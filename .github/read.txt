@@ -1,0 +1,13 @@
+What This build-and-test.yml do
+
+Every time you or your team members push code to the main branch, GitHub will automatically:
+
+Spin up a temporary server.
+
+Download your code.
+
+Install Java 17 and run your Spring Boot tests (mvn clean install).
+
+Install Node 18 and build your React app.
+
+Show a green checkmark ✅ on GitHub if everything works, or a red cross ❌ if someone pushed broken code.

@@ -25,7 +25,7 @@ jobs:
     - name: Build and Test with Maven
       # Adjust the path if your backend folder is named something else
       run: |
-        cd api 
+        cd server
         mvn clean install
 
   build-and-test-frontend:

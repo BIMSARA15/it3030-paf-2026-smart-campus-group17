@@ -3,8 +3,10 @@ import { useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
 
 function App() {
+  
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -17,13 +19,22 @@ function App() {
         {/* We will add a Global Navbar here later that shows for logged-in users */}
         
         <Routes>
-          {/* Public Route: If logged in, redirect away from the landing page. If not, show Landing. */}
+          {/* Public Route: Landing Page */}
           <Route 
             path="/" 
             element={user ? <Navigate to={
               user.role === 'ADMIN' ? '/admin' : 
               user.role === 'TECHNICIAN' ? '/technician' : '/dashboard'
             } /> : <Landing />} 
+          />
+
+          {/* Public Route: Login Page */}
+          <Route 
+            path="/login" 
+            element={user ? <Navigate to={
+              user.role === 'ADMIN' ? '/admin' : 
+              user.role === 'TECHNICIAN' ? '/technician' : '/dashboard'
+            } /> : <Login />} 
           />
 
           {/* User UI (Member 2 & 3 targets) */}

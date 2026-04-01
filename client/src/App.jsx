@@ -1,27 +1,61 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
-  const { user, login } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', marginTop: '20%' }}>Loading...</div>;
+  }
 
   return (
     <Router>
       <div className="app-container">
-        {/* If there is no user, show a login button. Otherwise, welcome them! */}
-        {!user ? (
-          <div style={{ padding: '20px' }}>
-            <h2>Welcome to Smart Campus</h2>
-            <button onClick={login}>Sign in with Google</button>
-          </div>
-        ) : (
-          <div style={{ padding: '20px' }}>
-            <h3>Welcome, {user.name}</h3>
-            <img src={user.picture} alt="Profile" style={{ width: '50px', borderRadius: '50%' }} />
-          </div>
-        )}
+        {/* We will add a Global Navbar here later that shows for logged-in users */}
+        
+        <Routes>
+          {/* Public Route: If logged in, redirect away from the landing page. If not, show Landing. */}
+          <Route 
+            path="/" 
+            element={user ? <Navigate to={
+              user.role === 'ADMIN' ? '/admin' : 
+              user.role === 'TECHNICIAN' ? '/technician' : '/dashboard'
+            } /> : <Landing />} 
+          />
 
-        {/* ... keep your existing Routes down here ... */}
+          {/* User UI (Member 2 & 3 targets) */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'TECHNICIAN']}>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Admin UI (Member 1 & 2 targets) */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <h2>Admin Workspace (Only ADMINs can see this)</h2>
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Technician UI (Member 3 target) */}
+          <Route 
+            path="/technician" 
+            element={
+              <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                <h2>Technician Workspace (Only TECHNICIANs can see this)</h2>
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
       </div>
     </Router>
   );

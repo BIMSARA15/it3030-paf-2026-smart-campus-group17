@@ -17,7 +17,7 @@
             "mainClass": "com.smartcampus.api.ApiApplication",
             "projectName": "api",
             "env": {
-                "MONGO_PASSWORD": "6UM5E3P5VfX3Ob17",
+                "MONGO_PASSWORD": "hSRsISBS0ToB4AY5",
                 "GOOGLE_CLIENT_ID": "391212593615-j5njeta8e5a5go5b3v9jnuocuj12b5tj.apps.googleusercontent.com",
                 "GOOGLE_CLIENT_SECRET": "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"
             }

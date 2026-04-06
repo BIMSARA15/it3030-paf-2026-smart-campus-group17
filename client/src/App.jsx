@@ -6,6 +6,7 @@ import Dashboard from './pages/user/Dashboard';
 import NewBooking from './pages/user/NewBooking';
 import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
+import AllBookings from './pages/admin/AllBookings';
 
 import Sidebar from './components/Sidebar'; 
 
@@ -88,6 +89,7 @@ function App() { //main App component that sets up the layout and routing for th
               <Route path="/booking/new" element={<NewBooking />} />
               <Route path="/bookings/my" element={<MyBookings />} />
               <Route path="/resources" element={<Resources />} />
+              <Route path="/bookings/all" element={<AllBookings />} />
               
             </Routes>
           </div>

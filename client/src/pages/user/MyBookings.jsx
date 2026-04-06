@@ -28,9 +28,12 @@ export default function MyBookings() {
   const [cancellingId, setCancellingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
 
+  // Add a fallback test ID so it matches the data you just inserted
+  const testUserId = currentUser?.id || 'IT23345478';
+
   // Filter bookings for the current user and sort by newest first
   const myBookings = bookings
-    .filter(b => b.userId === currentUser?.id)
+    .filter(b => b.userId === testUserId) // Updated this line!
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // Apply search and status filters

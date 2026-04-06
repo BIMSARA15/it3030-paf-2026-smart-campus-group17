@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
 const BookingContext = createContext();
@@ -7,7 +7,20 @@ export const useBooking = () => useContext(BookingContext);
 
 export const BookingProvider = ({ children }) => {
   const { user } = useAuth();
-  const [bookings, setBookings] = useState([]);
+  
+  // 1. Initialize state from localStorage (loads saved data on refresh)
+  const [bookings, setBookings] = useState(() => {
+    const savedBookings = localStorage.getItem('smart_campus_bookings');
+    if (savedBookings) {
+      return JSON.parse(savedBookings);
+    }
+    return [];
+  });
+
+  // 2. Save to localStorage every time the bookings array changes
+  useEffect(() => {
+    localStorage.setItem('smart_campus_bookings', JSON.stringify(bookings));
+  }, [bookings]);
 
   // Mock resources matching your screenshot
   const resources = [
@@ -32,7 +45,7 @@ export const BookingProvider = ({ children }) => {
   const createBooking = (bookingData) => {
     const newBooking = {
       ...bookingData,
-      id: Math.random().toString(36).substring(2, 9).toUpperCase(), // Added uppercase for ID
+      id: Math.random().toString(36).substring(2, 9).toUpperCase(), 
       status: 'PENDING',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -41,7 +54,6 @@ export const BookingProvider = ({ children }) => {
     return { success: true, message: 'Booking request submitted successfully.' };
   };
 
-  // Add this new function to handle cancellations
   const cancelBooking = (id) => {
     setBookings(prevBookings => 
       prevBookings.map(b => 
@@ -52,7 +64,6 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // --- ADD THESE TWO NEW FUNCTIONS ---
   const approveBooking = (id, adminNote) => {
     setBookings(prevBookings => 
       prevBookings.map(b => 
@@ -73,12 +84,11 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // UPDATE YOUR RETURN STATEMENT TO INCLUDE THEM:
   return (
     <BookingContext.Provider value={{ 
       resources, bookings, currentUser: user, 
       createBooking, checkConflict, getResourceById, cancelBooking,
-      approveBooking, rejectBooking // <-- Added here!
+      approveBooking, rejectBooking 
     }}>
       {children}
     </BookingContext.Provider>

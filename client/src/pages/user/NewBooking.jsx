@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'; //hooks for managing component state and side effects
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
-  ChevronLeft, Info, Loader2, User, MessageSquare // Added User and MessageSquare icons
+  ChevronLeft, Info, Loader2, User, MessageSquare
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -21,7 +21,7 @@ const TYPE_COLORS = {
 };
 
 export default function NewBooking() {
-  const { resources, bookings, currentUser, createBooking, checkConflict, getResourceById } = useBooking();
+  const { resources, bookings, currentUser, createBooking, getResourceById } = useBooking();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -36,31 +36,43 @@ export default function NewBooking() {
   const [endTime, setEndTime] = useState('');
   const [purpose, setPurpose] = useState('');
   const [attendees, setAttendees] = useState('');
-  const [lecturer, setLecturer] = useState(''); // New state for Lecturer
-  const [specialRequests, setSpecialRequests] = useState(''); // New state for Special Requests
+  const [lecturer, setLecturer] = useState('');
+  const [specialRequests, setSpecialRequests] = useState('');
 
   const [conflict, setConflict] = useState(null);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Pre-select resource from query param
   useEffect(() => {
     const rid = searchParams.get('resource');
     if (rid) {
       const r = getResourceById(rid);
       if (r) { setSelectedResource(r); setStep(2); }
     }
-  }, []); //useeffect empty dependency array to run only once on component mount
+  }, []);
 
-  // Real-time conflict check
+  // --- UPDATED CONFLICT DETECTION ---
+  // Now checks for both APPROVED and PENDING overlapping bookings
   useEffect(() => {
     if (selectedResource && date && startTime && endTime && startTime < endTime) {
-      setConflict(checkConflict(selectedResource.id, date, startTime, endTime));
+      const overlappingBooking = bookings.find(b =>
+        b.resourceId === selectedResource.id &&
+        b.date === date &&
+        (b.status === 'APPROVED' || b.status === 'PENDING') &&
+        (
+          (startTime >= b.startTime && startTime < b.endTime) ||
+          (endTime > b.startTime && endTime <= b.endTime) ||
+          (startTime <= b.startTime && endTime >= b.endTime)
+        )
+      );
+      setConflict(overlappingBooking || null);
     } else {
       setConflict(null);
     }
-  }, [selectedResource, date, startTime, endTime]); //ensures your "Conflict Check" is always up-to-date
+  }, [selectedResource, date, startTime, endTime, bookings]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -81,30 +93,33 @@ export default function NewBooking() {
     if (!purpose.trim()) e.purpose = 'Please describe the purpose';
     else if (purpose.trim().length < 10) e.purpose = 'Purpose must be at least 10 characters';
     
-    // Validation for new Lecturer field
     if (!lecturer.trim()) e.lecturer = 'Please provide the name of the Lecturer in Charge';
 
-    if (selectedResource?.capacity && attendees) {
-      if (parseInt(attendees) > selectedResource.capacity)
+    if (selectedResource?.capacity) {
+      if (!attendees) {
+        e.attendees = 'Please provide the expected number of attendees';
+      } else if (parseInt(attendees) > selectedResource.capacity) {
         e.attendees = `Exceeds capacity of ${selectedResource.capacity}`;
+      } else if (parseInt(attendees) < 1) {
+        e.attendees = 'Must have at least 1 attendee';
+      }
     }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async () => {
-    if (!validate() || !selectedResource || !currentUser) return;
+    if (!validate() || !selectedResource) return;
     if (conflict) return;
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 800));
     
-    // Added new fields to the submission payload
-    const res = createBooking({
+    const res = await createBooking({
       resourceId: selectedResource.id,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userEmail: currentUser.email,
-      userDept: currentUser.department,
+      userId: currentUser?.id || 'IT23345478',
+      userName: currentUser?.name || 'Chathurya',
+      userEmail: currentUser?.email || 'it23345478@my.sliit.lk',
+      userDept: currentUser?.department || 'Faculty of Computing',
       date, startTime, endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
@@ -114,7 +129,8 @@ export default function NewBooking() {
 
     setResult(res);
     setSubmitting(false);
-    if (res.success) setStep(3);
+    
+    if (res.success) setShowSuccessModal(true);
   };
 
   const inputClass = (field) =>
@@ -124,49 +140,56 @@ export default function NewBooking() {
         : 'border-gray-200 bg-gray-50 focus:border-blue-400 focus:bg-white'
     }`;
 
-  if (step === 3 && result?.success) {
-    return (
-      <div className="p-4 lg:p-6 flex items-center justify-center min-h-[60vh]">
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-emerald-600" />
-          </div>
-          <h2 className="text-gray-900 mb-2">Booking Submitted!</h2>
-          <p className="text-gray-500 text-sm mb-6">{result.message}</p>
-          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-6 text-left">
-            <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-amber-800 text-sm">Your booking is now <StatusBadge status="PENDING" size="sm" /></p>
-                <p className="text-amber-700 text-xs mt-1">An administrator will review your request and notify you of the outcome.</p>
+  return (
+    <div className="p-4 lg:p-6 text-left relative">
+      
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+          <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center z-10 border border-gray-100">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h2 className="text-gray-900 text-xl font-semibold mb-2">Booking Submitted!</h2>
+            <p className="text-gray-500 text-sm mb-6">{result?.message}</p>
+
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-6 text-left">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 text-sm font-medium flex items-center gap-2">
+                    Your booking is now <StatusBadge status="PENDING" size="sm" />
+                  </p>
+                  <p className="text-amber-700 text-xs mt-1">An administrator will review your request and notify you of the outcome.</p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => { 
-                setStep(1); setSelectedResource(null); setDate(''); setStartTime(''); 
-                setEndTime(''); setPurpose(''); setAttendees(''); setLecturer(''); 
-                setSpecialRequests(''); setResult(null); 
-              }}
-              className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm transition-colors"
-            >
-              New Booking
-            </button>
-            <button
-              onClick={() => navigate('/bookings/my')}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-[#0f2b5b] text-white hover:bg-[#1a3d70] text-sm transition-colors"
-            >
-              My Bookings
-            </button>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setStep(1);
+                  setSelectedResource(null);
+                  setDate(''); setStartTime(''); setEndTime('');
+                  setPurpose(''); setAttendees(''); setLecturer('');
+                  setSpecialRequests(''); setResult(null);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
+              >
+                New Booking
+              </button>
+              <button
+                onClick={() => navigate('/bookings/my')}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-[#0f2b5b] text-white hover:bg-[#1a3d70] text-sm font-medium shadow-lg shadow-blue-900/20 transition-all"
+              >
+                My Bookings
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="p-4 lg:p-6 text-left">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">New Booking Request</h1>
         <p className="text-gray-500 text-sm mt-1">Reserve a room, lab, or equipment</p>
@@ -377,7 +400,7 @@ export default function NewBooking() {
                   <div>
                     <label className="block text-gray-700 text-sm mb-1.5">
                       <Users className="w-3.5 h-3.5 inline mr-1.5" />
-                      Expected Attendees
+                      Expected Attendees <span className="text-red-500">*</span>
                       <span className="text-gray-400 text-xs ml-1">(max {selectedResource.capacity})</span>
                     </label>
                     <input
@@ -393,7 +416,6 @@ export default function NewBooking() {
                   </div>
                 )}
 
-                {/* --- NEW: Lecturer In Charge --- */}
                 <div>
                   <label className="block text-gray-700 text-sm mb-1.5">
                     <User className="w-3.5 h-3.5 inline mr-1.5" />
@@ -409,7 +431,6 @@ export default function NewBooking() {
                   {errors.lecturer && <p className="text-red-500 text-xs mt-1">{errors.lecturer}</p>}
                 </div>
 
-                {/* --- NEW: Special Requests --- */}
                 <div>
                   <label className="block text-gray-700 text-sm mb-1.5">
                     <MessageSquare className="w-3.5 h-3.5 inline mr-1.5" />

@@ -42,46 +42,125 @@ export const BookingProvider = ({ children }) => {
     ) || null;
   };
 
-  const createBooking = (bookingData) => {
-    const newBooking = {
-      ...bookingData,
-      id: Math.random().toString(36).substring(2, 9).toUpperCase(), 
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setBookings([...bookings, newBooking]);
-    return { success: true, message: 'Booking request submitted successfully.' };
+const createBooking = async (bookingData) => {
+    try {
+      // 1. Send the actual POST request to your Spring Boot backend
+      const response = await fetch('http://localhost:8080/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save booking to database');
+      }
+
+      // 2. Get the saved booking back from Spring Boot (now with a real MongoDB ID)
+      const savedBooking = await response.json();
+      
+      // 3. Update the React UI state
+      setBookings([...bookings, savedBooking]);
+      
+      return { success: true, message: 'Booking request submitted successfully.' };
+      
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      return { success: false, message: 'Failed to connect to the server.' };
+    }
+  };
+  
+  const cancelBooking = async (id) => {
+    try {
+      // 1. Send the PUT request to Spring Boot to update the database
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'CANCELLED'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel booking in database');
+      }
+
+      // 2. Get the confirmed update back from the server
+      const updatedBooking = await response.json();
+
+      // 3. Update the React UI
+      setBookings(prevBookings => 
+        prevBookings.map(b => 
+          b.id === id ? updatedBooking : b
+        )
+      );
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+    }
   };
 
-  const cancelBooking = (id) => {
-    setBookings(prevBookings => 
-      prevBookings.map(b => 
-        b.id === id 
-          ? { ...b, status: 'CANCELLED', updatedAt: new Date().toISOString() } 
-          : b
-      )
-    );
+  const approveBooking = async (id, adminNote) => {
+    try {
+      // 1. Send the PUT request to Spring Boot
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'APPROVED',
+          adminNote: adminNote,
+          reviewedBy: user?.name || 'Admin' // Sends the admin's name
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update database');
+      }
+
+      // 2. Get the updated booking back from the database
+      const updatedBooking = await response.json();
+
+      // 3. Update the React UI so the admin sees the change immediately
+      setBookings(prevBookings => 
+        prevBookings.map(b => (b.id === id ? updatedBooking : b))
+      );
+    } catch (error) {
+      console.error("Error approving booking:", error);
+    }
   };
 
-  const approveBooking = (id, adminNote) => {
-    setBookings(prevBookings => 
-      prevBookings.map(b => 
-        b.id === id 
-          ? { ...b, status: 'APPROVED', adminNote, reviewedBy: user?.name, updatedAt: new Date().toISOString() } 
-          : b
-      )
-    );
-  };
+  const rejectBooking = async (id, rejectionReason) => {
+    try {
+      // 1. Send the PUT request to Spring Boot
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'REJECTED',
+          rejectionReason: rejectionReason,
+          reviewedBy: user?.name || 'Admin'
+        }),
+      });
 
-  const rejectBooking = (id, rejectionReason) => {
-    setBookings(prevBookings => 
-      prevBookings.map(b => 
-        b.id === id 
-          ? { ...b, status: 'REJECTED', rejectionReason, reviewedBy: user?.name, updatedAt: new Date().toISOString() } 
-          : b
-      )
-    );
+      if (!response.ok) {
+        throw new Error('Failed to update database');
+      }
+
+      const updatedBooking = await response.json();
+
+      // 2. Update the React UI
+      setBookings(prevBookings => 
+        prevBookings.map(b => (b.id === id ? updatedBooking : b))
+      );
+    } catch (error) {
+      console.error("Error rejecting booking:", error);
+    }
   };
 
   return (

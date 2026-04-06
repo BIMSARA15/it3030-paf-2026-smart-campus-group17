@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   CalendarPlus, Building2, FlaskConical, Wrench, MapPin,
   Calendar, Clock, Users, ChevronDown, XCircle, Info,
-  Search
+  Search, AlertCircle, CheckCircle
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -227,6 +227,37 @@ export default function MyBookings() {
                       <div className="mt-3 flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
                         <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                         <p className="text-amber-700 text-sm">Your request is awaiting admin review. You'll be notified once a decision is made.</p>
+                      </div>
+                    )}
+
+                    {/* Admin Feedback Section */}
+                    {(booking.rejectionReason || booking.adminNote) && (
+                      <div className={`mt-3 p-3 rounded-xl border ${
+                        booking.status === 'REJECTED' 
+                          ? 'bg-red-50 border-red-100' 
+                          : 'bg-emerald-50 border-emerald-100'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5">
+                            {booking.status === 'REJECTED' ? (
+                              <AlertCircle className="w-4 h-4 text-red-600" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className={`text-xs font-semibold uppercase tracking-wider ${
+                              booking.status === 'REJECTED' ? 'text-red-800' : 'text-emerald-800'
+                            }`}>
+                              {booking.status === 'REJECTED' ? 'Reason for Rejection' : 'Admin Note'}
+                            </p>
+                            <p className={`text-sm mt-1 ${
+                              booking.status === 'REJECTED' ? 'text-red-700' : 'text-emerald-700'
+                            }`}>
+                              {booking.status === 'REJECTED' ? booking.rejectionReason : booking.adminNote}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
 

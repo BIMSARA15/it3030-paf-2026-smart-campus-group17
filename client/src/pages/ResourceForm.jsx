@@ -16,6 +16,7 @@ export default function ResourceForm() {
     location: '',
     building: '',
     floor: '',
+    requesterType: 'LECTURER',
     status: 'ACTIVE',
     description: ''
   });
@@ -125,6 +126,14 @@ export default function ResourceForm() {
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
                 <option value="OUT_OF_SERVICE">Out of Service</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Requester Type *</label>
+              <select required name="requesterType" value={formData.requesterType || 'LECTURER'} onChange={handleChange} className="w-full border-slate-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3 border">
+                <option value="LECTURER">1. Lecturer</option>
+                <option value="STUDENT">2. Student</option>
               </select>
             </div>
 

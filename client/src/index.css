@@ -1,5 +1,53 @@
 @import "tailwindcss";
 
+/* 1. Global Auto-Hiding Scrollbars */
+/* Hides scrollbars until the user hovers over the scrolling area */
+html, body, .overflow-auto, .overflow-x-auto, .overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+body:hover, .overflow-auto:hover, .overflow-x-auto:hover, .overflow-y-auto:hover {
+  scrollbar-color: #cbd5e1 transparent; /* Tailwind slate-300 color */
+}
+
+/* For Chrome, Safari, and Edge */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 20px;
+}
+
+body:hover::-webkit-scrollbar-thumb,
+.overflow-auto:hover::-webkit-scrollbar-thumb,
+.overflow-x-auto:hover::-webkit-scrollbar-thumb,
+.overflow-y-auto:hover::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+}
+
+/* 2. Exception Class specifically for the AllBookings page */
+.show-scrollbar-always,
+.show-scrollbar-always .overflow-x-auto,
+.show-scrollbar-always .overflow-y-auto,
+.show-scrollbar-always .overflow-auto {
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+.show-scrollbar-always::-webkit-scrollbar-thumb,
+.show-scrollbar-always .overflow-x-auto::-webkit-scrollbar-thumb,
+.show-scrollbar-always .overflow-y-auto::-webkit-scrollbar-thumb,
+.show-scrollbar-always .overflow-auto::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1 !important;
+}
+
 /*:root {
   --text: #6b6375;
   --text-h: #08060d;

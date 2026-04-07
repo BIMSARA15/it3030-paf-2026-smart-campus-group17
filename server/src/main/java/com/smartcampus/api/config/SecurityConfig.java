@@ -2,10 +2,12 @@ package com.smartcampus.api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -22,8 +24,14 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // Enable CORS
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login", "/error").permitAll()
+                // Allow API routes to be accessed without forcing a login loop
+                .requestMatchers("/", "/login", "/error", "/api/**").permitAll()
                 .anyRequest().authenticated()
+            )
+            // THIS IS THE FIX: It stops the CORS Google Redirect error.
+            // If an API request is unauthorized, it just sends a 401 error back to React.
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             )
             .oauth2Login(Customizer.withDefaults());
 

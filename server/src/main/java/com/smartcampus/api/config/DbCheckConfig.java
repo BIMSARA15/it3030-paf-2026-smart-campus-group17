@@ -13,7 +13,7 @@ public class DbCheckConfig {
         return args -> {
             try {
                 mongoTemplate.getDb().listCollectionNames();
-                System.out.println("✅ Database Connection: SUCCESSFUL");
+                System.out.println("✅ Database Connection: SUCCESSFULLY CONNECTED");
             } catch (Exception e) {
                 System.out.println("❌ Database Connection: FAILED - " + e.getMessage());
             }

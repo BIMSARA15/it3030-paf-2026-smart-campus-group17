@@ -447,6 +447,18 @@ export default function AllBookings() {
                               <p className="text-gray-400 text-xs mb-0.5">Full Purpose</p>
                               <p className="text-gray-700 text-sm">{booking.purpose}</p>
                             </div>
+                            {booking.lecturer && (
+                              <div className="mb-3">
+                                <p className="text-gray-400 text-xs mb-0.5">Lecturer in Charge</p>
+                                <p className="text-gray-700 text-sm">{booking.lecturer}</p>
+                              </div>
+                            )}
+                            {booking.specialRequests && (
+                              <div className="mb-3">
+                                <p className="text-gray-400 text-xs mb-0.5">Special Requests</p>
+                                <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
+                              </div>
+                            )}
                             {resource && (
                               <div className="mb-3">
                                 <p className="text-gray-400 text-xs mb-0.5">Resource Location</p>

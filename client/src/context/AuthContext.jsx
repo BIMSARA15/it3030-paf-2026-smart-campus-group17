@@ -15,17 +15,29 @@ export const AuthProvider = ({ children }) => {
   axios.defaults.withCredentials = true;
 
   useEffect(() => {
-    // MOCK LOGIN FOR TESTING UI WITHOUT BACKEND
-    setUser({
-      id: "test-user-123", // Critical for MyBookings filter to work
-      name: "Test Student",
-      email: "student@campus.edu",
-      department: "IT Department",
-      role: "ADMIN" // Sets admin so you can test approving/rejecting
-    });
-    setLoading(false);
+    // When the app loads, ask Spring Boot if we are logged in
+    const checkUserStatus = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/auth/user');
+        // Google returns a lot of data, we just want the core info for now
+        setUser({
+          name: response.data.name,
+          email: response.data.email,
+          picture: response.data.picture,
+          role: "USER" // We will pull this from MongoDB later
+        });
+      } catch (error) {
+        ("Auth check failed:", error)
+        // If it fails (e.g., 401 Unauthorized), the user is not logged in
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUserStatus();
   }, []);
-  
+
   const login = () => {
     // Redirect the browser to the Spring Boot Google Login URL
     window.location.href = 'http://localhost:8080/oauth2/authorization/google';

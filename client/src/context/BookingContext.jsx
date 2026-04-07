@@ -70,17 +70,17 @@ const createBooking = async (bookingData) => {
       return { success: false, message: 'Failed to connect to the server.' };
     }
   };
-  
-  const cancelBooking = async (id) => {
+
+  const cancelBooking = async (id, reason) => { // <-- Added 'reason' here!
     try {
-      // 1. Send the PUT request to Spring Boot to update the database
       const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: 'CANCELLED'
+          status: 'CANCELLED',
+          cancellationReason: reason // Now it knows what 'reason' is!
         }),
       });
 
@@ -88,10 +88,8 @@ const createBooking = async (bookingData) => {
         throw new Error('Failed to cancel booking in database');
       }
 
-      // 2. Get the confirmed update back from the server
       const updatedBooking = await response.json();
 
-      // 3. Update the React UI
       setBookings(prevBookings => 
         prevBookings.map(b => 
           b.id === id ? updatedBooking : b

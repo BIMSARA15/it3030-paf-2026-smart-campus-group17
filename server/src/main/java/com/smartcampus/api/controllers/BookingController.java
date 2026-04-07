@@ -53,6 +53,9 @@ public class BookingController {
             if (updateData.getRejectionReason() != null) booking.setRejectionReason(updateData.getRejectionReason());
             if (updateData.getReviewedBy() != null) booking.setReviewedBy(updateData.getReviewedBy());
 
+            // ADDED THIS LINE TO SAVE CANCELLATION REASON
+            if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
+
             return ResponseEntity.ok(bookingRepository.save(booking));
         }
         return ResponseEntity.notFound().build();

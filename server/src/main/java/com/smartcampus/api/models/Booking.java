@@ -27,6 +27,7 @@ public class Booking {
     private String rejectionReason;
     private String adminNote;
     private String reviewedBy;
+    private String cancellationReason;
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -84,9 +85,13 @@ public class Booking {
     public String getReviewedBy() { return reviewedBy; }
     public void setReviewedBy(String reviewedBy) { this.reviewedBy = reviewedBy; }
 
+    public String getCancellationReason() { return cancellationReason; }
+    public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
 }

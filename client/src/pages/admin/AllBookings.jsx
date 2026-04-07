@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, CheckCircle, XCircle, Calendar, Clock,
   Users, MapPin, ChevronDown, Building2, FlaskConical, Wrench,
-  Eye, SlidersHorizontal, X, AlertCircle,
+  Eye, SlidersHorizontal, X, AlertCircle, Info
 } from 'lucide-react';
 // Change these two lines
 import { useBooking } from "../../context/BookingContext";
@@ -470,6 +470,16 @@ export default function AllBookings() {
                                 <div>
                                   <p className="text-blue-700 text-xs">Admin Note</p>
                                   <p className="text-blue-600 text-sm">{booking.adminNote}</p>
+                                </div>
+                              </div>
+                            )}
+                            {/* NEW: Display Customer Cancellation Reason */}
+                            {booking.status === 'CANCELLED' && booking.cancellationReason && (
+                              <div className="mt-2 flex items-start gap-2 p-3 rounded-xl border bg-gray-50 border-gray-200">
+                                <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                <div>
+                                  <p className="text-gray-700 text-xs">Cancellation Reason (User)</p>
+                                  <p className="text-gray-600 text-sm">{booking.cancellationReason}</p>
                                 </div>
                               </div>
                             )}

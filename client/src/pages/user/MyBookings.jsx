@@ -25,15 +25,19 @@ export default function MyBookings() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [cancellingId, setCancellingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  
+  // --- UPDATED CANCELLATION STATES ---
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
 
   // Add a fallback test ID so it matches the data you just inserted
   const testUserId = currentUser?.id || 'IT23345478';
 
   // Filter bookings for the current user and sort by newest first
   const myBookings = bookings
-    .filter(b => b.userId === testUserId) // Updated this line!
+    .filter(b => b.userId === testUserId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // Apply search and status filters
@@ -65,9 +69,26 @@ export default function MyBookings() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const handleCancel = (id) => {
-    cancelBooking(id);
+  // --- NEW SUBMIT FUNCTIONS ---
+  const handleCancelSubmit = (id) => {
+    if (!cancelReason.trim()) {
+      setCancelError('Please tell us why you are cancelling.');
+      return;
+    }
+    
+    // Pass the reason to the Context function
+    cancelBooking(id, cancelReason); 
+    
+    // Reset the UI
     setCancellingId(null);
+    setCancelReason('');
+    setCancelError('');
+  };
+
+  const resetCancelState = () => {
+    setCancellingId(null);
+    setCancelReason('');
+    setCancelError('');
   };
 
   return (
@@ -261,22 +282,63 @@ export default function MyBookings() {
                       </div>
                     )}
 
-                    {/* Cancel button */}
+                    {/* --- NEW: User Cancellation Reason Display --- */}
+                    {booking.status === 'CANCELLED' && booking.cancellationReason && (
+                      <div className="mt-3 p-3 rounded-xl border bg-gray-50 border-gray-200">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5">
+                            <Info className="w-4 h-4 text-gray-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">
+                              Reason for Cancellation
+                            </p>
+                            <p className="text-sm mt-1 text-gray-600">
+                              {booking.cancellationReason}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* --- UPDATED: Cancel button and input field block --- */}
                     {canCancel && (
                       <div className="mt-4 pt-4 border-t border-gray-200/50">
                         {cancellingId === booking.id ? (
-                          <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                            <p className="text-red-800 text-sm mb-3">Are you sure you want to cancel this booking?</p>
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                            <p className="text-red-800 text-sm font-medium mb-3">Are you sure you want to cancel this booking?</p>
+                            
+                            <div className="mb-4">
+                              <label className="block text-red-800 text-xs mb-1.5">
+                                Reason for cancellation <span className="text-red-500">*</span>
+                              </label>
+                              <textarea
+                                rows={2}
+                                placeholder="Please tell us why you are cancelling..."
+                                value={cancelReason}
+                                onChange={(e) => {
+                                  setCancelReason(e.target.value);
+                                  if (cancelError) setCancelError('');
+                                }}
+                                className={`w-full px-3 py-2 text-sm rounded-lg border outline-none resize-none transition-colors ${
+                                  cancelError 
+                                    ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:bg-white' 
+                                    : 'border-red-200 bg-white focus:border-red-400'
+                                }`}
+                              />
+                              {cancelError && <p className="text-red-600 text-xs mt-1.5">{cancelError}</p>}
+                            </div>
+
                             <div className="flex gap-2">
                               <button
-                                onClick={() => handleCancel(booking.id)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+                                onClick={() => handleCancelSubmit(booking.id)}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
                               >
-                                <XCircle className="w-3.5 h-3.5" /> Yes, Cancel
+                                <XCircle className="w-3.5 h-3.5" /> Confirm Cancellation
                               </button>
                               <button
-                                onClick={() => setCancellingId(null)}
-                                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors bg-white"
+                                onClick={resetCancelState}
+                                className="px-4 py-2 border border-red-200 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors bg-white"
                               >
                                 Keep Booking
                               </button>

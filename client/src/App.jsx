@@ -1,6 +1,7 @@
 import { useState } from 'react'; //state hook to manage the sidebar open/close state
 import { Routes, Route, useLocation } from 'react-router-dom'; //react-router-dom hooks for routing and location tracking
 import { useAuth } from './context/AuthContext'; // <-- Imported useAuth to access user data for the header
+import { Bell } from 'lucide-react'; // <-- Imported Bell icon for notifications
 
 import Dashboard from './pages/user/Dashboard';
 import NewBooking from './pages/user/NewBooking';
@@ -66,6 +67,14 @@ function App() { //main App component that sets up the layout and routing for th
 
           {/* Right Side: User Profile */}
           <div className="flex items-center gap-3">
+
+            {/* --- NEW: Notification Icon --- */}
+            <button className="relative p-2 text-gray-400 hover:text-[#0f2b5b] hover:bg-gray-100 rounded-full transition-colors cursor-pointer mr-1">
+              <Bell className="w-5 h-5" />
+              {/* Red dot badge */}
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+
             {/* Hidden on very small screens to save space */}
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium text-[#0f2b5b] leading-tight">

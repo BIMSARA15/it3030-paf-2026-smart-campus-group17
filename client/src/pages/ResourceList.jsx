@@ -52,7 +52,7 @@ export default function ResourceList() {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Type</label>
             <select name="type" value={filters.type} onChange={handleFilterChange} className="w-full border-slate-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm py-2 px-3 border bg-white text-slate-700">
@@ -98,7 +98,7 @@ export default function ResourceList() {
           <p className="text-slate-500 max-w-sm mx-auto">Try adjusting your filters or search terms to find what you're looking for across the campus.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
           {resources.map(resource => (
             <ResourceCard key={resource.id} resource={resource} />
           ))}

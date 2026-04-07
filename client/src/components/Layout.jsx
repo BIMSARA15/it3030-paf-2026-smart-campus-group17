@@ -1,7 +1,14 @@
-import { Link } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, Building2 } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, PlusCircle, Building2, Wrench, Boxes } from 'lucide-react';
 
 export default function Layout({ children }) {
+  const navItemClassName = ({ isActive }) =>
+    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+      isActive
+        ? 'bg-indigo-50 text-indigo-700'
+        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+    }`;
+
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
@@ -11,14 +18,22 @@ export default function Layout({ children }) {
           <span className="text-lg font-bold text-slate-900 tracking-tight">UniBook Admin</span>
         </div>
         <nav className="p-4 space-y-1 mt-2">
-          <Link to="/" className="flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-indigo-50 text-indigo-700">
+          <NavLink to="/resources" className={navItemClassName}>
             <LayoutDashboard className="w-5 h-5 mr-3" />
             Resources
-          </Link>
-          <Link to="/resources/add" className="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+          </NavLink>
+          <NavLink to="/resources/new" className={navItemClassName}>
             <PlusCircle className="w-5 h-5 mr-3" />
             Add Resource
-          </Link>
+          </NavLink>
+          <NavLink to="/utilities" className={navItemClassName}>
+            <Boxes className="w-5 h-5 mr-3" />
+            Utilities
+          </NavLink>
+          <NavLink to="/utilities/new" className={navItemClassName}>
+            <Wrench className="w-5 h-5 mr-3" />
+            Add Utilities
+          </NavLink>
         </nav>
       </aside>
 
@@ -32,7 +47,7 @@ export default function Layout({ children }) {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto py-8 px-8">
+        <div className="w-full py-8 px-6 lg:px-8">
           {children}
         </div>
       </main>

@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import MicrosoftIcon from "../components/auth/MicrosoftIcon.jsx";
 import { Link } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
@@ -294,30 +294,42 @@ export default function AuthPage() {
                   </div>
                 )}
 
-                {/* Google Button */}
-                <button
-                  className="w-full flex items-center justify-center gap-3 rounded-xl transition-all mb-5"
-                  style={{
-                    padding: "0.875rem 1rem",
-                    border: "1.5px solid #E2E8F0",
-                    background: "white",
-                    color: "#374151",
-                    fontWeight: 500,
-                    fontSize: "0.9375rem",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#F8FAFC";
-                    e.currentTarget.style.borderColor = "#CBD5E1";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "white";
-                    e.currentTarget.style.borderColor = "#E2E8F0";
-                  }}
-                >
-                  <GoogleIcon />
-                  Continue with Google
-                </button>
+                {/* === OAUTH BUTTONS === */}
+                <div className="space-y-3 mb-5">
+                  {/* Microsoft Button - Available for ALL portals */}
+                  <button
+                    type="button"
+                    onClick={() => console.log("Login with Microsoft")} // Replace with: login('microsoft')
+                    className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
+                    style={{
+                      padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
+                      color: "#374151", fontWeight: 500, fontSize: "0.9375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
+                  >
+                    <MicrosoftIcon />
+                    Continue with Microsoft
+                  </button>
+
+                  {/* Google Button - ONLY visible for Lecturers */}
+                  {selectedPortalId === "lecturer" && (
+                    <button
+                      type="button"
+                      onClick={() => console.log("Login with Google")} // Replace with: login('google')
+                      className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
+                      style={{
+                        padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
+                        color: "#374151", fontWeight: 500, fontSize: "0.9375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
+                    >
+                      <GoogleIcon />
+                      Continue with Google (Visiting Lecturers)
+                    </button>
+                  )}
+                </div>
 
                 {/* Divider */}
                 <div className="flex items-center gap-4 mb-5">

@@ -19,13 +19,13 @@ function App() {
         {/* We will add a Global Navbar here later that shows for logged-in users */}
         
         <Routes>
-          {/* Public Route: Landing Page */}
+          {/* Public Route: Landing Page (Root URL) */}
           <Route 
             path="/" 
             element={user ? <Navigate to={
               user.role === 'ADMIN' ? '/admin' : 
               user.role === 'TECHNICIAN' ? '/technician' : '/dashboard'
-            } /> : <Landing />} 
+            } replace /> : <Landing />} 
           />
 
           {/* Public Route: Login Page */}
@@ -34,14 +34,14 @@ function App() {
             element={user ? <Navigate to={
               user.role === 'ADMIN' ? '/admin' : 
               user.role === 'TECHNICIAN' ? '/technician' : '/dashboard'
-            } /> : <Login />} 
+            } replace /> : <Login />} 
           />
 
-          {/* User UI (Member 2 & 3 targets) */}
+          {/* === FIX: RESTORED DASHBOARD ROUTE === */}
           <Route 
             path="/dashboard" 
             element={
-              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'TECHNICIAN']}>
+              <ProtectedRoute allowedRoles={['USER', 'STUDENT', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
                 <Dashboard />
               </ProtectedRoute>
             } 
@@ -52,7 +52,9 @@ function App() {
             path="/admin" 
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <h2>Admin Workspace (Only ADMINs can see this)</h2>
+                <div className="p-8">
+                  <h2>Admin Workspace (Only ADMINs can see this)</h2>
+                </div>
               </ProtectedRoute>
             } 
           />
@@ -62,7 +64,9 @@ function App() {
             path="/technician" 
             element={
               <ProtectedRoute allowedRoles={['TECHNICIAN']}>
-                <h2>Technician Workspace (Only TECHNICIANs can see this)</h2>
+                <div className="p-8">
+                  <h2>Technician Workspace (Only TECHNICIANs can see this)</h2>
+                </div>
               </ProtectedRoute>
             } 
           />

@@ -3,6 +3,8 @@ package com.smartcampus.api.controllers;
 import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,41 +23,40 @@ public class AuthController {
     private UserRepository userRepository;
 
     @GetMapping("/user")
-    public Map<String, Object> getUser(@AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<?> getUser(@AuthenticationPrincipal OAuth2User principal) {
+        // 1. If not logged in, throw a 401 Unauthorized Error so React knows!
         if (principal == null) {
-            return null;
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Not authenticated");
         }
 
-        // 1. Extract the data Google sent us
+        // 2. Extract the data Google/Microsoft sent us
         String email = principal.getAttribute("email");
         String name = principal.getAttribute("name");
         String picture = principal.getAttribute("picture");
 
-        // 2. Check if this user already exists in MongoDB Atlas
+        // 3. Check if this user already exists in MongoDB Atlas
         Optional<User> existingUser = userRepository.findByEmail(email);
         User dbUser;
 
         if (existingUser.isPresent()) {
-            // User exists! Grab their record so we know their real role
             dbUser = existingUser.get();
         } else {
-            // Brand new user! Create a record for them with the default "USER" role
             dbUser = new User();
             dbUser.setName(name);
             dbUser.setEmail(email);
             dbUser.setRole("USER"); 
-            // Save them to the database
             dbUser = userRepository.save(dbUser);
         }
 
-        // 3. Package the MongoDB data + Google Picture to send back to React
+        // 4. Package the MongoDB data + Profile Picture to send back to React
         Map<String, Object> response = new HashMap<>();
-        response.put("id", dbUser.getId()); // The MongoDB _id
+        response.put("id", dbUser.getId()); 
         response.put("name", dbUser.getName());
         response.put("email", dbUser.getEmail());
         response.put("role", dbUser.getRole());
-        response.put("picture", picture); // Keep the Google profile picture
+        response.put("picture", picture); 
 
-        return response;
+        // 5. Send a 200 OK Success with the data
+        return ResponseEntity.ok(response);
     }
 }

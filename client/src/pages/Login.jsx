@@ -1,8 +1,9 @@
 import { useState } from "react";
 import MicrosoftIcon from "../components/auth/MicrosoftIcon.jsx";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 // eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
   Lock,
@@ -12,6 +13,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Shield,
+  Wrench,
   AlertCircle,
   Building2,
   BookMarked
@@ -32,6 +34,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const { devLogin, login } = useAuth();
 
   const selectedPortal = portals.find((p) => p.id === selectedPortalId);
   const isPrivileged = selectedPortal?.isPrivileged ?? false;
@@ -296,10 +299,10 @@ export default function AuthPage() {
 
                 {/* === OAUTH BUTTONS === */}
                 <div className="space-y-3 mb-5">
-                  {/* Microsoft Button - Available for ALL portals */}
+                  {/* Microsoft Button - Primary Login for Everyone */}
                   <button
                     type="button"
-                    onClick={() => console.log("Login with Microsoft")} // Replace with: login('microsoft')
+                    onClick={() => login('microsoft')} // 👈 Here is where 'login' gets used!
                     className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
                     style={{
                       padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
@@ -312,11 +315,11 @@ export default function AuthPage() {
                     Continue with Microsoft
                   </button>
 
-                  {/* Google Button - ONLY visible for Lecturers */}
+                  {/* Google Button - ONLY for Visiting Lecturers */}
                   {selectedPortalId === "lecturer" && (
                     <button
                       type="button"
-                      onClick={() => console.log("Login with Google")} // Replace with: login('google')
+                      onClick={() => login('google')} // 👈 Used here too!
                       className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
                       style={{
                         padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
@@ -503,6 +506,31 @@ export default function AuthPage() {
               </motion.div>
             )}
           </AnimatePresence>
+          {/* ========================================================= */}
+          {/* 🛠️ DEVELOPER QUICK LOGIN (Only visible on localhost) 🛠️ */}
+          {/* ========================================================= */}
+          {import.meta.env.DEV && (
+            <div className="mt-10 p-4 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50">
+              <div className="flex items-center gap-2 mb-3">
+                <Wrench className="w-4 h-4 text-amber-600" />
+                <h3 className="text-amber-800 font-bold text-sm">Team 17 Quick Dev Login</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {["admin", "technician", "student", "lecturer"].map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => devLogin(role)}
+                    className="py-2 px-3 bg-white text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold hover:bg-amber-100 transition-colors uppercase tracking-wider"
+                  >
+                    Log in as {role}
+                  </button>
+                ))}
+              </div>
+              <p className="text-amber-700/70 text-[10px] mt-3 text-center leading-tight">
+                This panel bypasses OAuth2. It is only visible during local development.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

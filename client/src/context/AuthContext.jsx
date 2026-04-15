@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
+
 const AuthContext = createContext();
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
@@ -20,6 +21,12 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await axios.get('http://localhost:8080/api/auth/user');
         // Google returns a lot of data, we just want the core info for now
+        // 🛑 STRICT CHECK: If there is no email, kill the ghost user!
+        if (!response.data || !response.data.email) {
+            setUser(null);
+            setLoading(false);
+            return;
+        }
         setUser({
           name: response.data.name,
           email: response.data.email,

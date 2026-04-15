@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Landing from '../pages/Landing'; // Import the Landing page to redirect unauthorized users
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -19,7 +20,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     // Redirect unauthorized users to their own designated dashboard based on their role
     if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
     if (user.role === 'TECHNICIAN') return <Navigate to="/technician" replace />;
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;

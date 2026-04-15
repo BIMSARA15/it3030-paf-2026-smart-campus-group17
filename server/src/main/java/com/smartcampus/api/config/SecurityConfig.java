@@ -1,5 +1,9 @@
 package com.smartcampus.api.config;
 
+// 1. ADD THESE TWO IMPORTS:
+import com.smartcampus.api.services.CustomOAuth2UserService; 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -16,6 +20,10 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // 2. INJECT THE SERVICE HERE (Inside the class, before the methods)
+    @Autowired
+    private CustomOAuth2UserService customOAuth2UserService;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -25,7 +33,13 @@ public class SecurityConfig {
                 .requestMatchers("/", "/login", "/error").permitAll()
                 .anyRequest().authenticated()
             )
-            .oauth2Login(Customizer.withDefaults());
+            // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService) 
+                )
+                .defaultSuccessUrl("http://localhost:5173/dashboard", true)
+            );
 
         return http.build();
     }

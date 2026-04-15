@@ -5,7 +5,7 @@ export default function InputField({
   value, 
   onChange, 
   placeholder, 
-  icon,
+  icon: Icon, // 1. We declare it with a capital 'I' here
   rightElement, 
   autoComplete, 
   accentColor,
@@ -16,7 +16,10 @@ export default function InputField({
         {label}
       </label>
       <div className="mt-1.5 relative">
-        {icon && icon({ className: "absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" })}
+        
+        {/* 2. We USE it with a capital 'I' here! This fixes the error. */}
+        {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />}
+        
         <input
           id={id}
           type={type}

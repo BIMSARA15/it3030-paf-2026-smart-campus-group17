@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -23,7 +23,9 @@ import LeftPanel from "../components/auth/LeftPanel.jsx";
 import InputField from "../components/auth/InputField.jsx";
 import GoogleIcon from "../components/auth/GoogleIcon.jsx";
 
+
 export default function AuthPage() {
+ 
   const [selectedPortalId, setSelectedPortalId] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);

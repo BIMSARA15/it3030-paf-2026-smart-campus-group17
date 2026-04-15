@@ -42,6 +42,17 @@ export const AuthProvider = ({ children }) => {
   const login = (provider) => {
     window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
+  // NEW: Developer Quick Login Bypass
+  const devLogin = async (role) => {
+    try {
+      await axios.get(`http://localhost:8080/api/auth/dev-login/${role}`);
+      // Force a page reload to trigger the checkUserStatus useEffect and get the new session
+      window.location.href = role === 'admin' ? '/admin' : 
+                             role === 'technician' ? '/technician' : '/dashboard';
+    } catch (error) {
+      console.error("Dev login failed:", error);
+    }
+  };
 
   const logout = async () => {
     // Optional: add a backend logout endpoint call here later
@@ -49,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, devLogin, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

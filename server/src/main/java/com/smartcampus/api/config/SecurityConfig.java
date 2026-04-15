@@ -30,7 +30,8 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // Enable CORS
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login", "/error").permitAll()
+                // ADD the dev-login endpoint to the permitAll list here:
+                .requestMatchers("/", "/login", "/error", "/api/auth/dev-login/**").permitAll()
                 .anyRequest().authenticated()
             )
             // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK

@@ -38,9 +38,9 @@ export const AuthProvider = ({ children }) => {
     checkUserStatus();
   }, []);
 
-  const login = () => {
-    // Redirect the browser to the Spring Boot Google Login URL
-    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+// Accept the provider name ('google' or 'microsoft')
+  const login = (provider) => {
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
 
   const logout = async () => {

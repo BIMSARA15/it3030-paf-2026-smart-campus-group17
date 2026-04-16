@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios"; // Added axios import
 import MicrosoftIcon from "../components/auth/MicrosoftIcon.jsx";
 import { Link } from "react-router-dom";
 import SelectField from "../components/auth/SelectField.jsx";
@@ -49,9 +50,32 @@ export default function AuthPage() {
     setIsLogin(true);
   };
 
-  const handleSubmit = (e) => {
+  // UPDATED: Connected the manual signup logic to your Spring Boot backend
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Auth submitted", { portal: selectedPortalId, email, password, name, isLogin });
+    
+    if (!isLogin) {
+      // --- SIGN UP LOGIC ---
+      try {
+          await axios.post('http://localhost:8080/api/auth/register', {
+              name: name,
+              email: email, 
+              role: selectedPortalId.toUpperCase(),
+              faculty: faculty,
+              yearSemester: yearSemester,
+              registeredCourse: registeredCourse
+          });
+          alert("Registration Successful! You can now log in.");
+          setIsLogin(true); // Switch them back to the login screen
+      } catch (error) {
+          console.error("Registration failed:", error);
+          alert(error.response?.data || "Registration failed. Please try again.");
+      }
+    } else {
+      // --- SIGN IN LOGIC ---
+      // For now, this just logs the attempt. You can wire this up to a manual login endpoint later if needed!
+      console.log("Manual login submitted", { portal: selectedPortalId, email, password });
+    }
   };
 
   return (

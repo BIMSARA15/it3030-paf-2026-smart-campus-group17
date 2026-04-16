@@ -10,6 +10,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -58,5 +60,38 @@ public class AuthController {
 
         // 5. Send a 200 OK Success with the data
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
+        
+        // 1. Check if the user already exists to prevent duplicates
+        if (userRepository.findByEmail(newUserRequest.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body("Error: Email is already in use!");
+        }
+
+        // 2. Create the new user object
+        User user = new User();
+        user.setName(newUserRequest.getName());
+        user.setEmail(newUserRequest.getEmail());
+        
+        // Use the role provided, or default to STUDENT
+        user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
+        
+        // 3. Save the new specific fields!
+        user.setFaculty(newUserRequest.getFaculty());
+        
+        // Only save these if they are provided (e.g. Lecturers won't have a Year/Semester)
+        if (newUserRequest.getYearSemester() != null) {
+            user.setYearSemester(newUserRequest.getYearSemester());
+        }
+        if (newUserRequest.getRegisteredCourse() != null) {
+            user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
+        }
+
+        // 4. Save to MongoDB
+        userRepository.save(user);
+
+        return ResponseEntity.ok("User registered successfully!");
     }
 }

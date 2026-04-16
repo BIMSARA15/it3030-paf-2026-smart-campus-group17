@@ -12,6 +12,9 @@ public class User {
     private String email;
     private String role; // e.g., "USER", "ADMIN", "TECHNICIAN"
     private String oauthId; // To store the Google Sign-in ID later
+    private String faculty; // New field for faculty
+    private String yearSemester; // New field for year and semester 
+    private String registeredCourse; // New field for registered course
 
     // Constructors
     public User() {}
@@ -34,4 +37,10 @@ public class User {
     public void setRole(String role) { this.role = role; }
     public String getOauthId() { return oauthId; }
     public void setOauthId(String oauthId) { this.oauthId = oauthId; }
+    public String getFaculty() { return faculty;}
+    public void setFaculty(String faculty) { this.faculty = faculty;}
+    public String getYearSemester() {return yearSemester;}
+    public void setYearSemester(String yearSemester) {this.yearSemester = yearSemester;}
+    public String getRegisteredCourse() {return registeredCourse; }
+    public void setRegisteredCourse(String registeredCourse) { this.registeredCourse = registeredCourse;}
 }

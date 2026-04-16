@@ -31,7 +31,8 @@ export const AuthProvider = ({ children }) => {
           name: response.data.name,
           email: response.data.email,
           picture: response.data.picture,
-          role: "USER" // We will pull this from MongoDB later
+          role: "USER", // We will pull this from MongoDB later
+          profileComplete: response.data.profileComplete
         });
       } catch (error) {
         ("Auth check failed:", error)

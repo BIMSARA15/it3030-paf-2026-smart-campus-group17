@@ -28,7 +28,8 @@ export default function AuthPage() {
   const { devLogin, login } = useAuth();
   const [faculty, setFaculty] = useState("");
   const [yearSemester, setYearSemester] = useState("");
-  const [registeredCourse, setRegisteredCourse] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [specialization, setSpecialization] = useState("");
 
   const selectedPortal = portals.find((p) => p.id === selectedPortalId);
   const isPrivileged = selectedPortal?.isPrivileged ?? false;
@@ -58,12 +59,15 @@ export default function AuthPage() {
       // --- SIGN UP LOGIC ---
       try {
           await axios.post('http://localhost:8080/api/auth/register', {
+              required: true,
               name: name,
               email: email, 
               role: selectedPortalId.toUpperCase(),
               faculty: faculty,
               yearSemester: yearSemester,
-              registeredCourse: registeredCourse
+              phoneNumber: phoneNumber,
+              specialization: specialization,
+              
           });
           alert("Registration Successful! You can now log in.");
           setIsLogin(true); // Switch them back to the login screen
@@ -399,10 +403,30 @@ export default function AuthPage() {
                         ]}
                       />
                     )}
+                    <InputField
+                      id="phoneNumber"
+                      label="Phone Number"
+                      type="tel"  
+                      value={phoneNumber}
+                      onChange={setPhoneNumber}
+                      placeholder="e.g. +94 77 123 4567"
+                      icon={User}
+                      accentColor={selectedPortal?.accentColor}
+                    />
 
                     {/* STUDENT ONLY FIELDS: Year/Semester and Course */}
                     {selectedPortalId === "student" && (
                       <>
+                      <InputField
+                          id="specialization"
+                          label="Specialization"
+                          type="text"
+                          value={specialization}
+                          onChange={setSpecialization}
+                          placeholder="e.g. Software Engineering"
+                          icon={BookMarked}
+                          accentColor={selectedPortal?.accentColor}
+                        />
                         <SelectField
                           id="yearSemester"
                           label="Current Year & Semester"
@@ -422,16 +446,7 @@ export default function AuthPage() {
                           ]}
                         />
 
-                        <InputField
-                          id="registeredCourse"
-                          label="Registered Course"
-                          type="text"
-                          value={registeredCourse}
-                          onChange={setRegisteredCourse}
-                          placeholder="e.g. BSc (Hons) in Software Engineering"
-                          icon={BookMarked}
-                          accentColor={selectedPortal?.accentColor}
-                        />
+                        
                       </>
                     )}
                   </motion.div>

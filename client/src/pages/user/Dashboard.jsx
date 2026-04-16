@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { LayoutDashboard, BookOpen, Clock, Settings } from 'lucide-react';
 
 export default function Dashboard() {

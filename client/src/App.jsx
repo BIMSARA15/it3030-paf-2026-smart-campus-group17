@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/user/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import CompleteProfile from './pages/CompleteProfile';

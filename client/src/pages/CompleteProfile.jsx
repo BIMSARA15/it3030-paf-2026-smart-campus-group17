@@ -10,7 +10,6 @@ export default function CompleteProfile() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [faculty, setFaculty] = useState("");
   const [specialization, setSpecialization] = useState("");
-const [registeredCourse, setRegisteredCourse] = useState("");
   const [currentSemester, setCurrentSemester] = useState("");
 
   const handleSubmit = async (e) => {
@@ -52,11 +51,6 @@ const [registeredCourse, setRegisteredCourse] = useState("");
               { value: "Business", label: "Faculty of Business" },
               { value: "Engineering", label: "Faculty of Engineering" }
             ]}
-          />
-          <InputField
-            id="registeredCourse" label="Registered Course" type="text"
-            value={registeredCourse} onChange={setRegisteredCourse}
-            placeholder="e.g. BSc Computer Science" icon={BookOpen}
           />
           <InputField
             id="specialization" label="Specialization" type="text"

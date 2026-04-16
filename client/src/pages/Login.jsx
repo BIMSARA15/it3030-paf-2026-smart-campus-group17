@@ -1,22 +1,12 @@
 import { useState } from "react";
 import MicrosoftIcon from "../components/auth/MicrosoftIcon.jsx";
 import { Link } from "react-router-dom";
+import SelectField from "../components/auth/SelectField.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail,
-  Lock,
-  User,
-  Eye,
-  EyeOff,
-  ArrowLeft,
-  ChevronRight,
-  Shield,
-  Wrench,
-  AlertCircle,
-  Building2,
-  BookMarked
+  Mail,Lock,User,Eye,EyeOff,ArrowLeft,ChevronRight,Shield,Wrench,AlertCircle,Building2,Calendar,BookMarked
 } from "lucide-react";
 
 // Import your newly separated components and config
@@ -35,6 +25,9 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const { devLogin, login } = useAuth();
+  const [faculty, setFaculty] = useState("");
+  const [yearSemester, setYearSemester] = useState("");
+  const [registeredCourse, setRegisteredCourse] = useState("");
 
   const selectedPortal = portals.find((p) => p.id === selectedPortalId);
   const isPrivileged = selectedPortal?.isPrivileged ?? false;
@@ -347,22 +340,78 @@ export default function AuthPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Name — Sign Up only */}
                   <AnimatePresence>
-                    {!isLogin && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <InputField
-                          id="name" label="Full Name" type="text"
-                          value={name} onChange={setName}
-                          placeholder="e.g. Alex Johnson"
-                          icon={User} autoComplete="name"
-                          accentColor={accentColor}
-                        />
-                      </motion.div>
+                   {/* === SIGN UP ONLY FIELDS === */}
+                {!isLogin && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 overflow-hidden"
+                  >
+                    <InputField
+                      id="name"
+                      label="Full Name"
+                      type="text"
+                      value={name}
+                      onChange={setName}
+                      placeholder="e.g. John Doe"
+                      icon={User}
+                      accentColor={selectedPortal?.accentColor}
+                    />
+
+                    {/* FACULTY: Shows for both Student and Lecturer */}
+                    {(selectedPortalId === "student" || selectedPortalId === "lecturer") && (
+                      <SelectField
+                        id="faculty"
+                        label="Faculty"
+                        value={faculty}
+                        onChange={setFaculty}
+                        icon={Building2}
+                        accentColor={selectedPortal?.accentColor}
+                        options={[
+                          { value: "Computing", label: "Faculty of Computing" },
+                          { value: "Business", label: "Faculty of Business" },
+                          { value: "UoB", label: "UoB" }
+                        ]}
+                      />
                     )}
+
+                    {/* STUDENT ONLY FIELDS: Year/Semester and Course */}
+                    {selectedPortalId === "student" && (
+                      <>
+                        <SelectField
+                          id="yearSemester"
+                          label="Current Year & Semester"
+                          value={yearSemester}
+                          onChange={setYearSemester}
+                          icon={Calendar}
+                          accentColor={selectedPortal?.accentColor}
+                          options={[
+                            { value: "Y1S1", label: "Year 1 Semester 1" },
+                            { value: "Y1S2", label: "Year 1 Semester 2" },
+                            { value: "Y2S1", label: "Year 2 Semester 1" },
+                            { value: "Y2S2", label: "Year 2 Semester 2" },
+                            { value: "Y3S1", label: "Year 3 Semester 1" },
+                            { value: "Y3S2", label: "Year 3 Semester 2" },
+                            { value: "Y4S1", label: "Year 4 Semester 1" },
+                            { value: "Y4S2", label: "Year 4 Semester 2" }
+                          ]}
+                        />
+
+                        <InputField
+                          id="registeredCourse"
+                          label="Registered Course"
+                          type="text"
+                          value={registeredCourse}
+                          onChange={setRegisteredCourse}
+                          placeholder="e.g. BSc (Hons) in Software Engineering"
+                          icon={BookMarked}
+                          accentColor={selectedPortal?.accentColor}
+                        />
+                      </>
+                    )}
+                  </motion.div>
+                )}
                   </AnimatePresence>
 
                   {/* Email */}

@@ -15,6 +15,8 @@ public class User {
     private String faculty; // New field for faculty
     private String yearSemester; // New field for year and semester 
     private String registeredCourse; // New field for registered course
+    private String phoneNumber; // New field for phone number
+    private String specialization;
 
     // Constructors
     public User() {}
@@ -43,4 +45,9 @@ public class User {
     public void setYearSemester(String yearSemester) {this.yearSemester = yearSemester;}
     public String getRegisteredCourse() {return registeredCourse; }
     public void setRegisteredCourse(String registeredCourse) { this.registeredCourse = registeredCourse;}
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getSpecialization() { return specialization; }
+    public void setSpecialization(String specialization) { this.specialization = specialization; }
+
 }

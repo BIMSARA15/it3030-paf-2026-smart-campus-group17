@@ -39,15 +39,21 @@ public class AuthController {
         // 3. Check if this user already exists in MongoDB Atlas
         Optional<User> existingUser = userRepository.findByEmail(email);
         User dbUser;
+        boolean profileComplete = true; // Default to true
 
         if (existingUser.isPresent()) {
             dbUser = existingUser.get();
-        } else {
+        if (dbUser.getPhoneNumber() == null || dbUser.getFaculty() == null) {
+                profileComplete = false;
+            }
+        }
+        else {
             dbUser = new User();
             dbUser.setName(name);
             dbUser.setEmail(email);
             dbUser.setRole("USER"); 
             dbUser = userRepository.save(dbUser);
+            profileComplete = false; // Mark as incomplete
         }
 
         // 4. Package the MongoDB data + Profile Picture to send back to React
@@ -57,6 +63,7 @@ public class AuthController {
         response.put("email", dbUser.getEmail());
         response.put("role", dbUser.getRole());
         response.put("picture", picture); 
+        response.put("profileComplete", profileComplete); // Send flag to React
 
         // 5. Send a 200 OK Success with the data
         return ResponseEntity.ok(response);
@@ -93,5 +100,21 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok("User registered successfully!");
+    }
+    @PostMapping("/complete-profile")
+    public ResponseEntity<?> completeProfile(@AuthenticationPrincipal OAuth2User principal, @RequestBody Map<String, String> updates) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        
+        User user = userRepository.findByEmail(principal.getAttribute("email")).orElseThrow();
+        user.setPhoneNumber(updates.get("phoneNumber"));
+        user.setFaculty(updates.get("faculty"));
+        user.setRegisteredCourse(updates.get("registeredCourse"));
+        user.setSpecialization(updates.get("specialization"));
+        user.setYearSemester(updates.get("currentSemester"));
+        // Update role if they selected student/lecturer during onboarding
+        if (updates.containsKey("role")) user.setRole(updates.get("role").toUpperCase());
+        
+        userRepository.save(user);
+        return ResponseEntity.ok("Profile updated");
     }
 }

@@ -4,6 +4,7 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import CompleteProfile from './pages/CompleteProfile';
 
 function App() {
   
@@ -46,6 +47,24 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+  path="/dashboard" 
+  element={
+    <ProtectedRoute allowedRoles={['USER', 'STUDENT', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
+      {/* If profile is incomplete, force them to the form. Otherwise, show dashboard */}
+      {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : <Dashboard />}
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/complete-profile" 
+  element={
+    <ProtectedRoute allowedRoles={['USER', 'STUDENT', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
+      <CompleteProfile />
+    </ProtectedRoute>
+  } 
+/>
 
           {/* Admin UI (Member 1 & 2 targets) */}
           <Route 

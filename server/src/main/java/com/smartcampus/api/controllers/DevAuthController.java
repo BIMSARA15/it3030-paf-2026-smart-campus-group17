@@ -1,5 +1,8 @@
 package com.smartcampus.api.controllers;
 
+import com.smartcampus.api.models.User;
+import com.smartcampus.api.repositories.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
@@ -25,17 +28,37 @@ import java.util.Map;
 @Profile("!prod") 
 public class DevAuthController {
 
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping("/dev-login/{role}")
     public ResponseEntity<?> devQuickLogin(@PathVariable String role, HttpServletRequest request) {
         
-        // 1. Create fake authorities based on the requested role
         String roleName = role.toUpperCase();
+        String email = "dev-" + role.toLowerCase() + "@smartcampus.edu";
+        String name = "Dev " + roleName;
+
+        // --- NEW: Ensure this mock user actually exists in MongoDB with the CORRECT role! ---
+        if (userRepository.findByEmail(email).isEmpty()) {
+            User mockUser = new User();
+            mockUser.setEmail(email);
+            mockUser.setName(name);
+            mockUser.setRole(roleName); // This now correctly sets STUDENT, ADMIN, etc.
+            mockUser.setFaculty("Computing"); // Fake data so React doesn't force us to the complete-profile page
+            mockUser.setPhoneNumber("+94000000000"); 
+            
+            // We give it a dummy password so it doesn't break the new manual login logic
+            mockUser.setPassword("dummy_dev_password"); 
+            userRepository.save(mockUser);
+        }
+
+        // 1. Create fake authorities based on the requested role
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
 
         // 2. Create fake user attributes to mimic Microsoft/Google
         Map<String, Object> attributes = Map.of(
-            "email", "dev-" + role.toLowerCase() + "@smartcampus.edu",
-            "name", "Dev " + roleName
+            "email", email,
+            "name", name
         );
 
         // 3. Build the fake OAuth2 user
@@ -51,7 +74,7 @@ public class DevAuthController {
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, sc);
 
         return ResponseEntity.ok(Map.of(
-            "message", "Successfully bypassed login as " + roleName,
+            "message", "Successfully bypassed login and created DB record for " + roleName,
             "role", roleName
         ));
     }

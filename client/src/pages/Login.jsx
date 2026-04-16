@@ -62,6 +62,7 @@ export default function AuthPage() {
               required: true,
               name: name,
               email: email, 
+              password: password,
               role: selectedPortalId.toUpperCase(),
               faculty: faculty,
               yearSemester: yearSemester,
@@ -69,16 +70,29 @@ export default function AuthPage() {
               specialization: specialization,
               
           });
-          alert("Registration Successful! You can now log in.");
+       alert("Registration Successful! You can now log in.");
           setIsLogin(true); // Switch them back to the login screen
+          setPassword("");  // Clear the password field
       } catch (error) {
           console.error("Registration failed:", error);
           alert(error.response?.data || "Registration failed. Please try again.");
       }
-    } else {
-      // --- SIGN IN LOGIC ---
-      // For now, this just logs the attempt. You can wire this up to a manual login endpoint later if needed!
-      console.log("Manual login submitted", { portal: selectedPortalId, email, password });
+    } else {// --- SIGN IN LOGIC (NEW) ---
+      try {
+        await axios.post('http://localhost:8080/api/auth/login', {
+          email: email,
+          password: password
+        });
+        
+        // Force a hard reload. 
+        // This triggers AuthContext to fetch the new session from /api/auth/user
+        // App.jsx will then automatically route them to /admin, /technician, or /dashboard based on their role
+        window.location.href = '/dashboard'; 
+        
+      } catch (error) {
+        console.error("Login failed:", error);
+        alert(error.response?.data || "Invalid email or password.");
+      }
     }
   };
 

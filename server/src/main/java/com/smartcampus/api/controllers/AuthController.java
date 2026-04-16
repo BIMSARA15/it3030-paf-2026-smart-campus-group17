@@ -5,15 +5,23 @@ import com.smartcampus.api.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -24,96 +32,134 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder; // Injected BCrypt encoder
+    private SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+    // --- 1. UPDATED: Handles BOTH OAuth2 and Manual Logins ---
     @GetMapping("/user")
-    public ResponseEntity<?> getUser(@AuthenticationPrincipal OAuth2User principal) {
-        // 1. If not logged in, throw a 401 Unauthorized Error so React knows!
-        if (principal == null) {
+    public ResponseEntity<?> getUser(Authentication authentication) {
+        if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Not authenticated");
         }
 
-        // 2. Extract the data Google/Microsoft sent us
-        String email = principal.getAttribute("email");
-        String name = principal.getAttribute("name");
-        String picture = principal.getAttribute("picture");
+        String email = null;
+        String picture = null;
+        
+        // If they logged in via Google/Microsoft
+        if (authentication.getPrincipal() instanceof OAuth2User) {
+            OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+            email = oauthUser.getAttribute("email");
+            picture = oauthUser.getAttribute("picture");
+        } else {
+            // If they logged in manually, the principal is just their email string
+            email = authentication.getName();
+        }
 
-        // 3. Check if this user already exists in MongoDB Atlas
         Optional<User> existingUser = userRepository.findByEmail(email);
-        User dbUser;
-        boolean profileComplete = true; // Default to true
-
-        if (existingUser.isPresent()) {
-            dbUser = existingUser.get();
-        if (dbUser.getPhoneNumber() == null || dbUser.getFaculty() == null) {
-                profileComplete = false;
-            }
-        }
-        else {
-            dbUser = new User();
-            dbUser.setName(name);
-            dbUser.setEmail(email);
-            dbUser.setRole("USER"); 
-            dbUser = userRepository.save(dbUser);
-            profileComplete = false; // Mark as incomplete
+        if (existingUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found in DB");
         }
 
-        // 4. Package the MongoDB data + Profile Picture to send back to React
+        User dbUser = existingUser.get();
+        boolean profileComplete = (dbUser.getPhoneNumber() != null && dbUser.getFaculty() != null);
+
         Map<String, Object> response = new HashMap<>();
         response.put("id", dbUser.getId()); 
         response.put("name", dbUser.getName());
         response.put("email", dbUser.getEmail());
         response.put("role", dbUser.getRole());
         response.put("picture", picture); 
-        response.put("profileComplete", profileComplete); // Send flag to React
+        response.put("profileComplete", profileComplete);
 
-        // 5. Send a 200 OK Success with the data
         return ResponseEntity.ok(response);
     }
 
+    // --- 2. UPDATED: Save the hashed password during registration ---
     @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
-        
-        // 1. Check if the user already exists to prevent duplicates
         if (userRepository.findByEmail(newUserRequest.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
 
-        // 2. Create the new user object
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
-        
-        // Use the role provided, or default to STUDENT
+        // Hash the password before saving
+        user.setPassword(passwordEncoder.encode(newUserRequest.getPassword())); 
         user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
-        
-        // 3. Save the new specific fields!
         user.setFaculty(newUserRequest.getFaculty());
         
-        // Only save these if they are provided (e.g. Lecturers won't have a Year/Semester)
-        if (newUserRequest.getYearSemester() != null) {
-            user.setYearSemester(newUserRequest.getYearSemester());
-        }
-        if (newUserRequest.getRegisteredCourse() != null) {
-            user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
-        }
+        if (newUserRequest.getYearSemester() != null) user.setYearSemester(newUserRequest.getYearSemester());
+        if (newUserRequest.getRegisteredCourse() != null) user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
+        if (newUserRequest.getPhoneNumber() != null) user.setPhoneNumber(newUserRequest.getPhoneNumber());
+        if (newUserRequest.getSpecialization() != null) user.setSpecialization(newUserRequest.getSpecialization());
 
-        // 4. Save to MongoDB
         userRepository.save(user);
-
         return ResponseEntity.ok("User registered successfully!");
     }
-    @PostMapping("/complete-profile")
-    public ResponseEntity<?> completeProfile(@AuthenticationPrincipal OAuth2User principal, @RequestBody Map<String, String> updates) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+    // --- 3. NEW: Manual Login Endpoint ---
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
+        String email = loginRequest.get("email");
+        String password = loginRequest.get("password");
+
+        // 1. Find user and check password
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
+        }
+
+        User user = userOpt.get();
+
+        // 2. Tell Spring Security this user is officially logged in
+        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+        UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
         
-        User user = userRepository.findByEmail(principal.getAttribute("email")).orElseThrow();
+        SecurityContext sc = SecurityContextHolder.getContext();
+        sc.setAuthentication(authReq);
+
+        // 3. Save the session cookie so React remembers them
+        HttpSession session = request.getSession(true);
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, sc);
+
+        return ResponseEntity.ok("Login successful");
+    }
+
+   @PostMapping("/complete-profile")
+    public ResponseEntity<?> completeProfile(Authentication authentication, @RequestBody Map<String, String> updates) {
+        
+        // 1. Make sure they are logged in
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // 2. Safely extract the email whether they used OAuth2 or Manual Login
+        String email = null;
+        if (authentication.getPrincipal() instanceof OAuth2User) {
+            OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+            email = oauthUser.getAttribute("email");
+        } else {
+            email = authentication.getName(); // Manual login uses getName()
+        }
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        // 3. Find the user and update their profile
+        User user = userRepository.findByEmail(email).orElseThrow();
         user.setPhoneNumber(updates.get("phoneNumber"));
         user.setFaculty(updates.get("faculty"));
         user.setRegisteredCourse(updates.get("registeredCourse"));
         user.setSpecialization(updates.get("specialization"));
         user.setYearSemester(updates.get("currentSemester"));
+
         // Update role if they selected student/lecturer during onboarding
-        if (updates.containsKey("role")) user.setRole(updates.get("role").toUpperCase());
-        
+        if (updates.containsKey("role")) {
+            user.setRole(updates.get("role").toUpperCase());
+        }
+
         userRepository.save(user);
         return ResponseEntity.ok("Profile updated");
     }

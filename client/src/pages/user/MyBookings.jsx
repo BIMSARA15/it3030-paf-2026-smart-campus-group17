@@ -7,9 +7,8 @@ import {
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
-
-// 1. Import Sidebar
 import Sidebar from '../../components/Sidebar';
+import Header from '../../components/Header';
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -95,6 +94,7 @@ export default function MyBookings() {
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+        <Header />
         <div className="p-4 lg:p-6 space-y-5">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">

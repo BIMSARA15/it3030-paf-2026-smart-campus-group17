@@ -7,9 +7,8 @@ import {
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-
-// Import Sidebar
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../../components/Sidebar'; // Import Sidebar
+import Header from '../../components/Header'; // Import header
 
 export default function Dashboard() {
   const { currentUser, bookings, resources, getResourceById } = useBooking();
@@ -73,6 +72,7 @@ export default function Dashboard() {
 
       {/* Main Content Wrapper with Dynamic Margin */}
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+        <Header />
         <div className="p-4 lg:p-6 space-y-6">
           {/* Page header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

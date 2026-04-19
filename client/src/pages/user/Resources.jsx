@@ -5,9 +5,8 @@ import {
   Users, CalendarPlus, ChevronRight, CheckCircle, Tag,
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
-
-// 1. Import Sidebar
 import Sidebar from '../../components/Sidebar';
+import Header from '../../components/Header';
 
 const TYPE_CONFIG = {
   room: {
@@ -68,6 +67,7 @@ export default function Resources() {
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+        <Header />
         <div className="p-4 lg:p-6 space-y-5">
           {/* Header */}
           <div>

@@ -16,8 +16,9 @@ export const AuthProvider = ({ children }) => {
   axios.defaults.withCredentials = true;
 
   useEffect(() => {
+    // When the app loads, ask Spring Boot if we are logged in
     const checkUserStatus = async () => {
-      try {
+    try {
         const response = await axios.get('http://localhost:8080/api/auth/user');
         
         if (!response.data || !response.data.email) {
@@ -26,7 +27,7 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
-       // 🛑 CATCH THE SESSION HOLD
+       // 🛑 NEW USER: CATCH THE SESSION HOLD
        if (response.data.requiresRegistration) {
            setUser({
                name: response.data.name,
@@ -35,8 +36,13 @@ export const AuthProvider = ({ children }) => {
                requiresRegistration: true, // Tells your router they are partially logged in
                profileComplete: false
            });
+           
+          // If they aren't on the login page, send them there to finish!
+           if (!window.location.pathname.includes('/login')) {
+               window.location.href = '/login';
+           }
        } else {
-           // Normal login
+           // ✅ EXISTING USER: Normal login
            setUser({
               name: response.data.name,
               email: response.data.email,
@@ -44,8 +50,17 @@ export const AuthProvider = ({ children }) => {
               role: response.data.role, 
               profileComplete: response.data.profileComplete
             });
+            
+            // Auto-redirect to the correct dashboard based on role!
+            if (window.location.pathname === '/' || window.location.pathname === '/login') {
+                const role = (response.data.role || 'student').toLowerCase();
+                if (role === 'admin') window.location.href = '/admin';
+                else if (role === 'technician') window.location.href = '/staff';
+                else if (role === 'lecturer') window.location.href = '/lecturer';
+                else window.location.href = '/student'; 
+            }
        }
-      } catch (error) {
+      }catch (error) {
         console.error("Auth check failed:", error);
         setUser(null);
       } finally {

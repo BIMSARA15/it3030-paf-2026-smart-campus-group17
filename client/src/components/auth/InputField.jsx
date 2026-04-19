@@ -9,6 +9,7 @@ export default function InputField({
   rightElement, 
   autoComplete, 
   accentColor,
+  disabled,
 }) {
   return (
     <div>
@@ -26,6 +27,7 @@ export default function InputField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          disabled={disabled}
           autoComplete={autoComplete}
           className="w-full outline-none transition-all rounded-xl"
           style={{
@@ -35,8 +37,10 @@ export default function InputField({
             paddingBottom: "0.75rem",
             border: "1.5px solid #E2E8F0",
             fontSize: "0.9375rem",
-            color: "#0F172A",
-            background: "#FAFAFA",
+            color: disabled ? "#94A3B8" : "#0F172A", 
+            background: disabled ? "#F1F5F9" : "#FAFAFA",
+            cursor: disabled ? "not-allowed" : "text",
+            opacity: disabled ? 0.8 : 1
           }}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = accentColor;

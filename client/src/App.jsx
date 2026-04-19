@@ -35,15 +35,16 @@ function App() {
       <div className="app-container">
         <Routes>
           {/* Public Route: Landing Page */}
+          {/* Public Route: Landing Page */}
           <Route 
             path="/" 
-            element={user ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Landing />} 
+            element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Landing />} 
           />
 
           {/* Public Route: Login Page */}
           <Route 
             path="/login" 
-            element={user ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
+            element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
           />
 
           <Route 

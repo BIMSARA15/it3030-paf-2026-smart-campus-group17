@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail,Lock,User,Eye,EyeOff,ArrowLeft,ChevronRight,Shield,Wrench,AlertCircle,Building2,Calendar,BookMarked
+  Mail,Lock,User,Eye,EyeOff,ArrowLeft,ChevronRight,Shield,Wrench,AlertCircle,Building2,Calendar,BookMarked,Phone
 } from "lucide-react";
 
 import { portals } from "../config/portals.js";
@@ -17,20 +17,32 @@ import GoogleIcon from "../components/auth/GoogleIcon.jsx";
 
 export default function AuthPage() {
  
-  const [selectedPortalId, setSelectedPortalId] = useState(null);
+ const [selectedPortalId, setSelectedPortalId] = useState(localStorage.getItem('unibook_portal') || null);
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const { devLogin, login } = useAuth();
+  const { devLogin, login, user } = useAuth(); // 👈 Added user here!
   const [faculty, setFaculty] = useState("");
   const [yearSemester, setYearSemester] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [specialization, setSpecialization] = useState("");
   
-  // NEW: State to track validation errors
+// State to track validation errors
   const [errors, setErrors] = useState({});
+
+  // 🛑 MAGIC FIX (Updated): React 18+ recommended pattern for syncing state
+  const [prevUser, setPrevUser] = useState(null);
+  
+  if (user !== prevUser) {
+    setPrevUser(user);
+    if (user?.requiresRegistration) {
+      setIsLogin(false); // Force form to Sign Up mode
+      if (user.email) setEmail(user.email);
+      if (user.name) setName(user.name);
+    }
+  }
 
   const selectedPortal = portals.find((p) => p.id === selectedPortalId);
   const isPrivileged = selectedPortal?.isPrivileged ?? false;
@@ -39,6 +51,7 @@ export default function AuthPage() {
 
   const handlePortalSelect = (id) => {
     setSelectedPortalId(id);
+    localStorage.setItem('unibook_portal', id);
     setEmail("");
     setPassword("");
     setName("");
@@ -50,6 +63,7 @@ export default function AuthPage() {
 
   const handleBack = () => {
     setSelectedPortalId(null);
+    localStorage.removeItem('unibook_portal');
     setIsLogin(true);
     setErrors({}); // Clear errors on back
   };
@@ -62,7 +76,9 @@ export default function AuthPage() {
 
     // 1. Validate common fields
     if (!email) newErrors.email = "Please fill this field";
-    if (!password) newErrors.password = "Please fill this field";
+    
+    // 👇 Skip password validation if they are completing a Microsoft registration
+    if (!user?.requiresRegistration && !password) newErrors.password = "Please fill this field";
 
     // 2. Validate sign up specific fields
     if (!isLogin) {
@@ -88,7 +104,24 @@ export default function AuthPage() {
       return;
     }
 
-    if (!isLogin) {
+    if (user?.requiresRegistration) {
+      // --- 🛑 FINISH MICROSOFT REGISTRATION ---
+      try {
+          await axios.post('http://localhost:8080/api/auth/complete-profile', {
+              role: selectedPortalId.toUpperCase(),
+              faculty: faculty,
+              currentSemester: yearSemester,
+              phoneNumber: phoneNumber,
+              specialization: specialization
+          });
+          localStorage.removeItem('unibook_portal');
+          alert("Registration Complete! Welcome to UniBook.");
+          window.location.href = '/'; 
+      } catch (error) {
+          console.error("Profile completion failed:", error);
+          alert("Failed to complete registration. Please try again.");
+      }
+    } else if (!isLogin) {
       // --- SIGN UP LOGIC ---
       try {
           await axios.post('http://localhost:8080/api/auth/register', {
@@ -307,21 +340,28 @@ export default function AuthPage() {
                     </>
                   )}
                 </div>
-
-                {/* Heading */}
+{/* Heading */}
                 <div className="mb-7">
                   <h1 style={{ fontSize: "1.75rem", fontWeight: 750, color: "#0F172A", letterSpacing: "-0.02em" }}>
-                    {isLogin ? "Welcome back 👋" : `Join as a ${selectedPortal?.fullLabel}`}
+                    {user?.requiresRegistration ? "Complete Your Profile" : isLogin ? "Welcome back 👋" : `Join as a ${selectedPortal?.fullLabel}`}
                   </h1>
                   <p className="mt-1" style={{ color: "#64748B", fontSize: "0.9375rem" }}>
-                    {isLogin
-                      ? `Sign in to your ${selectedPortal?.fullLabel} dashboard`
-                      : `Create your ${selectedPortal?.fullLabel} account — it's free`}
+                    {user?.requiresRegistration ? "Your Microsoft email is verified! Please fill in the remaining details." : isLogin ? `Sign in to your ${selectedPortal?.fullLabel} dashboard` : `Create your ${selectedPortal?.fullLabel} account — it's free`}
                   </p>
                 </div>
 
-                {/* Toggle — only for non-privileged */}
-                {!isPrivileged && (
+                {/* 🛑 BANNER FOR NEW MICROSOFT USERS */}
+                {user?.requiresRegistration && (
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-xl mb-6 bg-blue-50 border border-blue-200">
+                        <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-blue-900">
+                            <strong>Not a registered user.</strong> Please complete the form below to finish setting up your account.
+                        </p>
+                    </div>
+                )}
+
+                {/* Toggle — only for non-privileged, hidden if Microsoft user */}
+                {!isPrivileged && !user?.requiresRegistration && (
                   <div
                     className="flex rounded-xl p-1 mb-7"
                     style={{ background: "#F1F5F9", border: "1px solid #E2E8F0" }}
@@ -362,49 +402,53 @@ export default function AuthPage() {
                   </div>
                 )}
 
-                {/* === OAUTH BUTTONS === */}
-                <div className="space-y-3 mb-5">
-                  <button
-                    type="button"
-                    onClick={() => login('microsoft')} 
-                    className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
-                    style={{
-                      padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
-                      color: "#374151", fontWeight: 500, fontSize: "0.9375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
-                  >
-                    <MicrosoftIcon />
-                    Continue with Microsoft
-                  </button>
+                {/* === OAUTH BUTTONS (Hidden if doing Microsoft setup) === */}
+                {!user?.requiresRegistration && (
+                  <>
+                    <div className="space-y-3 mb-5">
+                      <button
+                        type="button"
+                        onClick={() => login('microsoft')} 
+                        className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
+                        style={{
+                          padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
+                          color: "#374151", fontWeight: 500, fontSize: "0.9375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
+                      >
+                        <MicrosoftIcon />
+                        Continue with Microsoft
+                      </button>
 
-                  {selectedPortalId === "lecturer" && (
-                    <button
-                      type="button"
-                      onClick={() => login('google')} 
-                      className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
-                      style={{
-                        padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
-                        color: "#374151", fontWeight: 500, fontSize: "0.9375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
-                    >
-                      <GoogleIcon />
-                      Continue with Google (Visiting Lecturers)
-                    </button>
-                  )}
-                </div>
+                      {selectedPortalId === "lecturer" && (
+                        <button
+                          type="button"
+                          onClick={() => login('google')} 
+                          className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
+                          style={{
+                            padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
+                            color: "#374151", fontWeight: 500, fontSize: "0.9375rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#CBD5E1"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; }}
+                        >
+                          <GoogleIcon />
+                          Continue with Google (Visiting Lecturers)
+                        </button>
+                      )}
+                    </div>
 
-                {/* Divider */}
-                <div className="flex items-center gap-4 mb-5">
-                  <div className="flex-1 h-px" style={{ background: "#E9EEF5" }} />
-                  <span style={{ color: "#94A3B8", fontSize: "0.8125rem", whiteSpace: "nowrap" }}>
-                    or use email & password
-                  </span>
-                  <div className="flex-1 h-px" style={{ background: "#E9EEF5" }} />
-                </div>
+                    {/* Divider */}
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className="flex-1 h-px" style={{ background: "#E9EEF5" }} />
+                      <span style={{ color: "#94A3B8", fontSize: "0.8125rem", whiteSpace: "nowrap" }}>
+                        or use email & password
+                      </span>
+                      <div className="flex-1 h-px" style={{ background: "#E9EEF5" }} />
+                    </div>
+                  </>
+                )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -465,7 +509,7 @@ export default function AuthPage() {
                       {errors.phoneNumber && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.phoneNumber}</p>}
                     </div>
 
-                    {/* STUDENT ONLY FIELDS: Year/Semester and Course */}
+                    {/* STUDENT ONLY FIELDS: Year/Semester and Specialization */}
                     {selectedPortalId === "student" && (
                       <>
                         <div>
@@ -517,72 +561,75 @@ export default function AuthPage() {
                       placeholder={isPrivileged ? "admin@university.edu" : "you@university.edu"}
                       icon={Mail} autoComplete="email"
                       accentColor={accentColor}
+                      disabled={user?.requiresRegistration} // 👈 LOCKS THE FIELD!
                     />
                     {errors.email && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.email}</p>}
                   </div>
 
-                  {/* Password */}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="password" style={{ fontSize: "0.875rem", fontWeight: 500, color: "#374151" }}>
-                        Password
-                      </label>
-                      {isLogin && (
-                        <a
-                          href="#"
-                          style={{ fontSize: "0.8125rem", color: accentColor, fontWeight: 500 }}
-                          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                  {/* Password - Hidden completely if Microsoft user */}
+                  {!user?.requiresRegistration && (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="password" style={{ fontSize: "0.875rem", fontWeight: 500, color: "#374151" }}>
+                          Password
+                        </label>
+                        {isLogin && (
+                          <a
+                            href="#"
+                            style={{ fontSize: "0.8125rem", color: accentColor, fontWeight: 500 }}
+                            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                          >
+                            Forgot password?
+                          </a>
+                        )}
+                      </div>
+                      <div className="mt-1.5 relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        <input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          autoComplete={isLogin ? "current-password" : "new-password"}
+                          className="w-full outline-none transition-all rounded-xl"
+                          style={{
+                            paddingLeft: "2.75rem",
+                            paddingRight: "3rem",
+                            paddingTop: "0.75rem",
+                            paddingBottom: "0.75rem",
+                            border: "1.5px solid #E2E8F0",
+                            fontSize: "0.9375rem",
+                            color: "#0F172A",
+                            background: "#FAFAFA",
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = accentColor;
+                            e.currentTarget.style.background = "white";
+                            e.currentTarget.style.boxShadow = `0 0 0 3px ${accentColor}18`;
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = "#E2E8F0";
+                            e.currentTarget.style.background = "#FAFAFA";
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
+                          style={{ color: "#94A3B8" }}
                         >
-                          Forgot password?
-                        </a>
-                      )}
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {errors.password && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.password}</p>}
                     </div>
-                    <div className="mt-1.5 relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      <input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        autoComplete={isLogin ? "current-password" : "new-password"}
-                        className="w-full outline-none transition-all rounded-xl"
-                        style={{
-                          paddingLeft: "2.75rem",
-                          paddingRight: "3rem",
-                          paddingTop: "0.75rem",
-                          paddingBottom: "0.75rem",
-                          border: "1.5px solid #E2E8F0",
-                          fontSize: "0.9375rem",
-                          color: "#0F172A",
-                          background: "#FAFAFA",
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = accentColor;
-                          e.currentTarget.style.background = "white";
-                          e.currentTarget.style.boxShadow = `0 0 0 3px ${accentColor}18`;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = "#E2E8F0";
-                          e.currentTarget.style.background = "#FAFAFA";
-                          e.currentTarget.style.boxShadow = "none";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
-                        style={{ color: "#94A3B8" }}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {errors.password && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.password}</p>}
-                  </div>
+                  )}
 
                   {/* Remember me (login only) */}
-                  {isLogin && (
+                  {!user?.requiresRegistration && isLogin && (
                     <div className="flex items-center gap-2.5">
                       <input
                         id="remember"
@@ -620,7 +667,9 @@ export default function AuthPage() {
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                    {isPrivileged
+                    {user?.requiresRegistration
+                      ? "Complete Registration"
+                      : isPrivileged
                       ? `Sign in as ${selectedPortal?.fullLabel}`
                       : isLogin
                       ? "Sign In to UniBook"
@@ -629,8 +678,8 @@ export default function AuthPage() {
                   </button>
                 </form>
 
-                {/* Toggle Sign Up / Sign In — non-privileged only */}
-                {!isPrivileged && (
+                {/* Toggle Sign Up / Sign In — non-privileged only, hidden for Microsoft setup */}
+                {!isPrivileged && !user?.requiresRegistration && (
                   <p className="text-center mt-6" style={{ fontSize: "0.9375rem", color: "#94A3B8" }}>
                     {isLogin ? "New to UniBook? " : "Already have an account? "}
                     <button

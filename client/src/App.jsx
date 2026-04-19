@@ -16,7 +16,7 @@ import CompleteProfile from './pages/CompleteProfile';
 // import StudentDashboard from './pages/user/StudentDashboard';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
 
   if (loading) {
     return <div style={{ textAlign: 'center', marginTop: '20%' }}>Loading...</div>;
@@ -67,6 +67,12 @@ function App() {
                 <div className="p-8 bg-slate-50 min-h-screen">
                   <h2 className="text-2xl font-bold">Admin Dashboard Placeholder</h2>
                   <p className="text-slate-500">Create your page in the <b>/pages/admin/</b> folder and import it here.</p>
+                  <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
                 </div>
               </ProtectedRoute>
             } 
@@ -80,6 +86,12 @@ function App() {
                 <div className="p-8 bg-slate-50 min-h-screen">
                   <h2 className="text-2xl font-bold">Staff Dashboard Placeholder</h2>
                   <p className="text-slate-500">Create your page in the <b>/pages/staff/</b> folder and import it here.</p>
+                  <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
                 </div>
               </ProtectedRoute>
             } 
@@ -94,6 +106,12 @@ function App() {
                   <div className="p-8 bg-slate-50 min-h-screen">
                     <h2 className="text-2xl font-bold">Lecturer Dashboard Placeholder</h2>
                     <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
+                    <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
                   </div>
                 )}
               </ProtectedRoute>
@@ -109,6 +127,12 @@ function App() {
                   <div className="p-8 bg-slate-50 min-h-screen">
                     <h2 className="text-2xl font-bold">Student Dashboard Placeholder</h2>
                     <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
+                    <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
                   </div>
                 )}
               </ProtectedRoute>

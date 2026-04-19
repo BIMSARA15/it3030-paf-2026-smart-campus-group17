@@ -74,10 +74,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    // Optional: add a backend logout endpoint call here later
-    setUser(null);
+    try {
+      // Tell Spring Boot to destroy the session cookie
+      await axios.post('http://localhost:8080/logout'); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      // Clear the React state and send them to the Landing page
+      setUser(null);
+      window.location.href = '/'; 
+    }
   };
-
   return (
     <AuthContext.Provider value={{ user, login, logout, devLogin, loading }}>
       {!loading && children}

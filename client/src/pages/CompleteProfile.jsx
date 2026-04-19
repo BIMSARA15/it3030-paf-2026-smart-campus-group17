@@ -22,7 +22,7 @@ export default function CompleteProfile() {
         currentSemester
       });
       // Force a hard reload to update the session and clear the 'incomplete' flag
-      window.location.href = "/dashboard";
+      window.location.href = "/";
     } catch (error) {
       console.error("Failed to update profile", error);
     }

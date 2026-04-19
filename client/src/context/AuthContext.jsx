@@ -27,11 +27,12 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
             return;
         }
-        setUser({
+       setUser({
           name: response.data.name,
           email: response.data.email,
           picture: response.data.picture,
-          role: "USER", // We will pull this from MongoDB later
+          // 👇 CHANGED: Pull the actual role from Spring Boot instead of hardcoding "USER"
+          role: response.data.role, 
           profileComplete: response.data.profileComplete
         });
       } catch (error) {

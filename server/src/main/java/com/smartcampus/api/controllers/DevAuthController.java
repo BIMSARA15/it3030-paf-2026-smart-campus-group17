@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -38,18 +39,29 @@ public class DevAuthController {
         String email = "dev-" + role.toLowerCase() + "@smartcampus.edu";
         String name = "Dev " + roleName;
 
-        // --- NEW: Ensure this mock user actually exists in MongoDB with the CORRECT role! ---
-        if (userRepository.findByEmail(email).isEmpty()) {
+        // =========================================================================
+        // 🛠️ THE FIX: Ensure the user exists in MongoDB with the EXACT CORRECT ROLE 
+        // =========================================================================
+        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+        
+        if (existingUserOpt.isEmpty()) {
+            // If they don't exist at all, create them perfectly
             User mockUser = new User();
             mockUser.setEmail(email);
             mockUser.setName(name);
-            mockUser.setRole(roleName); // This now correctly sets STUDENT, ADMIN, etc.
-            mockUser.setFaculty("Computing"); // Fake data so React doesn't force us to the complete-profile page
+            mockUser.setRole(roleName); 
+            mockUser.setFaculty("Computing"); // Prevents the complete-profile redirect
             mockUser.setPhoneNumber("+94000000000"); 
-            
-            // We give it a dummy password so it doesn't break the new manual login logic
-            mockUser.setPassword("dummy_dev_password"); 
             userRepository.save(mockUser);
+        } else {
+            // If they DO exist, but were corrupted to "USER" previously, AUTO-REPAIR THEM!
+            User existingUser = existingUserOpt.get();
+            if (!roleName.equals(existingUser.getRole())) {
+                existingUser.setRole(roleName);
+                existingUser.setFaculty("Computing");
+                existingUser.setPhoneNumber("+94000000000");
+                userRepository.save(existingUser);
+            }
         }
 
         // 1. Create fake authorities based on the requested role
@@ -74,7 +86,7 @@ public class DevAuthController {
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, sc);
 
         return ResponseEntity.ok(Map.of(
-            "message", "Successfully bypassed login and created DB record for " + roleName,
+            "message", "Successfully bypassed login as " + roleName + " and repaired DB!",
             "role", roleName
         ));
     }

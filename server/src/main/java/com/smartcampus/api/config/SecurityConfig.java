@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService) 
                 )
-                .defaultSuccessUrl("http://localhost:5173/dashboard", true)
+                .defaultSuccessUrl("http://localhost:5173/", true)
             );
 
         return http.build();

@@ -43,23 +43,35 @@ public class AuthController {
         }
 
         String email = null;
+        String name = null;
         String picture = null;
         
-        // If they logged in via Google/Microsoft
         if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
             email = oauthUser.getAttribute("email");
+            name = oauthUser.getAttribute("name");
             picture = oauthUser.getAttribute("picture");
         } else {
-            // If they logged in manually, the principal is just their email string
             email = authentication.getName();
         }
 
         Optional<User> existingUser = userRepository.findByEmail(email);
+        
         if (existingUser.isEmpty()) {
+            // 🛑 SESSION HOLD TRIGGER: They are verified by Microsoft, but not in MongoDB!
+            if (authentication.getPrincipal() instanceof OAuth2User) {
+                Map<String, Object> holdResponse = new HashMap<>();
+                holdResponse.put("email", email);
+                holdResponse.put("name", name);
+                holdResponse.put("picture", picture);
+                holdResponse.put("requiresRegistration", true); // Flag for React!
+                holdResponse.put("profileComplete", false);
+                return ResponseEntity.ok(holdResponse);
+            }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found in DB");
         }
 
+        // Standard Return for existing users
         User dbUser = existingUser.get();
         boolean profileComplete = (dbUser.getPhoneNumber() != null && dbUser.getFaculty() != null);
 
@@ -153,38 +165,48 @@ public class AuthController {
    @PostMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(Authentication authentication, @RequestBody Map<String, String> updates) {
         
-        // 1. Make sure they are logged in
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // 2. Safely extract the email whether they used OAuth2 or Manual Login
         String email = null;
+        String name = null;
         if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
             email = oauthUser.getAttribute("email");
+            name = oauthUser.getAttribute("name");
         } else {
-            email = authentication.getName(); // Manual login uses getName()
+            email = authentication.getName(); 
         }
 
-        if (email == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        User user;
+
+        if (userOpt.isEmpty()) {
+            // ✨ SESSION HOLD COMPLETION: Create the new user in DB!
+            user = new User();
+            user.setEmail(email);
+            user.setName(name != null ? name : email.split("@")[0]);
+            
+            // Apply the role they chose in the form (or default to STUDENT)
+            String requestedRole = updates.get("role");
+            user.setRole(requestedRole != null ? requestedRole.toUpperCase() : "STUDENT");
+        } else {
+            // Existing user just updating their profile
+            user = userOpt.get();
+            if (updates.containsKey("role")) user.setRole(updates.get("role").toUpperCase());
         }
 
-        // 3. Find the user and update their profile
-        User user = userRepository.findByEmail(email).orElseThrow();
-        user.setPhoneNumber(updates.get("phoneNumber"));
-        user.setFaculty(updates.get("faculty"));
-        user.setRegisteredCourse(updates.get("registeredCourse"));
-        user.setSpecialization(updates.get("specialization"));
-        user.setYearSemester(updates.get("currentSemester"));
-
-        // Update role if they selected student/lecturer during onboarding
-        if (updates.containsKey("role")) {
-            user.setRole(updates.get("role").toUpperCase());
-        }
+        // Save all form data
+        if (updates.containsKey("phoneNumber")) user.setPhoneNumber(updates.get("phoneNumber"));
+        if (updates.containsKey("faculty")) user.setFaculty(updates.get("faculty"));
+        if (updates.containsKey("registeredCourse")) user.setRegisteredCourse(updates.get("registeredCourse"));
+        if (updates.containsKey("specialization")) user.setSpecialization(updates.get("specialization"));
+        if (updates.containsKey("currentSemester")) user.setYearSemester(updates.get("currentSemester"));
 
         userRepository.save(user);
-        return ResponseEntity.ok("Profile updated");
+        return ResponseEntity.ok("Profile updated and saved to DB!");
     }
 }

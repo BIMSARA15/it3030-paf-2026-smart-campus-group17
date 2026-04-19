@@ -16,28 +16,37 @@ export const AuthProvider = ({ children }) => {
   axios.defaults.withCredentials = true;
 
   useEffect(() => {
-    // When the app loads, ask Spring Boot if we are logged in
     const checkUserStatus = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/auth/user');
-        // Google returns a lot of data, we just want the core info for now
-        // 🛑 STRICT CHECK: If there is no email, kill the ghost user!
+        
         if (!response.data || !response.data.email) {
             setUser(null);
             setLoading(false);
             return;
         }
-       setUser({
-          name: response.data.name,
-          email: response.data.email,
-          picture: response.data.picture,
-          // 👇 CHANGED: Pull the actual role from Spring Boot instead of hardcoding "USER"
-          role: response.data.role, 
-          profileComplete: response.data.profileComplete
-        });
+
+       // 🛑 CATCH THE SESSION HOLD
+       if (response.data.requiresRegistration) {
+           setUser({
+               name: response.data.name,
+               email: response.data.email,
+               picture: response.data.picture,
+               requiresRegistration: true, // Tells your router they are partially logged in
+               profileComplete: false
+           });
+       } else {
+           // Normal login
+           setUser({
+              name: response.data.name,
+              email: response.data.email,
+              picture: response.data.picture,
+              role: response.data.role, 
+              profileComplete: response.data.profileComplete
+            });
+       }
       } catch (error) {
-        ("Auth check failed:", error)
-        // If it fails (e.g., 401 Unauthorized), the user is not logged in
+        console.error("Auth check failed:", error);
         setUser(null);
       } finally {
         setLoading(false);

@@ -1,111 +1,147 @@
-import { useState } from 'react'; //state hook to manage the sidebar open/close state
-import { Routes, Route, useLocation } from 'react-router-dom'; //react-router-dom hooks for routing and location tracking
-import { useAuth } from './context/AuthContext'; // <-- Imported useAuth to access user data for the header
-import { Bell } from 'lucide-react'; // <-- Imported Bell icon for notifications
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import Landing from './pages/Landing';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login'; 
+import CompleteProfile from './pages/CompleteProfile';
 
-import Dashboard from './pages/user/Dashboard';
-import NewBooking from './pages/user/NewBooking';
-import MyBookings from './pages/user/MyBookings';
-import Resources from './pages/user/Resources';
-import AllBookings from './pages/admin/AllBookings';
+// ------------------------------------------------------------------------
+// TEAM INSTRUCTIONS: 
+// When you pull this branch, uncomment your import below and replace the 
+// placeholder <div> tags in the Routes with your actual component!
+// ------------------------------------------------------------------------
+// import AdminDashboard from './pages/admin/AdminDashboard';
+// import StaffDashboard from './pages/staff/StaffDashboard';
+// import LecturerDashboard from './pages/user/LecturerDashboard';
+// import StudentDashboard from './pages/user/StudentDashboard';
 
-import Sidebar from './components/Sidebar'; 
+function App() {
+  const { user, loading, logout } = useAuth();
 
-function App() { //main App component that sets up the layout and routing for the application
-  // It's usually better to default to 'true' for desktop views
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); 
-  const location = useLocation();
-  
-  // Grab the user data to display in the header
-  const { user } = useAuth();
+  if (loading) {
+    return <div style={{ textAlign: 'center', marginTop: '20%' }}>Loading...</div>;
+  }
 
-  const getPageTitle = () => { //event handler to set the page title based on the current route
-    switch (location.pathname) {
-      case '/': return 'Dashboard';
-      case '/booking/new': return 'New Booking';
-      case '/bookings/my': return 'My Bookings';
-      case '/resources': return 'Resources';
-      case '/bookings/all': return 'All Bookings';
-      default: return 'Smart Campus';
-    }
-  };
-
-  // Helper to extract initials for the avatar
-  const getInitials = (name) => {
-    if (!name) return 'C';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  // Smart Routing Helper: Determines where a logged-in user belongs
+  const getDashboardRoute = (role) => {
+    if (role === 'ADMIN') return '/admin';
+    if (role === 'TECHNICIAN') return '/staff';
+    if (role === 'LECTURER') return '/lecturer';
+    return '/student'; // Default for STUDENT or USER
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
-      
-      {/* Mobile Backdrop - hidden on medium/large screens */}
-      {isSidebarOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-20 transition-opacity cursor-pointer"
-          onClick={() => setIsSidebarOpen(false)} //state handler to close the sidebar when the backdrop is clicked
-        />
-      )}
+    <Router>
+      <div className="app-container">
+        <Routes>
+          {/* Public Route: Landing Page */}
+          <Route 
+            path="/" 
+            element={user ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Landing />} 
+          />
 
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+          {/* Public Route: Login Page */}
+          <Route 
+            path="/login" 
+            element={user ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
+          />
 
-      <main 
-        className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'ml-64' : 'ml-20'
-        }`}
-      >
-        
-        {/* Updated Header */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10">
-          
-          {/* Left Side: Title (Hamburger Menu Removed) */}
-          <div className="flex items-center">
-            <h2 className="text-lg font-semibold text-gray-800">
-              {getPageTitle()}
-            </h2>
-          </div>
+          <Route 
+            path="/complete-profile" 
+            element={
+              <ProtectedRoute allowedRoles={['USER', 'STUDENT', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
+                <CompleteProfile />
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* Right Side: User Profile */}
-          <div className="flex items-center gap-3">
+          {/* ========================================== */}
+          {/* TEAM DASHBOARD ROUTES (PLACEHOLDERS)         */}
+          {/* ========================================== */}
 
-            {/* --- NEW: Notification Icon --- */}
-            <button className="relative p-2 text-gray-400 hover:text-[#0f2b5b] hover:bg-gray-100 rounded-full transition-colors cursor-pointer mr-1">
-              <Bell className="w-5 h-5" />
-              {/* Red dot badge */}
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+          {/* Member 1 & 2: Admin */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <div className="p-8 bg-slate-50 min-h-screen">
+                  <h2 className="text-2xl font-bold">Admin Dashboard Placeholder</h2>
+                  <p className="text-slate-500">Create your page in the <b>/pages/admin/</b> folder and import it here.</p>
+                  <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
+                </div>
+              </ProtectedRoute>
+            } 
+          />
 
-            {/* Hidden on very small screens to save space */}
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-[#0f2b5b] leading-tight">
-                {user?.name || 'Chathurya'}
-              </p>
-              <p className="text-xs text-gray-500 leading-tight mt-0.5">
-                {user?.email || 'it23345478@my.sliit.lk'}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#0f2b5b] flex items-center justify-center flex-shrink-0 font-bold text-sm text-white shadow-md">
-              {getInitials(user?.name || 'Chathurya')}
-            </div>
-          </div>
+          {/* Member 3: Staff / Technician */}
+          <Route 
+            path="/staff" 
+            element={
+              <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                <div className="p-8 bg-slate-50 min-h-screen">
+                  <h2 className="text-2xl font-bold">Staff Dashboard Placeholder</h2>
+                  <p className="text-slate-500">Create your page in the <b>/pages/staff/</b> folder and import it here.</p>
+                  <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
+                </div>
+              </ProtectedRoute>
+            } 
+          />
 
-        </header>
+          {/* User Folder: Lecturer */}
+          <Route 
+            path="/lecturer" 
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
+                  <div className="p-8 bg-slate-50 min-h-screen">
+                    <h2 className="text-2xl font-bold">Lecturer Dashboard Placeholder</h2>
+                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
+                    <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
+                  </div>
+                )}
+              </ProtectedRoute>
+            } 
+          />
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="max-w-7xl mx-auto pb-10">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/booking/new" element={<NewBooking />} />
-              <Route path="/bookings/my" element={<MyBookings />} />
-              <Route path="/resources" element={<Resources />} />
-              <Route path="/bookings/all" element={<AllBookings />} />
-              
-            </Routes>
-          </div>
-        </div>
+          {/* User Folder: Student */}
+          <Route 
+            path="/student" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
+                 {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
+                  <div className="p-8 bg-slate-50 min-h-screen">
+                    <h2 className="text-2xl font-bold">Student Dashboard Placeholder</h2>
+                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
+                    <button 
+                    onClick={logout} 
+                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
+                  >
+                    Log Out to Landing Page
+                  </button>
+                  </div>
+                )}
+              </ProtectedRoute>
+            } 
+          />
 
-      </main>
-    </div>
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

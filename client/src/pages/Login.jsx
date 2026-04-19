@@ -54,9 +54,16 @@ export default function AuthPage() {
   // UPDATED: Connected the manual signup logic to your Spring Boot backend
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (!email || !password) {
+      alert("Please enter both an email and a password.");
+      return;
+    }
     if (!isLogin) {
       // --- SIGN UP LOGIC ---
+      if (!name) {
+        alert("Please enter your full name to register.");
+        return;
+      }
       try {
           await axios.post('http://localhost:8080/api/auth/register', {
               required: true,
@@ -87,7 +94,7 @@ export default function AuthPage() {
         // Force a hard reload. 
         // This triggers AuthContext to fetch the new session from /api/auth/user
         // App.jsx will then automatically route them to /admin, /technician, or /dashboard based on their role
-        window.location.href = '/dashboard'; 
+        window.location.href = '/'; 
         
       } catch (error) {
         console.error("Login failed:", error);

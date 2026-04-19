@@ -75,8 +75,16 @@ public class AuthController {
     }
 
     // --- 2. UPDATED: Save the hashed password during registration ---
+    // --- 2. UPDATED: Backend Validation Added ---
     @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
+        // Validation: Block empty submissions
+        if (newUserRequest.getEmail() == null || newUserRequest.getEmail().isBlank() ||
+            newUserRequest.getPassword() == null || newUserRequest.getPassword().isBlank() ||
+            newUserRequest.getName() == null || newUserRequest.getName().isBlank()) {
+            return ResponseEntity.badRequest().body("Error: Name, Email, and Password are required!");
+        }
+
         if (userRepository.findByEmail(newUserRequest.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
@@ -84,7 +92,6 @@ public class AuthController {
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
-        // Hash the password before saving
         user.setPassword(passwordEncoder.encode(newUserRequest.getPassword())); 
         user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
         user.setFaculty(newUserRequest.getFaculty());
@@ -100,11 +107,11 @@ public class AuthController {
 
     // --- 3. NEW: Manual Login Endpoint ---
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginRequest, HttpServletRequest request) {
+    // Note the added HttpServletResponse parameter!
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginRequest, HttpServletRequest request, HttpServletResponse response) {
         String email = loginRequest.get("email");
         String password = loginRequest.get("password");
 
-        // 1. Find user and check password
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
@@ -112,16 +119,14 @@ public class AuthController {
 
         User user = userOpt.get();
 
-        // 2. Tell Spring Security this user is officially logged in
         List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
         UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
         
         SecurityContext sc = SecurityContextHolder.getContext();
         sc.setAuthentication(authReq);
 
-        // 3. Save the session cookie so React remembers them
-        HttpSession session = request.getSession(true);
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, sc);
+        // THIS IS THE MAGIC FIX: Explicitly save the context to the response cookie
+        securityContextRepository.saveContext(sc, request, response);
 
         return ResponseEntity.ok("Login successful");
     }

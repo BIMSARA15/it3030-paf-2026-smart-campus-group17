@@ -38,10 +38,11 @@ export default function MyBookings() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
 
-  const testUserId = currentUser?.id || 'IT23345478';
+  // Match bookings by email instead of ID
+  const testUserEmail = currentUser?.email || 'it23345478@my.sliit.lk';
 
   const myBookings = bookings
-    .filter(b => b.userId === testUserId)
+    .filter(b => b.userEmail === testUserEmail)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const filtered = myBookings.filter(b => {
@@ -101,9 +102,10 @@ export default function MyBookings() {
               <h1 className="text-2xl font-semibold text-gray-900">My Bookings</h1>
               <p className="text-gray-500 text-sm mt-0.5">{myBookings.length} total booking{myBookings.length !== 1 ? 's' : ''}</p>
             </div>
+            {/* UPDATED: Green Gradient Button */}
             <button
               onClick={() => navigate('/booking/new')}
-              className="sm:ml-auto inline-flex items-center gap-2 px-4 py-2.5 bg-[#0f2b5b] text-white rounded-xl hover:bg-[#1a3d70] transition-colors text-sm"
+              className="sm:ml-auto inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
             >
               <CalendarPlus className="w-4 h-4" /> New Booking
             </button>
@@ -116,9 +118,9 @@ export default function MyBookings() {
                 <button
                   key={s}
                   onClick={() => setStatusFilter(s)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
                     statusFilter === s
-                      ? 'bg-[#0f2b5b] text-white'
+                      ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Active state gradient
                       : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -133,12 +135,13 @@ export default function MyBookings() {
             </div>
             <div className="relative sm:ml-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              {/* UPDATED: Search input focus ring */}
               <input
                 type="text"
                 placeholder="Search bookings..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-blue-400 transition-colors w-full sm:w-56"
+                className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all w-full sm:w-56"
               />
             </div>
           </div>
@@ -154,7 +157,7 @@ export default function MyBookings() {
               {myBookings.length === 0 && (
                 <button
                   onClick={() => navigate('/booking/new')}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#0f2b5b] text-white rounded-xl text-sm hover:bg-[#1a3d70]"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
                 >
                   <CalendarPlus className="w-4 h-4" /> Make Your First Booking
                 </button>

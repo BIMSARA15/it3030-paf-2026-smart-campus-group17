@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios"; // Added axios import
+import axios from "axios";
 import MicrosoftIcon from "../components/auth/MicrosoftIcon.jsx";
 import { Link } from "react-router-dom";
 import SelectField from "../components/auth/SelectField.jsx";
@@ -10,12 +10,10 @@ import {
   Mail,Lock,User,Eye,EyeOff,ArrowLeft,ChevronRight,Shield,Wrench,AlertCircle,Building2,Calendar,BookMarked
 } from "lucide-react";
 
-// Import your newly separated components and config
 import { portals } from "../config/portals.js";
 import LeftPanel from "../components/auth/LeftPanel.jsx";
 import InputField from "../components/auth/InputField.jsx";
 import GoogleIcon from "../components/auth/GoogleIcon.jsx";
-
 
 export default function AuthPage() {
  
@@ -30,6 +28,9 @@ export default function AuthPage() {
   const [yearSemester, setYearSemester] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [specialization, setSpecialization] = useState("");
+  
+  // NEW: State to track validation errors
+  const [errors, setErrors] = useState({});
 
   const selectedPortal = portals.find((p) => p.id === selectedPortalId);
   const isPrivileged = selectedPortal?.isPrivileged ?? false;
@@ -42,6 +43,7 @@ export default function AuthPage() {
     setPassword("");
     setName("");
     setShowPassword(false);
+    setErrors({}); // Clear errors on portal change
     const selectedPortalData = portals.find((p) => p.id === id);
     if (selectedPortalData?.isPrivileged) setIsLogin(true);
   };
@@ -49,21 +51,45 @@ export default function AuthPage() {
   const handleBack = () => {
     setSelectedPortalId(null);
     setIsLogin(true);
+    setErrors({}); // Clear errors on back
   };
 
-  // UPDATED: Connected the manual signup logic to your Spring Boot backend
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      alert("Please enter both an email and a password.");
+    
+    // NEW: Validation Logic
+    const newErrors = {};
+
+    // 1. Validate common fields
+    if (!email) newErrors.email = "Please fill this field";
+    if (!password) newErrors.password = "Please fill this field";
+
+    // 2. Validate sign up specific fields
+    if (!isLogin) {
+      if (!name) newErrors.name = "Please fill this field";
+      if (!phoneNumber) newErrors.phoneNumber = "Please fill this field";
+
+      // Validate Faculty for Student and Lecturer
+      if (selectedPortalId === "student" || selectedPortalId === "lecturer") {
+        if (!faculty) newErrors.faculty = "Please fill this field";
+      }
+
+      // Validate Extra Fields for Student
+      if (selectedPortalId === "student") {
+        if (!specialization) newErrors.specialization = "Please fill this field";
+        if (!yearSemester) newErrors.yearSemester = "Please fill this field";
+      }
+    }
+
+    setErrors(newErrors);
+
+    // Stop submission if there are any errors
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
+
     if (!isLogin) {
       // --- SIGN UP LOGIC ---
-      if (!name) {
-        alert("Please enter your full name to register.");
-        return;
-      }
       try {
           await axios.post('http://localhost:8080/api/auth/register', {
               required: true,
@@ -75,25 +101,22 @@ export default function AuthPage() {
               yearSemester: yearSemester,
               phoneNumber: phoneNumber,
               specialization: specialization,
-              
           });
        alert("Registration Successful! You can now log in.");
-          setIsLogin(true); // Switch them back to the login screen
-          setPassword("");  // Clear the password field
+          setIsLogin(true); 
+          setPassword("");  
       } catch (error) {
           console.error("Registration failed:", error);
           alert(error.response?.data || "Registration failed. Please try again.");
       }
-    } else {// --- SIGN IN LOGIC (NEW) ---
+    } else {
+      // --- SIGN IN LOGIC ---
       try {
         await axios.post('http://localhost:8080/api/auth/login', {
           email: email,
           password: password
         });
         
-        // Force a hard reload. 
-        // This triggers AuthContext to fetch the new session from /api/auth/user
-        // App.jsx will then automatically route them to /admin, /technician, or /dashboard based on their role
         window.location.href = '/'; 
         
       } catch (error) {
@@ -308,7 +331,7 @@ export default function AuthPage() {
                       return (
                         <button
                           key={tab}
-                          onClick={() => setIsLogin(i === 0)}
+                          onClick={() => { setIsLogin(i === 0); setErrors({}); }}
                           className="flex-1 py-2.5 rounded-lg transition-all"
                           style={{
                             fontSize: "0.9375rem",
@@ -341,10 +364,9 @@ export default function AuthPage() {
 
                 {/* === OAUTH BUTTONS === */}
                 <div className="space-y-3 mb-5">
-                  {/* Microsoft Button - Primary Login for Everyone */}
                   <button
                     type="button"
-                    onClick={() => login('microsoft')} // 👈 Here is where 'login' gets used!
+                    onClick={() => login('microsoft')} 
                     className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
                     style={{
                       padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
@@ -357,11 +379,10 @@ export default function AuthPage() {
                     Continue with Microsoft
                   </button>
 
-                  {/* Google Button - ONLY for Visiting Lecturers */}
                   {selectedPortalId === "lecturer" && (
                     <button
                       type="button"
-                      onClick={() => login('google')} // 👈 Used here too!
+                      onClick={() => login('google')} 
                       className="w-full flex items-center justify-center gap-3 rounded-xl transition-all"
                       style={{
                         padding: "0.875rem 1rem", border: "1.5px solid #E2E8F0", background: "white",
@@ -387,7 +408,6 @@ export default function AuthPage() {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Name — Sign Up only */}
                   <AnimatePresence>
                    {/* === SIGN UP ONLY FIELDS === */}
                 {!isLogin && (
@@ -397,77 +417,92 @@ export default function AuthPage() {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-4 overflow-hidden"
                   >
-                    <InputField
-                      id="name"
-                      label="Full Name"
-                      type="text"
-                      value={name}
-                      onChange={setName}
-                      placeholder="e.g. John Doe"
-                      icon={User}
-                      accentColor={selectedPortal?.accentColor}
-                    />
+                    <div>
+                      <InputField
+                        id="name"
+                        label="Full Name"
+                        type="text"
+                        value={name}
+                        onChange={setName}
+                        placeholder="e.g. John Doe"
+                        icon={User}
+                        accentColor={selectedPortal?.accentColor}
+                      />
+                      {errors.name && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.name}</p>}
+                    </div>
 
                     {/* FACULTY: Shows for both Student and Lecturer */}
                     {(selectedPortalId === "student" || selectedPortalId === "lecturer") && (
-                      <SelectField
-                        id="faculty"
-                        label="Faculty"
-                        value={faculty}
-                        onChange={setFaculty}
-                        icon={Building2}
-                        accentColor={selectedPortal?.accentColor}
-                        options={[
-                          { value: "Computing", label: "Faculty of Computing" },
-                          { value: "Business", label: "Faculty of Business" },
-                          { value: "UoB", label: "UoB" }
-                        ]}
-                      />
+                      <div>
+                        <SelectField
+                          id="faculty"
+                          label="Faculty"
+                          value={faculty}
+                          onChange={setFaculty}
+                          icon={Building2}
+                          accentColor={selectedPortal?.accentColor}
+                          options={[
+                            { value: "Computing", label: "Faculty of Computing" },
+                            { value: "Business", label: "Faculty of Business" },
+                            { value: "UoB", label: "UoB" }
+                          ]}
+                        />
+                        {errors.faculty && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.faculty}</p>}
+                      </div>
                     )}
-                    <InputField
-                      id="phoneNumber"
-                      label="Phone Number"
-                      type="tel"  
-                      value={phoneNumber}
-                      onChange={setPhoneNumber}
-                      placeholder="e.g. +94 77 123 4567"
-                      icon={User}
-                      accentColor={selectedPortal?.accentColor}
-                    />
+                    
+                    <div>
+                      <InputField
+                        id="phoneNumber"
+                        label="Phone Number"
+                        type="tel"  
+                        value={phoneNumber}
+                        onChange={setPhoneNumber}
+                        placeholder="e.g. +94 77 123 4567"
+                        icon={User}
+                        accentColor={selectedPortal?.accentColor}
+                      />
+                      {errors.phoneNumber && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.phoneNumber}</p>}
+                    </div>
 
                     {/* STUDENT ONLY FIELDS: Year/Semester and Course */}
                     {selectedPortalId === "student" && (
                       <>
-                      <InputField
-                          id="specialization"
-                          label="Specialization"
-                          type="text"
-                          value={specialization}
-                          onChange={setSpecialization}
-                          placeholder="e.g. Software Engineering"
-                          icon={BookMarked}
-                          accentColor={selectedPortal?.accentColor}
-                        />
-                        <SelectField
-                          id="yearSemester"
-                          label="Current Year & Semester"
-                          value={yearSemester}
-                          onChange={setYearSemester}
-                          icon={Calendar}
-                          accentColor={selectedPortal?.accentColor}
-                          options={[
-                            { value: "Y1S1", label: "Year 1 Semester 1" },
-                            { value: "Y1S2", label: "Year 1 Semester 2" },
-                            { value: "Y2S1", label: "Year 2 Semester 1" },
-                            { value: "Y2S2", label: "Year 2 Semester 2" },
-                            { value: "Y3S1", label: "Year 3 Semester 1" },
-                            { value: "Y3S2", label: "Year 3 Semester 2" },
-                            { value: "Y4S1", label: "Year 4 Semester 1" },
-                            { value: "Y4S2", label: "Year 4 Semester 2" }
-                          ]}
-                        />
+                        <div>
+                          <InputField
+                            id="specialization"
+                            label="Specialization"
+                            type="text"
+                            value={specialization}
+                            onChange={setSpecialization}
+                            placeholder="e.g. Software Engineering"
+                            icon={BookMarked}
+                            accentColor={selectedPortal?.accentColor}
+                          />
+                          {errors.specialization && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.specialization}</p>}
+                        </div>
 
-                        
+                        <div>
+                          <SelectField
+                            id="yearSemester"
+                            label="Current Year & Semester"
+                            value={yearSemester}
+                            onChange={setYearSemester}
+                            icon={Calendar}
+                            accentColor={selectedPortal?.accentColor}
+                            options={[
+                              { value: "Y1S1", label: "Year 1 Semester 1" },
+                              { value: "Y1S2", label: "Year 1 Semester 2" },
+                              { value: "Y2S1", label: "Year 2 Semester 1" },
+                              { value: "Y2S2", label: "Year 2 Semester 2" },
+                              { value: "Y3S1", label: "Year 3 Semester 1" },
+                              { value: "Y3S2", label: "Year 3 Semester 2" },
+                              { value: "Y4S1", label: "Year 4 Semester 1" },
+                              { value: "Y4S2", label: "Year 4 Semester 2" }
+                            ]}
+                          />
+                          {errors.yearSemester && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.yearSemester}</p>}
+                        </div>
                       </>
                     )}
                   </motion.div>
@@ -475,13 +510,16 @@ export default function AuthPage() {
                   </AnimatePresence>
 
                   {/* Email */}
-                  <InputField
-                    id="email" label="Email Address" type="email"
-                    value={email} onChange={setEmail}
-                    placeholder={isPrivileged ? "admin@university.edu" : "you@university.edu"}
-                    icon={Mail} autoComplete="email"
-                    accentColor={accentColor}
-                  />
+                  <div>
+                    <InputField
+                      id="email" label="Email Address" type="email"
+                      value={email} onChange={setEmail}
+                      placeholder={isPrivileged ? "admin@university.edu" : "you@university.edu"}
+                      icon={Mail} autoComplete="email"
+                      accentColor={accentColor}
+                    />
+                    {errors.email && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.email}</p>}
+                  </div>
 
                   {/* Password */}
                   <div>
@@ -540,6 +578,7 @@ export default function AuthPage() {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    {errors.password && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.password}</p>}
                   </div>
 
                   {/* Remember me (login only) */}
@@ -595,7 +634,7 @@ export default function AuthPage() {
                   <p className="text-center mt-6" style={{ fontSize: "0.9375rem", color: "#94A3B8" }}>
                     {isLogin ? "New to UniBook? " : "Already have an account? "}
                     <button
-                      onClick={() => setIsLogin(!isLogin)}
+                      onClick={() => { setIsLogin(!isLogin); setErrors({}); }}
                       style={{ color: accentColor, fontWeight: 600 }}
                       onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
                       onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}

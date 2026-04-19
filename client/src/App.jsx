@@ -15,6 +15,9 @@ import CompleteProfile from './pages/CompleteProfile';
 // import LecturerDashboard from './pages/user/LecturerDashboard';
 //import StudentDashboard from './pages/user/StudentDashboard';
 import Dashboard from './pages/user/Dashboard';
+import NewBooking from './pages/user/NewBooking';
+import MyBookings from './pages/user/MyBookings';
+import Resources from './pages/user/Resources';
 
 function App() {
   const { user, loading, logout } = useAuth();
@@ -129,6 +132,37 @@ function App() {
                  ) : (
                    <Dashboard />
                  )}
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* ========================================== */}
+          {/* AUXILIARY PAGES (Bookings & Resources)       */}
+          {/* ========================================== */}
+          
+          <Route 
+            path="/booking/new" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
+                <NewBooking />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/bookings/my" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
+                <MyBookings />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/resources" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
+                <Resources />
               </ProtectedRoute>
             } 
           />

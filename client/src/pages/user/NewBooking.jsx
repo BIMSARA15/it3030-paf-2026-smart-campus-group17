@@ -3,12 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
-  ChevronLeft, Info, Loader2, User, MessageSquare
+  ChevronLeft, Info, Loader2, User, MessageSquare, X 
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 
-// 1. Import Sidebar
 import Sidebar from '../../components/Sidebar';
 
 const TYPE_ICONS = {
@@ -28,7 +27,6 @@ export default function NewBooking() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // 2. Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [step, setStep] = useState(1);
@@ -36,7 +34,6 @@ export default function NewBooking() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedResource, setSelectedResource] = useState(null);
   
-  // Form State
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -134,18 +131,20 @@ export default function NewBooking() {
     setResult(res);
     setSubmitting(false);
     
-    if (res.success) setShowSuccessModal(true);
+    if (res.success) {
+      setShowSuccessModal(true);
+      setStep(3); 
+    }
   };
 
   const inputClass = (field) =>
-    `w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-colors ${
+    `w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-all ${
       errors[field]
         ? 'border-red-300 bg-red-50 focus:border-red-400'
-        : 'border-gray-200 bg-gray-50 focus:border-blue-400 focus:bg-white'
+        : 'border-gray-200 bg-gray-50 focus:border-[#17A38A] focus:bg-white focus:ring-4 focus:ring-[#17A38A]/15'
     }`;
 
   return (
-    // 3. Add Layout Wrapper
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       
@@ -156,7 +155,15 @@ export default function NewBooking() {
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
               <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center z-10 border border-gray-100">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="absolute top-4 right-4 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 mt-2">
                   <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
                 <h2 className="text-gray-900 text-xl font-semibold mb-2">Booking Submitted!</h2>
@@ -188,9 +195,10 @@ export default function NewBooking() {
                   >
                     New Booking
                   </button>
+                  
                   <button
                     onClick={() => navigate('/bookings/my')}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#0f2b5b] text-white hover:bg-[#1a3d70] text-sm font-medium shadow-lg shadow-blue-900/20 transition-all"
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] text-sm font-medium shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 transition-all"
                   >
                     My Bookings
                   </button>
@@ -204,23 +212,23 @@ export default function NewBooking() {
             <p className="text-gray-500 text-sm mt-1">Reserve a room, lab, or equipment</p>
           </div>
 
-          <div className="flex items-center gap-2 mb-6">
-            {['Select Resource', 'Booking Details'].map((label, i) => {
+          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 sm:pb-0">
+            {['Select Resource', 'Booking Details', 'Request Submitted'].map((label, i) => {
               const stepNum = i + 1;
               const active = step === stepNum;
               const done = step > stepNum;
               return (
-                <div key={label} className="flex items-center gap-2">
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-colors ${
+                <div key={label} className="flex items-center gap-2 whitespace-nowrap">
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all ${
                     done ? 'bg-emerald-100 text-emerald-700' :
-                    active ? 'bg-[#0f2b5b] text-white' : 'bg-gray-100 text-gray-400'
+                    active ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' : 'bg-gray-100 text-gray-400'
                   }`}>
                     <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs border border-current">
                       {done ? '✓' : stepNum}
                     </span>
                     {label}
                   </div>
-                  {i < 1 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
+                  {i < 2 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
                 </div>
               );
             })}
@@ -237,7 +245,7 @@ export default function NewBooking() {
                       placeholder="Search resources..."
                       value={search}
                       onChange={e => setSearch(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
                     />
                   </div>
                   <div className="flex gap-2 flex-wrap">
@@ -245,9 +253,9 @@ export default function NewBooking() {
                       <button
                         key={t}
                         onClick={() => setTypeFilter(t)}
-                        className={`px-3 py-2 rounded-xl text-xs capitalize transition-colors ${
+                        className={`px-3 py-2 rounded-xl text-xs capitalize transition-all ${
                           typeFilter === t
-                            ? 'bg-[#0f2b5b] text-white'
+                            ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -263,7 +271,7 @@ export default function NewBooking() {
                   <button
                     key={resource.id}
                     onClick={() => { setSelectedResource(resource); setStep(2); }}
-                    className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50/30 transition-all group"
+                    className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)] transition-all group"
                   >
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
@@ -273,7 +281,7 @@ export default function NewBooking() {
                         {resource.type}
                       </span>
                     </div>
-                    <h4 className="text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{resource.name}</h4>
+                    <h4 className="text-gray-900 mb-1 group-hover:text-[#0F6657] transition-colors">{resource.name}</h4>
                     <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
                       <MapPin className="w-3 h-3" />
                       {resource.location}
@@ -304,7 +312,7 @@ export default function NewBooking() {
             </div>
           )}
 
-          {step === 2 && selectedResource && (
+          {step >= 2 && selectedResource && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2 space-y-4">
                 <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -316,12 +324,14 @@ export default function NewBooking() {
                       <h3 className="text-gray-900">{selectedResource.name}</h3>
                       <p className="text-gray-400 text-xs">{selectedResource.location}</p>
                     </div>
-                    <button
-                      onClick={() => setStep(1)}
-                      className="ml-auto text-blue-600 text-xs hover:underline flex items-center gap-1"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" /> Change
-                    </button>
+                    {step === 2 && (
+                      <button
+                        onClick={() => setStep(1)}
+                        className="ml-auto text-[#17A38A] text-xs hover:underline flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" /> Change
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -334,6 +344,7 @@ export default function NewBooking() {
                         type="date"
                         min={today}
                         value={date}
+                        disabled={step === 3}
                         onChange={e => { setDate(e.target.value); setErrors(p => ({ ...p, date: '' })); }}
                         className={inputClass('date')}
                       />
@@ -349,6 +360,7 @@ export default function NewBooking() {
                         <input
                           type="time"
                           value={startTime}
+                          disabled={step === 3}
                           onChange={e => { setStartTime(e.target.value); setErrors(p => ({ ...p, startTime: '' })); }}
                           className={inputClass('startTime')}
                         />
@@ -362,6 +374,7 @@ export default function NewBooking() {
                         <input
                           type="time"
                           value={endTime}
+                          disabled={step === 3}
                           onChange={e => { setEndTime(e.target.value); setErrors(p => ({ ...p, endTime: '' })); }}
                           className={inputClass('endTime')}
                         />
@@ -369,7 +382,7 @@ export default function NewBooking() {
                       </div>
                     </div>
 
-                    {conflict && (
+                    {conflict && step !== 3 && (
                       <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
                         <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                         <div>
@@ -383,7 +396,7 @@ export default function NewBooking() {
                       </div>
                     )}
 
-                    {!conflict && date && startTime && endTime && startTime < endTime && (
+                    {!conflict && date && startTime && endTime && startTime < endTime && step !== 3 && (
                       <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
                         <CheckCircle className="w-4 h-4 text-emerald-600" />
                         <p className="text-emerald-700 text-sm">Time slot is available</p>
@@ -396,6 +409,7 @@ export default function NewBooking() {
                       </label>
                       <textarea
                         rows={3}
+                        disabled={step === 3}
                         placeholder="Describe the purpose of this booking (e.g., Final Year Project Presentation for CS4081)..."
                         value={purpose}
                         onChange={e => { setPurpose(e.target.value); setErrors(p => ({ ...p, purpose: '' })); }}
@@ -416,6 +430,7 @@ export default function NewBooking() {
                           type="number"
                           min="1"
                           max={selectedResource.capacity}
+                          disabled={step === 3}
                           placeholder={`1 – ${selectedResource.capacity}`}
                           value={attendees}
                           onChange={e => { setAttendees(e.target.value); setErrors(p => ({ ...p, attendees: '' })); }}
@@ -432,6 +447,7 @@ export default function NewBooking() {
                       </label>
                       <input
                         type="text"
+                        disabled={step === 3}
                         placeholder="e.g., Dr. Kamal Perera"
                         value={lecturer}
                         onChange={e => { setLecturer(e.target.value); setErrors(p => ({ ...p, lecturer: '' })); }}
@@ -447,39 +463,62 @@ export default function NewBooking() {
                       </label>
                       <textarea
                         rows={2}
+                        disabled={step === 3}
                         placeholder="Any specific setup requirements (e.g., extra chairs, projector adapter)..."
                         value={specialRequests}
                         onChange={e => setSpecialRequests(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors resize-none"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 transition-all resize-none"
                       />
                     </div>
 
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> Back
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting || !!conflict}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-sm transition-all ${
-                      submitting || conflict
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-[#0f2b5b] text-white hover:bg-[#1a3d70] shadow-lg shadow-blue-900/20'
-                    }`}
-                  >
-                    {submitting ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
-                    ) : (
-                      <>Submit Booking Request <ChevronRight className="w-4 h-4" /></>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-3">
+                    {step === 2 && (
+                      <button
+                        onClick={() => setStep(1)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" /> Back
+                      </button>
                     )}
-                  </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitting || !!conflict || step === 3}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-sm transition-all ${
+                        submitting || conflict || step === 3
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_6px_20px_rgba(23,163,138,0.4)] border-t border-white/30 active:scale-[0.98]'
+                      }`}
+                    >
+                      {submitting ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                      ) : step === 3 ? (
+                        <>Submitted Successfully <CheckCircle className="w-4 h-4" /></>
+                      ) : (
+                        <>Submit Booking Request <ChevronRight className="w-4 h-4" /></>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {step === 3 && (
+                    <button
+                      onClick={() => {
+                        setStep(1);
+                        setSelectedResource(null);
+                        setDate(''); setStartTime(''); setEndTime('');
+                        setPurpose(''); setAttendees(''); setLecturer('');
+                        setSpecialRequests(''); setResult(null);
+                      }}
+                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_6px_20px_rgba(23,163,138,0.4)] border-t border-white/30 text-sm font-medium transition-all active:scale-[0.98] mt-1"
+                    >
+                      Make Another Booking
+                    </button>
+                  )}
                 </div>
+
               </div>
 
               <div className="space-y-4">

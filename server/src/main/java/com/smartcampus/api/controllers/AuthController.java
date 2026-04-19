@@ -76,32 +76,51 @@ public class AuthController {
 
     // --- 2. UPDATED: Save the hashed password during registration ---
     // --- 2. UPDATED: Backend Validation Added ---
-    @PostMapping("/register")
+   @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
-        // Validation: Block empty submissions
+        
+        // 1. Validation: Block empty submissions for required fields
         if (newUserRequest.getEmail() == null || newUserRequest.getEmail().isBlank() ||
             newUserRequest.getPassword() == null || newUserRequest.getPassword().isBlank() ||
             newUserRequest.getName() == null || newUserRequest.getName().isBlank()) {
             return ResponseEntity.badRequest().body("Error: Name, Email, and Password are required!");
         }
 
+        // 2. Check if the user already exists to prevent duplicates
         if (userRepository.findByEmail(newUserRequest.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
 
+        // 3. Create the new user object
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
+        
+        // Hash and save the password!
         user.setPassword(passwordEncoder.encode(newUserRequest.getPassword())); 
+        
+        // Use the role provided, or default to STUDENT
         user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
+        
+        // 4. Save ALL the specific fields
         user.setFaculty(newUserRequest.getFaculty());
         
-        if (newUserRequest.getYearSemester() != null) user.setYearSemester(newUserRequest.getYearSemester());
-        if (newUserRequest.getRegisteredCourse() != null) user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
-        if (newUserRequest.getPhoneNumber() != null) user.setPhoneNumber(newUserRequest.getPhoneNumber());
-        if (newUserRequest.getSpecialization() != null) user.setSpecialization(newUserRequest.getSpecialization());
+        if (newUserRequest.getYearSemester() != null) {
+            user.setYearSemester(newUserRequest.getYearSemester());
+        }
+        if (newUserRequest.getRegisteredCourse() != null) {
+            user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
+        }
+        if (newUserRequest.getPhoneNumber() != null) {
+            user.setPhoneNumber(newUserRequest.getPhoneNumber());
+        }
+        if (newUserRequest.getSpecialization() != null) {
+            user.setSpecialization(newUserRequest.getSpecialization());
+        }
 
+        // 5. Save to MongoDB
         userRepository.save(user);
+
         return ResponseEntity.ok("User registered successfully!");
     }
 

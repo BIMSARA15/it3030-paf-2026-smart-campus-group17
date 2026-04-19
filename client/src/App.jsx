@@ -13,7 +13,8 @@ import CompleteProfile from './pages/CompleteProfile';
 // import AdminDashboard from './pages/admin/AdminDashboard';
 // import StaffDashboard from './pages/staff/StaffDashboard';
 // import LecturerDashboard from './pages/user/LecturerDashboard';
-// import StudentDashboard from './pages/user/StudentDashboard';
+//import StudentDashboard from './pages/user/StudentDashboard';
+import Dashboard from './pages/user/Dashboard';
 
 function App() {
   const { user, loading, logout } = useAuth();
@@ -123,18 +124,11 @@ function App() {
             path="/student" 
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
-                 {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
-                  <div className="p-8 bg-slate-50 min-h-screen">
-                    <h2 className="text-2xl font-bold">Student Dashboard Placeholder</h2>
-                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
-                    <button 
-                    onClick={logout} 
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                  </div>
-                )}
+                 {user?.profileComplete === false ? (
+                   <Navigate to="/complete-profile" replace /> 
+                 ) : (
+                   <Dashboard />
+                 )}
               </ProtectedRoute>
             } 
           />

@@ -43,35 +43,36 @@ public class AuthController {
         }
 
         String email = null;
-        String name = null;
         String picture = null;
+        String name = null;
         
+        // If they logged in via Google/Microsoft
         if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
             email = oauthUser.getAttribute("email");
-            name = oauthUser.getAttribute("name");
             picture = oauthUser.getAttribute("picture");
+            name = oauthUser.getAttribute("name"); // Extract name for the form
         } else {
+            // If they logged in manually, the principal is just their email string
             email = authentication.getName();
         }
 
         Optional<User> existingUser = userRepository.findByEmail(email);
         
+        // 🛑 THE FIX: Handle new Microsoft users instead of throwing a 401 Error
         if (existingUser.isEmpty()) {
-            // 🛑 SESSION HOLD TRIGGER: They are verified by Microsoft, but not in MongoDB!
             if (authentication.getPrincipal() instanceof OAuth2User) {
                 Map<String, Object> holdResponse = new HashMap<>();
                 holdResponse.put("email", email);
                 holdResponse.put("name", name);
                 holdResponse.put("picture", picture);
-                holdResponse.put("requiresRegistration", true); // Flag for React!
-                holdResponse.put("profileComplete", false);
+                holdResponse.put("requiresRegistration", true); // Tells React to show the form!
                 return ResponseEntity.ok(holdResponse);
             }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found in DB");
         }
 
-        // Standard Return for existing users
+        // Standard response for existing users
         User dbUser = existingUser.get();
         boolean profileComplete = (dbUser.getPhoneNumber() != null && dbUser.getFaculty() != null);
 

@@ -13,10 +13,22 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // --- ADDED: Smart routing logic to match your App.jsx ---
+  const getDashboardRoute = (role) => {
+    const r = role?.toUpperCase() || '';
+    if (r === 'ADMIN') return '/admin';
+    if (r === 'TECHNICIAN') return '/staff';
+    if (r === 'LECTURER') return '/lecturer';
+    return '/student';
+  };
+
+  const dashboardPath = getDashboardRoute(user?.role);
+
   const isActive = (path) => location.pathname === path;
 
   const navLinks = [
-    { name: 'Dashboard', path: '/', icon: LayoutGrid },
+    // --- UPDATED: Point to the dynamic dashboardPath instead of '/' ---
+    { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
     { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
     { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
     { name: 'Resources', path: '/resources', icon: Building2 },
@@ -70,7 +82,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           ) : (
             <button 
               onClick={() => setIsOpen(true)}
-              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0 mt-2"
+              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0 -mt-4"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -106,7 +118,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       {isOpen && <p className="text-xs font-bold text-gray-400 tracking-wider mb-3 px-4 uppercase">Navigation</p>}
       
       {/* --- NAVIGATION LINKS --- */}
-      <div className={`flex-1 overflow-y-auto ${isOpen ? 'px-3 mt-2' : 'px-2 mt-4'}`}>
+      <div className={`flex-1 overflow-visible ${isOpen ? 'px-3 mt-2' : 'px-2 mt-4'}`}>
         <nav className="space-y-1">
           {navLinks.map((link) => {
             const active = isActive(link.path);
@@ -116,14 +128,23 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               <Link
                 key={link.name}
                 to={link.path}
-                className={`flex items-center ${isOpen ? 'justify-start px-4' : 'justify-center px-0'} py-3.5 rounded-xl transition-all duration-200 group ${
+                className={`relative flex items-center ${isOpen ? 'justify-start px-4' : 'justify-center px-0'} py-3.5 rounded-xl transition-all duration-200 group ${
                   active 
-                    ? 'bg-[#0F6657]/15 text-[#0F6657] font-bold shadow-sm ring-1 ring-[#0F6657]/20' 
+                    ? 'bg-[#0F6657]/10 text-[#0F6657] font-semibold' 
                     : 'text-gray-600 hover:bg-[#0F6657]/10 hover:text-[#0F6657] font-medium'
                 }`}
               >
                 <Icon className={`w-[22px] h-[22px] flex-shrink-0 ${active ? 'text-[#0F6657]' : 'text-gray-500 group-hover:text-[#0F6657]'} ${isOpen && 'mr-4'}`} />
                 {isOpen && <span className="text-[15px] whitespace-nowrap">{link.name}</span>}
+
+                {/* --- GREEN TOOLTIP --- */}
+                {!isOpen && (
+                  <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-[#0F6657] text-white text-[13px] font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap z-[100] shadow-[0_4px_12px_rgba(15,102,87,0.2)] flex items-center">
+                    {link.name}
+                    {/* Tooltip Arrow */}
+                    <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-[5px] border-transparent border-r-[#0F6657]"></div>
+                  </div>
+                )}
               </Link>
             );
           })}
@@ -156,10 +177,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               setShowLogoutConfirm(true);
               if (!isOpen) setIsOpen(true); 
             }}
-            className={`group flex items-center ${isOpen ? 'justify-start px-4' : 'justify-center'} w-full py-3.5 rounded-xl bg-red-50/80 hover:bg-red-100 text-red-600 font-semibold transition-all duration-200 border border-red-100/50`}
+            className={`relative group flex items-center ${isOpen ? 'justify-start px-4' : 'justify-center'} w-full py-3.5 rounded-xl bg-red-50/80 hover:bg-red-100 text-red-600 font-semibold transition-all duration-200 border border-red-100/50`}
           >
             <LogOut className={`w-[22px] h-[22px] flex-shrink-0 text-red-500 group-hover:text-red-700 ${isOpen && 'mr-4'}`} />
             {isOpen && <span className="text-[15px] whitespace-nowrap">Logout</span>}
+
+            {/* --- LOGOUT TOOLTIP (RED) --- */}
+            {!isOpen && (
+              <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-red-600 text-white text-[13px] font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap z-[100] shadow-[0_4px_12px_rgba(220,38,38,0.2)] flex items-center">
+                Logout
+                <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-[5px] border-transparent border-r-red-600"></div>
+              </div>
+            )}
           </button>
         )}
       </div>

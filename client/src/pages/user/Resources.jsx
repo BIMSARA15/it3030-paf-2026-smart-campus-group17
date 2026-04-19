@@ -79,12 +79,13 @@ export default function Resources() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              {/* UPDATED: Search input focus ring */}
               <input
                 type="text"
                 placeholder="Search resources, features..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-blue-400 transition-colors"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
               />
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -92,9 +93,9 @@ export default function Resources() {
                 <button
                   key={t}
                   onClick={() => setTypeFilter(t)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all ${
                     typeFilter === t
-                      ? 'bg-[#0f2b5b] text-white'
+                      ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Green gradient for active filter
                       : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -121,7 +122,9 @@ export default function Resources() {
                     key={resource.id}
                     onClick={() => setSelectedId(isSelected ? null : resource.id)}
                     className={`bg-white rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-                      isSelected ? 'border-blue-500 shadow-md shadow-blue-100' : 'border-gray-100 hover:border-gray-200'
+                      isSelected 
+                        ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5' // UPDATED: Selected state
+                        : 'border-gray-100 hover:border-[#17A38A]/30'
                     }`}
                   >
                     {/* Top row */}
@@ -135,7 +138,8 @@ export default function Resources() {
                     </div>
 
                     {/* Name */}
-                    <h4 className={`text-gray-900 font-medium mb-1 transition-colors ${isSelected ? 'text-blue-700' : ''}`}>
+                    {/* UPDATED: Title text color when selected */}
+                    <h4 className={`text-gray-900 font-medium mb-1 transition-colors ${isSelected ? 'text-[#0F6657]' : ''}`}>
                       {resource.name}
                     </h4>
 
@@ -173,7 +177,8 @@ export default function Resources() {
                           : <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Available</span>
                         }
                       </div>
-                      <div className="flex items-center gap-1 text-blue-600 text-xs font-medium">
+                      {/* UPDATED: View text link color */}
+                      <div className="flex items-center gap-1 text-[#17A38A] text-xs font-medium">
                         View <ChevronRight className="w-3 h-3" />
                       </div>
                     </div>
@@ -277,10 +282,10 @@ export default function Resources() {
                       })()}
                     </div>
 
-                    {/* Book button */}
+                    {/* UPDATED: Book button with Green Gradient */}
                     <button
                       onClick={() => navigate(`/booking/new?resource=${selectedResource.id}`)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#0f2b5b] text-white rounded-xl hover:bg-[#1a3d70] transition-colors text-sm font-medium shadow-lg shadow-blue-900/20"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] rounded-xl transition-all text-sm font-medium shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 active:scale-[0.98]"
                     >
                       <CalendarPlus className="w-4 h-4" /> Book This Resource
                     </button>

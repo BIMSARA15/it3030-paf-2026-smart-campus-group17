@@ -8,14 +8,14 @@ import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-// Import the Sidebar component
+// Import Sidebar
 import Sidebar from '../../components/Sidebar';
 
 export default function Dashboard() {
   const { currentUser, bookings, resources, getResourceById } = useBooking();
   const navigate = useNavigate();
 
-  // Add state to control the sidebar
+  // Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isAdmin = currentUser?.role === 'admin';
@@ -67,16 +67,12 @@ export default function Dashboard() {
   ];
 
   return (
-    // 1. We wrap the whole page in a flex container
     <div className="min-h-screen bg-slate-50 flex">
-      
-      {/* 2. We render the Sidebar here */}
+      {/* Sidebar Component */}
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      {/* 3. We apply a dynamic left margin so the content slides over! */}
+      {/* Main Content Wrapper with Dynamic Margin */}
       <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
-        
-        {/* Everything inside here is your exact original UI code */}
         <div className="p-4 lg:p-6 space-y-6">
           {/* Page header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -90,9 +86,10 @@ export default function Dashboard() {
                   : `${stats.approved} confirmed · ${stats.pending} pending review`}
               </p>
             </div>
+            {/* New Booking Button with Gradient */}
             <button
               onClick={() => navigate('/booking/new')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0f2b5b] text-white rounded-xl hover:bg-[#1a3d70] transition-colors text-sm"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
             >
               <CalendarPlus className="w-4 h-4" />
               New Booking
@@ -144,19 +141,22 @@ export default function Dashboard() {
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h3 className="text-gray-900 mb-4 font-medium">Quick Actions</h3>
               <div className="space-y-2">
+                
+                {/* --- UPDATED: Quick Action Make a Booking (Green Theme) --- */}
                 <button
                   onClick={() => navigate('/booking/new')}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors group text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-[#17A38A]/10 transition-colors group text-left border border-transparent hover:border-[#17A38A]/20"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0F6657] to-[#17A38A] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
                     <CalendarPlus className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-blue-900 text-sm font-medium">Make a Booking</p>
-                    <p className="text-blue-500 text-xs">Reserve a resource</p>
+                    <p className="text-[#0F6657] text-sm font-medium">Make a Booking</p>
+                    <p className="text-[#17A38A] text-xs">Reserve a resource</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+                  <ChevronRight className="w-4 h-4 text-[#17A38A] group-hover:translate-x-0.5 transition-transform" />
                 </button>
+                
                 <button
                   onClick={() => navigate('/resources')}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group text-left"
@@ -170,6 +170,7 @@ export default function Dashboard() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
+                
                 {isAdmin && (
                   <button
                     onClick={() => navigate('/bookings/all')}
@@ -223,7 +224,7 @@ export default function Dashboard() {
                 <h3 className="text-gray-900 font-medium">Upcoming Approved Bookings</h3>
                 <button
                   onClick={() => navigate(isAdmin ? '/bookings/all' : '/bookings/my')}
-                  className="flex items-center gap-1 text-blue-600 text-xs hover:underline"
+                  className="flex items-center gap-1 text-[#17A38A] text-xs hover:underline"
                 >
                   View all <ArrowRight className="w-3 h-3" />
                 </button>
@@ -258,7 +259,7 @@ export default function Dashboard() {
               <h3 className="text-gray-900 font-medium">Recent Requests</h3>
               <button
                 onClick={() => navigate(isAdmin ? '/bookings/all' : '/bookings/my')}
-                className="flex items-center gap-1 text-blue-600 text-xs hover:underline"
+                className="flex items-center gap-1 text-[#17A38A] text-xs hover:underline"
               >
                 View all <ArrowRight className="w-3 h-3" />
               </button>

@@ -51,12 +51,22 @@ export const AuthProvider = ({ children }) => {
     window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
   };
   // NEW: Developer Quick Login Bypass
+  // NEW: Developer Quick Login Bypass
   const devLogin = async (role) => {
     try {
       await axios.get(`http://localhost:8080/api/auth/dev-login/${role}`);
-      // Force a page reload to trigger the checkUserStatus useEffect and get the new session
-      window.location.href = role === 'admin' ? '/admin' : 
-                             role === 'technician' ? '/technician' : '/dashboard';
+      
+      // Force a page reload and route to their specific team folders!
+      if (role === 'admin') {
+        window.location.href = '/admin';
+      } else if (role === 'technician') {
+        window.location.href = '/staff'; // Technician goes to Staff folder
+      } else if (role === 'lecturer') {
+        window.location.href = '/lecturer';
+      } else {
+        window.location.href = '/student'; // Default student dashboard
+      }
+      
     } catch (error) {
       console.error("Dev login failed:", error);
     }

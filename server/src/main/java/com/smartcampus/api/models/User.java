@@ -10,8 +10,14 @@ public class User {
     private String id;
     private String name;
     private String email;
+    private String password;
     private String role; // e.g., "USER", "ADMIN", "TECHNICIAN"
     private String oauthId; // To store the Google Sign-in ID later
+    private String faculty; // New field for faculty
+    private String yearSemester; // New field for year and semester 
+    private String registeredCourse; // New field for registered course
+    private String phoneNumber; // New field for phone number
+    private String specialization;
 
     // Constructors
     public User() {}
@@ -30,8 +36,21 @@ public class User {
     public void setName(String name) { this.name = name; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getPassword() { return password; }
+public void setPassword(String password) { this.password = password; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
     public String getOauthId() { return oauthId; }
     public void setOauthId(String oauthId) { this.oauthId = oauthId; }
+    public String getFaculty() { return faculty;}
+    public void setFaculty(String faculty) { this.faculty = faculty;}
+    public String getYearSemester() {return yearSemester;}
+    public void setYearSemester(String yearSemester) {this.yearSemester = yearSemester;}
+    public String getRegisteredCourse() {return registeredCourse; }
+    public void setRegisteredCourse(String registeredCourse) { this.registeredCourse = registeredCourse;}
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getSpecialization() { return specialization; }
+    public void setSpecialization(String specialization) { this.specialization = specialization; }
+
 }

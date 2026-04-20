@@ -134,6 +134,9 @@ export default function NewBooking() {
     if (res.success) {
       setShowSuccessModal(true);
       setStep(3); 
+    } else {
+      // FIX: Add error handling so it doesn't fail silently
+      setErrors({ submit: res.message || 'Failed to submit booking. Please try again.' });
     }
   };
 
@@ -476,6 +479,14 @@ export default function NewBooking() {
                 </div>
 
                 <div className="flex flex-col gap-3">
+                  {/* FIX: Display submit error to the user if the backend connection fails */}
+                  {errors.submit && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                      <p className="text-red-700 text-sm">{errors.submit}</p>
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     {step === 2 && (
                       <button

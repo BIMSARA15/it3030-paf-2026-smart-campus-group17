@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/bookings")
-@CrossOrigin(origins = "http://localhost:5173") // Allows your Vite React app to connect
+//@CrossOrigin(origins = "http://localhost:5173") // Allows your Vite React app to connect
 public class BookingController {
 
     @Autowired

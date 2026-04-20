@@ -50,6 +50,7 @@ const createBooking = async (bookingData) => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // CRITICAL for Spring Security
         body: JSON.stringify(bookingData),
       });
 

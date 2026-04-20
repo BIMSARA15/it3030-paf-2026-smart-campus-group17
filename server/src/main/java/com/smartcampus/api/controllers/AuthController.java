@@ -44,22 +44,35 @@ public class AuthController {
 
         String email = null;
         String picture = null;
+        String name = null;
         
         // If they logged in via Google/Microsoft
         if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
             email = oauthUser.getAttribute("email");
             picture = oauthUser.getAttribute("picture");
+            name = oauthUser.getAttribute("name"); // Extract name for the form
         } else {
             // If they logged in manually, the principal is just their email string
             email = authentication.getName();
         }
 
         Optional<User> existingUser = userRepository.findByEmail(email);
+        
+        // 🛑 THE FIX: Handle new Microsoft users instead of throwing a 401 Error
         if (existingUser.isEmpty()) {
+            if (authentication.getPrincipal() instanceof OAuth2User) {
+                Map<String, Object> holdResponse = new HashMap<>();
+                holdResponse.put("email", email);
+                holdResponse.put("name", name);
+                holdResponse.put("picture", picture);
+                holdResponse.put("requiresRegistration", true); // Tells React to show the form!
+                return ResponseEntity.ok(holdResponse);
+            }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found in DB");
         }
 
+        // Standard response for existing users
         User dbUser = existingUser.get();
         boolean profileComplete = (dbUser.getPhoneNumber() != null && dbUser.getFaculty() != null);
 
@@ -76,32 +89,51 @@ public class AuthController {
 
     // --- 2. UPDATED: Save the hashed password during registration ---
     // --- 2. UPDATED: Backend Validation Added ---
-    @PostMapping("/register")
+   @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
-        // Validation: Block empty submissions
+        
+        // 1. Validation: Block empty submissions for required fields
         if (newUserRequest.getEmail() == null || newUserRequest.getEmail().isBlank() ||
             newUserRequest.getPassword() == null || newUserRequest.getPassword().isBlank() ||
             newUserRequest.getName() == null || newUserRequest.getName().isBlank()) {
             return ResponseEntity.badRequest().body("Error: Name, Email, and Password are required!");
         }
 
+        // 2. Check if the user already exists to prevent duplicates
         if (userRepository.findByEmail(newUserRequest.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
 
+        // 3. Create the new user object
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
+        
+        // Hash and save the password!
         user.setPassword(passwordEncoder.encode(newUserRequest.getPassword())); 
+        
+        // Use the role provided, or default to STUDENT
         user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
+        
+        // 4. Save ALL the specific fields
         user.setFaculty(newUserRequest.getFaculty());
         
-        if (newUserRequest.getYearSemester() != null) user.setYearSemester(newUserRequest.getYearSemester());
-        if (newUserRequest.getRegisteredCourse() != null) user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
-        if (newUserRequest.getPhoneNumber() != null) user.setPhoneNumber(newUserRequest.getPhoneNumber());
-        if (newUserRequest.getSpecialization() != null) user.setSpecialization(newUserRequest.getSpecialization());
+        if (newUserRequest.getYearSemester() != null) {
+            user.setYearSemester(newUserRequest.getYearSemester());
+        }
+        if (newUserRequest.getRegisteredCourse() != null) {
+            user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
+        }
+        if (newUserRequest.getPhoneNumber() != null) {
+            user.setPhoneNumber(newUserRequest.getPhoneNumber());
+        }
+        if (newUserRequest.getSpecialization() != null) {
+            user.setSpecialization(newUserRequest.getSpecialization());
+        }
 
+        // 5. Save to MongoDB
         userRepository.save(user);
+
         return ResponseEntity.ok("User registered successfully!");
     }
 
@@ -134,38 +166,48 @@ public class AuthController {
    @PostMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(Authentication authentication, @RequestBody Map<String, String> updates) {
         
-        // 1. Make sure they are logged in
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // 2. Safely extract the email whether they used OAuth2 or Manual Login
         String email = null;
+        String name = null;
         if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
             email = oauthUser.getAttribute("email");
+            name = oauthUser.getAttribute("name");
         } else {
-            email = authentication.getName(); // Manual login uses getName()
+            email = authentication.getName(); 
         }
 
-        if (email == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        User user;
+
+        if (userOpt.isEmpty()) {
+            // ✨ SESSION HOLD COMPLETION: Create the new user in DB!
+            user = new User();
+            user.setEmail(email);
+            user.setName(name != null ? name : email.split("@")[0]);
+            
+            // Apply the role they chose in the form (or default to STUDENT)
+            String requestedRole = updates.get("role");
+            user.setRole(requestedRole != null ? requestedRole.toUpperCase() : "STUDENT");
+        } else {
+            // Existing user just updating their profile
+            user = userOpt.get();
+            if (updates.containsKey("role")) user.setRole(updates.get("role").toUpperCase());
         }
 
-        // 3. Find the user and update their profile
-        User user = userRepository.findByEmail(email).orElseThrow();
-        user.setPhoneNumber(updates.get("phoneNumber"));
-        user.setFaculty(updates.get("faculty"));
-        user.setRegisteredCourse(updates.get("registeredCourse"));
-        user.setSpecialization(updates.get("specialization"));
-        user.setYearSemester(updates.get("currentSemester"));
-
-        // Update role if they selected student/lecturer during onboarding
-        if (updates.containsKey("role")) {
-            user.setRole(updates.get("role").toUpperCase());
-        }
+        // Save all form data
+        if (updates.containsKey("phoneNumber")) user.setPhoneNumber(updates.get("phoneNumber"));
+        if (updates.containsKey("faculty")) user.setFaculty(updates.get("faculty"));
+        if (updates.containsKey("registeredCourse")) user.setRegisteredCourse(updates.get("registeredCourse"));
+        if (updates.containsKey("specialization")) user.setSpecialization(updates.get("specialization"));
+        if (updates.containsKey("currentSemester")) user.setYearSemester(updates.get("currentSemester"));
 
         userRepository.save(user);
-        return ResponseEntity.ok("Profile updated");
+        return ResponseEntity.ok("Profile updated and saved to DB!");
     }
 }

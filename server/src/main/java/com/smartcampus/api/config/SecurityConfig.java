@@ -33,7 +33,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 // ADD the dev-login endpoint to the permitAll list here:
-                .requestMatchers("/", "/login", "/error", "/api/auth/dev-login/**").permitAll()
+               .requestMatchers("/", "/login", "/error", "/api/auth/dev-login/**", "/api/auth/register", "/api/auth/login").permitAll()
                 .anyRequest().authenticated()
             )
             // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK
@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService) 
                 )
-                .defaultSuccessUrl("http://localhost:5173/", true)
+                .defaultSuccessUrl("http://localhost:5173/login", true)
             );
 
         return http.build();

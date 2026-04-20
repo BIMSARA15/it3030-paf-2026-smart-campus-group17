@@ -18,7 +18,10 @@ export default function StudentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isAdmin = currentUser?.role === 'admin';
-  const myBookings = isAdmin ? bookings : bookings.filter(b => b.userId === currentUser?.id);
+  
+  // FIX 1: Match the fallback ID used in NewBooking.jsx so test bookings show up
+  const currentUserId = currentUser?.id || 'IT23345478';
+  const myBookings = isAdmin ? bookings : bookings.filter(b => b.userId === currentUserId);
 
   const stats = {
     total: myBookings.length,
@@ -29,13 +32,20 @@ export default function StudentDashboard() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const upcoming = myBookings
+  
+  // FIX 2: Use spread operator [...] before sort() to prevent mutating the state array
+  const upcoming = [...myBookings]
     .filter(b => b.status === 'APPROVED' && b.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
     .slice(0, 5);
 
-  const recent = myBookings
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  // FIX 3: Safe sorting for createdAt (in case older bookings don't have it)
+  const recent = [...myBookings]
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 6);
 
   // Chart data – last 7 days bookings
@@ -54,6 +64,7 @@ export default function StudentDashboard() {
   });
 
   const formatDate = (d) => {
+    if (!d) return '';
     const dt = new Date(d + 'T00:00:00');
     return dt.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
   };
@@ -238,7 +249,7 @@ export default function StudentDashboard() {
                         <CalendarCheck className="w-5 h-5 text-emerald-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 text-sm font-medium truncate">{resource?.name}</p>
+                        <p className="text-gray-900 text-sm font-medium truncate">{resource?.name || 'Unknown Resource'}</p>
                         <p className="text-gray-400 text-xs truncate">{booking.purpose}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
@@ -281,8 +292,8 @@ export default function StudentDashboard() {
                     return (
                       <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3">
-                          <p className="text-gray-900 text-sm font-medium">{resource?.name}</p>
-                          <p className="text-gray-400 text-xs capitalize">{resource?.type}</p>
+                          <p className="text-gray-900 text-sm font-medium">{resource?.name || 'Unknown Resource'}</p>
+                          <p className="text-gray-400 text-xs capitalize">{resource?.type || 'N/A'}</p>
                         </td>
                         {isAdmin && (
                           <td className="px-5 py-3">
@@ -303,6 +314,13 @@ export default function StudentDashboard() {
                       </tr>
                     );
                   })}
+                  {recent.length === 0 && (
+                    <tr>
+                      <td colSpan={isAdmin ? 5 : 4} className="px-5 py-8 text-center text-gray-500 text-sm">
+                        No recent bookings found.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

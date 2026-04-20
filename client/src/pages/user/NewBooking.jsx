@@ -561,7 +561,7 @@ export default function NewBooking() {
                   {(() => {
                     const todayStr = today;
                     const existing = bookings
-                      .filter(b => b.resourceId === selectedResource.id && b.status === 'APPROVED' && b.date >= todayStr)
+                      .filter(b => b.resourceId === selectedResource.id && (b.status === 'APPROVED' || b.status === 'PENDING') && b.date >= todayStr)
                       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
                       .slice(0, 5);
                     

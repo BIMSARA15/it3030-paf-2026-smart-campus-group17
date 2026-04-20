@@ -23,9 +23,20 @@ const TYPE_COLORS = {
 };
 
 export default function NewBooking() {
-  const { resources, bookings, currentUser, createBooking, getResourceById, getUtilitiesForResource } = useBooking();
+  const {
+    resources,
+    bookings,
+    currentUser,
+    createBooking,
+    getResourceById,
+    getUtilitiesForResource,
+    fetchResources,
+    resourcesLoading,
+    resourcesError,
+  } = useBooking();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const currentRole = (currentUser?.role || '').toUpperCase();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -51,12 +62,16 @@ export default function NewBooking() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
+    fetchResources();
+  }, []);
+
+  useEffect(() => {
     const rid = searchParams.get('resource');
     if (rid) {
       const r = getResourceById(rid);
       if (r) { setSelectedResource(r); setStep(2); }
     }
-  }, []);
+  }, [searchParams, resources]);
 
   useEffect(() => {
     if (selectedResource && date && startTime && endTime && startTime < endTime) {
@@ -79,10 +94,15 @@ export default function NewBooking() {
   const today = new Date().toISOString().split('T')[0];
 
   const filtered = resources.filter(r => {
+    const access = (r.access || '').toLowerCase();
+    const matchesAccess =
+      currentRole === 'ADMIN' || currentRole === 'LECTURER'
+        ? true
+        : access === 'student' || access === 'anyone';
     const matchType = typeFilter === 'all' || r.type === typeFilter;
     const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location.toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
+    return matchesAccess && matchType && matchSearch;
   });
 
   const validate = () => {
@@ -278,42 +298,52 @@ export default function NewBooking() {
               </div>
 
               <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {filtered.map(resource => (
-                  <button
-                    key={resource.id}
-                    onClick={() => { setSelectedResource(resource); setStep(2); }}
-                    className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)] transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
-                        {TYPE_ICONS[resource.type]}
+                {resourcesLoading ? (
+                  <div className="col-span-full flex items-center justify-center gap-2 py-12 text-gray-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <p className="text-sm">Loading resources...</p>
+                  </div>
+                ) : resourcesError ? (
+                  <div className="col-span-full text-center py-12 text-red-400">
+                    <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Unable to load resources right now</p>
+                  </div>
+                ) : filtered.map(resource => (
+                    <button
+                      key={resource.id}
+                      onClick={() => { setSelectedResource(resource); setStep(2); }}
+                      className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)] transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
+                          {TYPE_ICONS[resource.type]}
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[resource.type]}`}>
+                          {resource.type}
+                        </span>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[resource.type]}`}>
-                        {resource.type}
-                      </span>
-                    </div>
-                    <h4 className="text-gray-900 mb-1 group-hover:text-[#0F6657] transition-colors">{resource.name}</h4>
-                    <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                      <MapPin className="w-3 h-3" />
-                      {resource.location}
-                    </div>
-                    {resource.capacity && (
-                      <div className="flex items-center gap-1 text-gray-400 text-xs">
-                        <Users className="w-3 h-3" />
-                        Capacity: {resource.capacity} persons
+                      <h4 className="text-gray-900 mb-1 group-hover:text-[#0F6657] transition-colors">{resource.name}</h4>
+                      <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
+                        <MapPin className="w-3 h-3" />
+                        {resource.location}
                       </div>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {resource.features.slice(0, 3).map(f => (
-                        <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
-                      ))}
-                      {resource.features.length > 3 && (
-                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                      {resource.capacity && (
+                        <div className="flex items-center gap-1 text-gray-400 text-xs">
+                          <Users className="w-3 h-3" />
+                          Capacity: {resource.capacity} persons
+                        </div>
                       )}
-                    </div>
-                  </button>
-                ))}
-                {filtered.length === 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {resource.features.slice(0, 3).map(f => (
+                          <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
+                        ))}
+                        {resource.features.length > 3 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                {!resourcesLoading && !resourcesError && filtered.length === 0 && (
                   <div className="col-span-full text-center py-12 text-gray-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No resources match your search</p>

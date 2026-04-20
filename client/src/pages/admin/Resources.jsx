@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Building2, Loader2, Plus, RefreshCw } from 'lucide-react';
+import { AlertCircle, Building2, Loader2, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import ResourceCard from '../../components/admin/ResourceCard';
@@ -7,6 +7,16 @@ import AddResourceModal from '../../components/admin/AddResourceModal';
 import { useBooking } from '../../context/BookingContext';
 
 const API_BASE_URL = 'http://localhost:8080';
+
+const getCanonicalType = (resource) => {
+  const rawType = (resource.resourceType || resource.type || '').toString().trim().toLowerCase();
+
+  if (rawType === 'lab') return 'Lab';
+  if (rawType === 'meeting room') return 'Meeting Room';
+  if (rawType === 'lecture room' || rawType === 'room') return 'Lecture Room';
+
+  return resource.resourceType || resource.type || '';
+};
 
 export default function Resources() {
   const {
@@ -21,6 +31,32 @@ export default function Resources() {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingResource, setEditingResource] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [accessFilter, setAccessFilter] = useState('All');
+
+  const filteredResources = resources.filter((resource) => {
+    const query = search.trim().toLowerCase();
+    const matchesSearch =
+      query === '' ||
+      resource.resourceName.toLowerCase().includes(query) ||
+      resource.resourceCode.toLowerCase().includes(query) ||
+      resource.block.toLowerCase().includes(query) ||
+      resource.level.toLowerCase().includes(query) ||
+      resource.description.toLowerCase().includes(query) ||
+      resource.features.some((feature) => feature.toLowerCase().includes(query));
+
+    const matchesStatus = statusFilter === 'All' || resource.status === statusFilter;
+    const matchesType = typeFilter === 'All' || getCanonicalType(resource) === typeFilter;
+    const matchesAccess = accessFilter === 'All' || resource.access === accessFilter;
+
+    return matchesSearch && matchesStatus && matchesType && matchesAccess;
+  });
+
+  const statusOptions = ['All', 'Available', 'Not Available', 'Out Of Service'];
+  const typeOptions = ['All', 'Lecture Room', 'Lab', 'Meeting Room'];
+  const accessOptions = ['All', 'Lecturer', 'Student', 'Anyone'];
 
   const handleSaveResource = async (resourceData) => {
     try {
@@ -161,16 +197,92 @@ export default function Resources() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {resources.map((resource) => (
-                  <ResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    onEdit={handleEditResource}
-                    onDelete={handleDeleteResource}
-                    deleting={deletingId === resource.id}
-                  />
-                ))}
+              <div className="space-y-5">
+                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search by name, code, block, level, or feature..."
+                        className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Filters
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3 lg:w-auto">
+                      <select
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value)}
+                        className="rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
+                      >
+                        {statusOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option === 'All' ? 'All Statuses' : option}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={typeFilter}
+                        onChange={(event) => setTypeFilter(event.target.value)}
+                        className="rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
+                      >
+                        {typeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option === 'All' ? 'All Types' : option}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={accessFilter}
+                        onChange={(event) => setAccessFilter(event.target.value)}
+                        className="rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
+                      >
+                        {accessOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option === 'All' ? 'All Access' : option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-xs text-slate-500">
+                    Showing {filteredResources.length} of {resources.length} resources
+                  </div>
+                </div>
+
+                {filteredResources.length === 0 ? (
+                  <div className="flex min-h-[220px] flex-col items-center justify-center rounded-[24px] bg-slate-50 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[#2563EB]">
+                      <Search className="h-6 w-6" />
+                    </div>
+                    <div className="mt-4">
+                      <p className="text-base font-medium text-slate-700">No resources match your filters</p>
+                      <p className="mt-1 text-sm text-slate-400">Try changing the search text or filter values.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                    {filteredResources.map((resource) => (
+                      <ResourceCard
+                        key={resource.id}
+                        resource={resource}
+                        onEdit={handleEditResource}
+                        onDelete={handleDeleteResource}
+                        deleting={deletingId === resource.id}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

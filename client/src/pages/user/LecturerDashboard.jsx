@@ -95,7 +95,7 @@ export default function LecturerDashboard() {
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            {statCards.map(({ label, value, icon: Icon, color, bg, border }) => (
+            {statCards.map(({ label, value, icon:  color, bg, border }) => (
               <div key={label} className={`bg-white rounded-xl border ${border} p-4 flex flex-col gap-3`}>
                 <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${color}`} />

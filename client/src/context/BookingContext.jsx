@@ -2,6 +2,36 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
 const BookingContext = createContext();
+const API_BASE_URL = 'http://localhost:8080';
+
+const normalizeResourceType = (type) => {
+  if (type === 'Lab') return 'lab';
+  return 'room';
+};
+
+const normalizeResource = (resource) => ({
+  ...resource,
+  name: resource.resourceName,
+  location: `Block ${resource.block}, Level ${resource.level}`,
+  type: normalizeResourceType(resource.type),
+  resourceType: resource.type,
+  features: Array.isArray(resource.features) ? resource.features : [],
+  description: resource.description || '',
+  resourceCode: resource.resourceCode || '',
+  status: resource.status || 'Available',
+  utilityIds: Array.isArray(resource.utilityIds) ? resource.utilityIds : [],
+});
+
+const normalizeUtility = (utility) => ({
+  ...utility,
+  utilityCode: utility.utilityCode || '',
+  utilityName: utility.utilityName || '',
+  category: utility.category || '',
+  quantity: utility.quantity || 0,
+  status: utility.status || 'Available',
+  location: utility.location || '',
+  description: utility.description || '',
+});
 
 export const useBooking = () => useContext(BookingContext);
 
@@ -22,15 +52,78 @@ export const BookingProvider = ({ children }) => {
     localStorage.setItem('smart_campus_bookings', JSON.stringify(bookings));
   }, [bookings]);
 
-  // Mock resources matching your screenshot
-  const resources = [
-    { id: '1', name: 'Lecture Hall A', type: 'room', location: 'Block A, Level 1', capacity: 200, features: ['Projector', 'Audio System', 'Air Conditioning'] },
-    { id: '2', name: 'Lecture Hall B', type: 'room', location: 'Block A, Level 2', capacity: 150, features: ['Smart Board', 'Audio System', 'Air Conditioning'] },
-    { id: '3', name: 'Conference Room 1', type: 'room', location: 'Block B, Level 3', capacity: 20, features: ['Video Conferencing', 'Projector', 'Whiteboard'] },
-    { id: '4', name: 'Chemistry Lab', type: 'lab', location: 'Block C, Level 1', capacity: 40, features: ['Fume Hoods', 'Gas Lines', 'Safety Showers'] }
-  ];
+  const [resources, setResources] = useState([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [resourcesError, setResourcesError] = useState('');
+  const [utilities, setUtilities] = useState([]);
+  const [utilitiesLoading, setUtilitiesLoading] = useState(false);
+  const [utilitiesError, setUtilitiesError] = useState('');
+
+  const fetchResources = async () => {
+    setResourcesLoading(true);
+    setResourcesError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/resources`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch resources: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResources(Array.isArray(data) ? data.map(normalizeResource) : []);
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+      setResourcesError('Failed to load resources.');
+      setResources([]);
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchUtilities = async () => {
+    setUtilitiesLoading(true);
+    setUtilitiesError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/utilities`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch utilities: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setUtilities(Array.isArray(data) ? data.map(normalizeUtility) : []);
+    } catch (error) {
+      console.error('Error fetching utilities:', error);
+      setUtilitiesError('Failed to load utilities.');
+      setUtilities([]);
+    } finally {
+      setUtilitiesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUtilities();
+  }, []);
 
   const getResourceById = (id) => resources.find(r => r.id === id);
+  const getUtilityById = (id) => utilities.find(u => u.id === id);
+  const getUtilitiesForResource = (resourceId) => {
+    const resource = getResourceById(resourceId);
+    if (!resource) return [];
+    return resource.utilityIds
+      .map((utilityId) => getUtilityById(utilityId))
+      .filter(Boolean);
+  };
 
   const checkConflict = (resourceId, date, startTime, endTime) => {
     return bookings.find(b =>
@@ -47,6 +140,7 @@ const createBooking = async (bookingData) => {
       // 1. Send the actual POST request to your Spring Boot backend
       const response = await fetch('http://localhost:8080/api/bookings', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -75,6 +169,7 @@ const createBooking = async (bookingData) => {
     try {
       const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -105,6 +200,7 @@ const createBooking = async (bookingData) => {
       // 1. Send the PUT request to Spring Boot
       const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -136,6 +232,7 @@ const createBooking = async (bookingData) => {
       // 1. Send the PUT request to Spring Boot
       const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -163,9 +260,10 @@ const createBooking = async (bookingData) => {
 
   return (
     <BookingContext.Provider value={{ 
-      resources, bookings, currentUser: user, 
+      resources, utilities, bookings, currentUser: user, 
       createBooking, checkConflict, getResourceById, cancelBooking,
-      approveBooking, rejectBooking 
+      approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
+      fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
     }}>
       {children}
     </BookingContext.Provider>

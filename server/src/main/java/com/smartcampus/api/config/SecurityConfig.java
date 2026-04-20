@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -34,6 +35,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // ADD the dev-login endpoint to the permitAll list here:
                .requestMatchers("/", "/login", "/error", "/api/auth/dev-login/**", "/api/auth/register", "/api/auth/login").permitAll()
+               .requestMatchers(HttpMethod.GET, "/api/resources").permitAll()
+               .requestMatchers(HttpMethod.GET, "/api/utilities").permitAll()
                 .anyRequest().authenticated()
             )
             // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK

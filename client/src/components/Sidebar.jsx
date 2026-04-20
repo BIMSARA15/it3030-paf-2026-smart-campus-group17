@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  LayoutGrid, CalendarPlus, BookOpen, Building2, 
+  LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, 
   LogOut, GraduationCap, ChevronRight, X, Menu 
 } from 'lucide-react';
 
@@ -32,7 +32,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const isTechnician = role === 'TECHNICIAN';
 
   // Dynamic Navigation Links based on Role
-  const navLinks = (isAdmin || isTechnician)
+  const navLinks = isAdmin
+    ? [
+        { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
+        { name: 'Resources', path: '/admin/resources', icon: Building2 },
+        { name: 'Utilities', path: '/admin/utilities', icon: Wrench },
+      ]
+    : isTechnician
     ? [{ name: 'Dashboard', path: dashboardPath, icon: LayoutGrid }]
     : [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },

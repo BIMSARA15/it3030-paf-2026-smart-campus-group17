@@ -10,10 +10,13 @@ import CompleteProfile from './pages/CompleteProfile';
 // When you pull this branch, uncomment your import below and replace the 
 // placeholder <div> tags in the Routes with your actual component!
 // ------------------------------------------------------------------------
-// import AdminDashboard from './pages/admin/AdminDashboard';
-// import StaffDashboard from './pages/staff/StaffDashboard';
-// import LecturerDashboard from './pages/user/LecturerDashboard';
-// import StudentDashboard from './pages/user/StudentDashboard';
+//import AdminDashboard from './pages/admin/AdminDashboard';
+//import StaffDashboard from './pages/staff/StaffDashboard';
+import LecturerDashboard from './pages/user/LecturerDashboard';
+import StudentDashboard from './pages/user/StudentDashboard';
+import NewBooking from './pages/user/NewBooking';
+import MyBookings from './pages/user/MyBookings';
+import Resources from './pages/user/Resources';
 
 function App() {
   const { user, loading, logout } = useAuth();
@@ -98,22 +101,13 @@ function App() {
             } 
           />
 
-          {/* User Folder: Lecturer */}
+         {/* User Folder: Lecturer */}
           <Route 
             path="/lecturer" 
             element={
               <ProtectedRoute allowedRoles={['LECTURER']}>
                 {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
-                  <div className="p-8 bg-slate-50 min-h-screen">
-                    <h2 className="text-2xl font-bold">Lecturer Dashboard Placeholder</h2>
-                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
-                    <button 
-                    onClick={logout} 
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                  </div>
+                  <LecturerDashboard />
                 )}
               </ProtectedRoute>
             } 
@@ -124,18 +118,42 @@ function App() {
             path="/student" 
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
-                 {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
-                  <div className="p-8 bg-slate-50 min-h-screen">
-                    <h2 className="text-2xl font-bold">Student Dashboard Placeholder</h2>
-                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
-                    <button 
-                    onClick={logout} 
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                  </div>
-                )}
+                 {user?.profileComplete === false ? (
+                   <Navigate to="/complete-profile" replace /> 
+                 ) : (
+                   <StudentDashboard />
+                 )}
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* ========================================== */}
+          {/* AUXILIARY PAGES (Bookings & Resources)       */}
+          {/* ========================================== */}
+          
+          <Route 
+            path="/booking/new" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
+                <NewBooking />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/bookings/my" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
+                <MyBookings />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/resources" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
+                <Resources />
               </ProtectedRoute>
             } 
           />

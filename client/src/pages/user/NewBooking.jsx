@@ -95,14 +95,16 @@ export default function NewBooking() {
 
   const filtered = resources.filter(r => {
     const access = (r.access || '').toLowerCase();
+    const status = (r.status || '').toLowerCase();
     const matchesAccess =
       currentRole === 'ADMIN' || currentRole === 'LECTURER'
         ? true
         : access === 'student' || access === 'anyone';
+    const matchesStatus = status !== 'out of service';
     const matchType = typeFilter === 'all' || r.type === typeFilter;
     const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location.toLowerCase().includes(search.toLowerCase());
-    return matchesAccess && matchType && matchSearch;
+    return matchesAccess && matchesStatus && matchType && matchSearch;
   });
 
   const validate = () => {
@@ -141,6 +143,7 @@ export default function NewBooking() {
 
   const handleSubmit = async () => {
     if (!validate() || !selectedResource) return;
+    if ((selectedResource.status || '').toLowerCase() === 'out of service') return;
     if (conflict) return;
     setSubmitting(true);
     

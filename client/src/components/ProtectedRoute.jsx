@@ -19,7 +19,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Redirect unauthorized users to their own designated dashboard based on their role
     if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
-    if (user.role === 'TECHNICIAN') return <Navigate to="/technician" replace />;
+    if (user.role === 'TECHNICIAN') return <Navigate to="/staff" replace />;
     return <Navigate to="/" replace />;
   }
 

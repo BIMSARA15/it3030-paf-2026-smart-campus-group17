@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, } from 'recharts';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 
@@ -95,17 +95,21 @@ export default function LecturerDashboard() {
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            {statCards.map(({ label, value, icon:  color, bg, border }) => (
-              <div key={label} className={`bg-white rounded-xl border ${border} p-4 flex flex-col gap-3`}>
-                <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
+            {statCards.map((card) => {
+              const Icon = card.icon; // 👈 Assign it here to make ESLint happy!
+              
+              return (
+                <div key={card.label} className={`bg-white rounded-xl border ${card.border} p-4 flex flex-col gap-3`}>
+                  <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${card.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>{card.value}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{card.label}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>{value}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{label}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">

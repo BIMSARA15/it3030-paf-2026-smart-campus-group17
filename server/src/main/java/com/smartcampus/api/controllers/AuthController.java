@@ -10,7 +10,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,8 +31,6 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder; // Injected BCrypt encoder
     private SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     // --- 1. UPDATED: Handles BOTH OAuth2 and Manual Logins ---
     @GetMapping("/user")
@@ -74,7 +71,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // --- 2. UPDATED: Save the hashed password during registration ---
+    // --- 2. UPDATED: Save the plain-text password during registration ---
     // --- 2. UPDATED: Backend Validation Added ---
     @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
@@ -92,7 +89,7 @@ public class AuthController {
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
-        user.setPassword(passwordEncoder.encode(newUserRequest.getPassword())); 
+        user.setPassword(newUserRequest.getPassword());
         user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
         user.setFaculty(newUserRequest.getFaculty());
         
@@ -113,11 +110,14 @@ public class AuthController {
         String password = loginRequest.get("password");
 
         Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
+        if (userOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
         }
 
         User user = userOpt.get();
+        if (!user.getPassword().equals(password)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
+        }
 
         List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
         UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);

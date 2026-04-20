@@ -13,8 +13,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
 
@@ -32,8 +30,18 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // Enable CORS
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // ADD the dev-login endpoint to the permitAll list here:
-                .requestMatchers("/", "/login", "/error", "/api/auth/dev-login/**").permitAll()
+                // Public auth endpoints — must be reachable without a session:
+                //   dev-login  : developer-only quick login bypass
+                //   register   : create a new account
+                //   login      : manual email + password sign-in
+                .requestMatchers(
+                        "/", "/login", "/error",
+                        "/api/auth/dev-login/**",
+                        "/api/auth/register",
+                        "/api/auth/login"
+                ).permitAll()
+                // Module C — /api/tickets/** is intentionally `authenticated()` only;
+                // ADMIN-only enforcement happens inline in TicketController.
                 .anyRequest().authenticated()
             )
             // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK
@@ -45,10 +53,6 @@ public class SecurityConfig {
             );
 
         return http.build();
-    }
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     // Define the CORS rules

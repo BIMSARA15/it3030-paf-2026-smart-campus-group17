@@ -3,6 +3,7 @@ package com.smartcampus.api.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Document(collection = "bookings")
 public class Booking {
@@ -22,6 +23,7 @@ public class Booking {
     private Integer attendees;
     private String lecturer;
     private String specialRequests;
+    private List<String> requestedUtilityIds;
     
     private String status; // PENDING, APPROVED, REJECTED, CANCELLED
     private String rejectionReason;
@@ -72,6 +74,9 @@ public class Booking {
 
     public String getSpecialRequests() { return specialRequests; }
     public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
+
+    public List<String> getRequestedUtilityIds() { return requestedUtilityIds; }
+    public void setRequestedUtilityIds(List<String> requestedUtilityIds) { this.requestedUtilityIds = requestedUtilityIds; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

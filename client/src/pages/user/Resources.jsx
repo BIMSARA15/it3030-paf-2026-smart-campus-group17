@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin,
-  Users, CalendarPlus, ChevronRight, CheckCircle, Tag,
+  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package,
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import Sidebar from '../../components/Sidebar';
@@ -24,7 +24,7 @@ const TYPE_CONFIG = {
 };
 
 export default function Resources() {
-  const { resources, bookings } = useBooking();
+  const { resources, bookings, getUtilitiesForResource } = useBooking();
   const navigate = useNavigate();
   
   // 2. Add Sidebar State
@@ -248,6 +248,22 @@ export default function Resources() {
                         ))}
                       </div>
                     </div>
+
+                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Package className="w-3.5 h-3.5 text-gray-400" />
+                          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Available Utilities</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {getUtilitiesForResource(selectedResource.id).map((utility) => (
+                            <span key={utility.id} className="text-xs px-2 py-1 bg-blue-50 border border-blue-100 text-[#2563EB] rounded-lg">
+                              {utility.utilityName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Upcoming bookings */}
                     <div className="border-t border-gray-100 pt-4 mb-4">

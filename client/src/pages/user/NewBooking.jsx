@@ -22,6 +22,102 @@ const TYPE_COLORS = {
   equipment: 'bg-orange-100 text-orange-600',
 };
 
+// Helper to convert 12h format back to 24h for math calculations behind the scenes
+const formatTo24Hour = (timeStr) => {
+  if (!timeStr) return '';
+  if (!timeStr.includes('M')) return timeStr; 
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  if (hours === '12') hours = '00';
+  if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+  return `${hours.padStart(2, '0')}:${minutes}`;
+};
+
+// The Custom Popover Time Picker matching your screenshot
+const CustomTimePicker = ({ value, onChange, disabled, error }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const displayValue = value || "Select time";
+  const currentHour = value ? value.split(':')[0] : '12';
+  const currentMin = value ? value.split(':')[1].split(' ')[0] : '00';
+  const currentAmPm = value ? value.split(' ')[1] : 'AM';
+
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+  const ampm = ['AM', 'PM'];
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.time-picker-dropdown')) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (type, val) => {
+    let h = currentHour;
+    let m = currentMin;
+    let ap = currentAmPm;
+    if (type === 'h') h = val;
+    if (type === 'm') m = val;
+    if (type === 'ap') ap = val;
+    onChange(`${h}:${m} ${ap}`);
+  };
+
+  return (
+    <div className="relative time-picker-dropdown w-full">
+      <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+      <div 
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-all cursor-pointer flex items-center justify-between ${
+          error ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50 hover:bg-white'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <span className={value ? 'text-gray-900 font-medium' : 'text-gray-400'}>{displayValue}</span>
+        <Clock className="w-4 h-4 text-gray-400" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 top-full left-0 mt-2 bg-white border border-gray-100 shadow-xl rounded-xl flex overflow-hidden w-full h-48 ring-1 ring-black/5">
+          <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
+            {hours.map(h => (
+              <div 
+                key={h} 
+                onClick={() => handleSelect('h', h)}
+                className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentHour === h ? 'bg-[#17A38A]/10 text-[#0F6657] font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {h}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
+            {minutes.map(m => (
+              <div 
+                key={m} 
+                onClick={() => handleSelect('m', m)}
+                className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentMin === m ? 'bg-[#17A38A]/10 text-[#0F6657] font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {m}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto hide-scroll py-2">
+            {ampm.map(ap => (
+              <div 
+                key={ap} 
+                onClick={() => handleSelect('ap', ap)}
+                className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentAmPm === ap ? 'bg-[#17A38A]/10 text-[#0F6657] font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {ap}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function NewBooking() {
   const {
     resources,
@@ -74,17 +170,24 @@ export default function NewBooking() {
   }, [searchParams, resources]);
 
   useEffect(() => {
-    if (selectedResource && date && startTime && endTime && startTime < endTime) {
-      const overlappingBooking = bookings.find(b =>
-        b.resourceId === selectedResource.id &&
-        b.date === date &&
-        (b.status === 'APPROVED' || b.status === 'PENDING') &&
-        (
-          (startTime >= b.startTime && startTime < b.endTime) ||
-          (endTime > b.startTime && endTime <= b.endTime) ||
-          (startTime <= b.startTime && endTime >= b.endTime)
-        )
-      );
+    // Convert to 24h for mathematical comparison
+    const start24 = formatTo24Hour(startTime);
+    const end24 = formatTo24Hour(endTime);
+
+    if (selectedResource && date && start24 && end24 && start24 < end24) {
+      const overlappingBooking = bookings.find(b => {
+        if (b.resourceId !== selectedResource.id || b.date !== date) return false;
+        if (b.status !== 'APPROVED' && b.status !== 'PENDING') return false;
+        
+        const bStart = formatTo24Hour(b.startTime);
+        const bEnd = formatTo24Hour(b.endTime);
+
+        return (
+          (start24 >= bStart && start24 < bEnd) ||
+          (end24 > bStart && end24 <= bEnd) ||
+          (start24 <= bStart && end24 >= bEnd)
+        );
+      });
       setConflict(overlappingBooking || null);
     } else {
       setConflict(null);
@@ -113,7 +216,9 @@ export default function NewBooking() {
     else if (date < today) e.date = 'Date cannot be in the past';
     if (!startTime) e.startTime = 'Please select start time';
     if (!endTime) e.endTime = 'Please select end time';
-    if (startTime && endTime && startTime >= endTime) e.endTime = 'End time must be after start time';
+    if (startTime && endTime && formatTo24Hour(startTime) >= formatTo24Hour(endTime)) {
+      e.endTime = 'End time must be after start time';
+    }
     if (!purpose.trim()) e.purpose = 'Please describe the purpose';
     else if (purpose.trim().length < 10) e.purpose = 'Purpose must be at least 10 characters';
     
@@ -246,7 +351,7 @@ export default function NewBooking() {
 
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">New Booking Request</h1>
-            <p className="text-gray-500 text-sm mt-1">Reserve a room, lab, or equipment</p>
+            <p className="text-gray-500 text-sm mt-1">Reserve a Lecture Hall, Lab, or Equipment</p>
           </div>
 
           <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 sm:pb-0">
@@ -286,7 +391,7 @@ export default function NewBooking() {
                     />
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    {['all', 'room', 'lab', 'equipment'].map(t => (
+                    {['all', 'Lecture Hall', 'lab', 'equipment'].map(t => (
                       <button
                         key={t}
                         onClick={() => setTypeFilter(t)}
@@ -404,12 +509,11 @@ export default function NewBooking() {
                           <Clock className="w-3.5 h-3.5 inline mr-1.5" />
                           Start Time <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="time"
+                        <CustomTimePicker
                           value={startTime}
                           disabled={step === 3}
-                          onChange={e => { setStartTime(e.target.value); setErrors(p => ({ ...p, startTime: '' })); }}
-                          className={inputClass('startTime')}
+                          error={errors.startTime}
+                          onChange={val => { setStartTime(val); setErrors(p => ({ ...p, startTime: '' })); }}
                         />
                         {errors.startTime && <p className="text-red-500 text-xs mt-1">{errors.startTime}</p>}
                       </div>
@@ -418,12 +522,11 @@ export default function NewBooking() {
                           <Clock className="w-3.5 h-3.5 inline mr-1.5" />
                           End Time <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="time"
+                        <CustomTimePicker
                           value={endTime}
                           disabled={step === 3}
-                          onChange={e => { setEndTime(e.target.value); setErrors(p => ({ ...p, endTime: '' })); }}
-                          className={inputClass('endTime')}
+                          error={errors.endTime}
+                          onChange={val => { setEndTime(val); setErrors(p => ({ ...p, endTime: '' })); }}
                         />
                         {errors.endTime && <p className="text-red-500 text-xs mt-1">{errors.endTime}</p>}
                       </div>
@@ -517,6 +620,45 @@ export default function NewBooking() {
                         className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 transition-all resize-none"
                       />
                     </div>
+
+                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
+                      <div>
+                        <label className="block text-gray-700 text-sm mb-1.5">
+                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
+                          Requested Utilities
+                        </label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {getUtilitiesForResource(selectedResource.id).map((utility) => {
+                            const checked = requestedUtilityIds.includes(utility.id);
+
+                            return (
+                              <label
+                                key={utility.id}
+                                className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-sm transition-all ${
+                                  checked
+                                    ? 'border-[#17A38A]/30 bg-[#17A38A]/5 text-[#0F6657]'
+                                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-[#17A38A]/20 hover:bg-white'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleRequestedUtility(utility.id)}
+                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#17A38A] focus:ring-[#17A38A]/30"
+                                />
+                                <span>
+                                  <span className="block font-medium">{utility.utilityName}</span>
+                                  <span className="block text-xs text-gray-400">
+                                    {utility.utilityCode} · {utility.category}
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
 
@@ -622,7 +764,7 @@ export default function NewBooking() {
                     const todayStr = today;
                     const existing = bookings
                       .filter(b => b.resourceId === selectedResource.id && (b.status === 'APPROVED' || b.status === 'PENDING') && b.date >= todayStr)
-                      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+                      .sort((a, b) => a.date.localeCompare(b.date) || formatTo24Hour(a.startTime).localeCompare(formatTo24Hour(b.startTime)))
                       .slice(0, 5);
                     
                     if (existing.length === 0) {

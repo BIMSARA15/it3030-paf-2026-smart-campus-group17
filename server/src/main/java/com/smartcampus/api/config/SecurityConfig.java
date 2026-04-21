@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -32,18 +33,10 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // Enable CORS
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // Public auth endpoints — must be reachable without a session:
-                //   dev-login  : developer-only quick login bypass
-                //   register   : create a new account
-                //   login      : manual email + password sign-in
-                .requestMatchers(
-                        "/", "/login", "/error",
-                        "/api/auth/dev-login/**",
-                        "/api/auth/register",
-                        "/api/auth/login"
-                ).permitAll()
-                // Module C — /api/tickets/** is intentionally `authenticated()` only;
-                // ADMIN-only enforcement happens inline in TicketController.
+                // ADD the dev-login endpoint to the permitAll list here:
+               .requestMatchers("/", "/login", "/error", "/api/auth/dev-login/**", "/api/auth/register", "/api/auth/login").permitAll()
+               .requestMatchers(HttpMethod.GET, "/api/resources").permitAll()
+               .requestMatchers(HttpMethod.GET, "/api/utilities").permitAll()
                 .anyRequest().authenticated()
             )
             // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK
@@ -51,12 +44,11 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService) 
                 )
-                .defaultSuccessUrl("http://localhost:5173/", true)
+                .defaultSuccessUrl("http://localhost:5173/login", true)
             );
 
         return http.build();
     }
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

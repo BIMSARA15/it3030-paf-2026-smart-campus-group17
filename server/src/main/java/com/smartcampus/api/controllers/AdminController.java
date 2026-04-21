@@ -52,4 +52,38 @@ public class AdminController {
         
         return ResponseEntity.ok("Technician successfully provisioned.");
     }
+    // 3. TOGGLE TECHNICIAN AVAILABILITY STATUS
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/technicians/{id}/status")
+    public ResponseEntity<?> toggleTechnicianStatus(@PathVariable String id, @RequestBody Map<String, Boolean> request) {
+        Optional<User> userOpt = userRepository.findById(id);
+        
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Technician not found.");
+        }
+
+        User technician = userOpt.get();
+        Boolean isAvailable = request.get("available");
+        
+        if (isAvailable != null) {
+            technician.setAvailable(isAvailable);
+            userRepository.save(technician);
+        }
+        
+        return ResponseEntity.ok("Technician status updated.");
+    }
+
+    // 4. DELETE TECHNICIAN
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/technicians/{id}")
+    public ResponseEntity<?> deleteTechnician(@PathVariable String id) {
+        Optional<User> userOpt = userRepository.findById(id);
+        
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Technician not found.");
+        }
+
+        userRepository.deleteById(id);
+        return ResponseEntity.ok("Technician successfully removed from the system.");
+    }
 }

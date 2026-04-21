@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, 
-  LogOut, GraduationCap, ChevronRight, X, Menu 
+  LogOut, GraduationCap, ChevronRight, X, Menu, SendHorizontal
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -42,6 +42,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     ? [{ name: 'Dashboard', path: dashboardPath, icon: LayoutGrid }]
     : [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
+        ...(isLecturer ? [{ name: 'Std Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
         { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
         { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
         { name: 'Resources', path: '/resources', icon: Building2 },

@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 
 const BookingContext = createContext();
 const API_BASE_URL = 'http://localhost:8080';
+const STUDENT_REQUESTS_STORAGE_KEY = 'smart_campus_student_requests';
 
 const normalizeResourceType = (type) => {
   if (type === 'Lab') return 'lab';
@@ -33,6 +34,8 @@ const normalizeUtility = (utility) => ({
   description: utility.description || '',
 });
 
+const createLocalId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
 export const useBooking = () => useContext(BookingContext);
 
 export const BookingProvider = ({ children }) => {
@@ -51,6 +54,18 @@ export const BookingProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('smart_campus_bookings', JSON.stringify(bookings));
   }, [bookings]);
+
+  const [studentRequests, setStudentRequests] = useState(() => {
+    const savedRequests = localStorage.getItem(STUDENT_REQUESTS_STORAGE_KEY);
+    if (savedRequests) {
+      return JSON.parse(savedRequests);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STUDENT_REQUESTS_STORAGE_KEY, JSON.stringify(studentRequests));
+  }, [studentRequests]);
 
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -155,14 +170,59 @@ const createBooking = async (bookingData) => {
       const savedBooking = await response.json();
       
       // 3. Update the React UI state
-      setBookings([...bookings, savedBooking]);
+      setBookings((current) => [...current, savedBooking]);
       
-      return { success: true, message: 'Booking request submitted successfully.' };
+      return { success: true, message: 'Booking request submitted successfully.', booking: savedBooking };
       
     } catch (error) {
       console.error("Error creating booking:", error);
       return { success: false, message: 'Failed to connect to the server.' };
     }
+  };
+
+  const createStudentRequest = async (requestData) => {
+    const now = new Date().toISOString();
+    const nextRequest = {
+      id: createLocalId('stdreq'),
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now,
+      ...requestData,
+      requestedUtilityIds: Array.isArray(requestData.requestedUtilityIds) ? requestData.requestedUtilityIds : [],
+    };
+
+    setStudentRequests((current) => [nextRequest, ...current]);
+
+    return {
+      success: true,
+      message: 'Your request has been sent to the lecturer.',
+      request: nextRequest,
+    };
+  };
+
+  const updateStudentRequest = (id, updates) => {
+    const updatedAt = new Date().toISOString();
+    setStudentRequests((current) =>
+      current.map((request) =>
+        request.id === id
+          ? { ...request, ...updates, updatedAt }
+          : request
+      )
+    );
+  };
+
+  const fulfillStudentRequest = async (requestId, bookingData) => {
+    const response = await createBooking(bookingData);
+
+    if (response.success) {
+      updateStudentRequest(requestId, {
+        status: 'BOOKING_CREATED',
+        fulfilledBy: user?.name || 'Lecturer',
+        linkedBookingId: response.booking?.id || '',
+      });
+    }
+
+    return response;
   };
 
   const cancelBooking = async (id, reason) => { // <-- Added 'reason' here!
@@ -260,10 +320,11 @@ const createBooking = async (bookingData) => {
 
   return (
     <BookingContext.Provider value={{ 
-      resources, utilities, bookings, currentUser: user, 
+      resources, utilities, bookings, studentRequests, currentUser: user, 
       createBooking, checkConflict, getResourceById, cancelBooking,
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
+      createStudentRequest, updateStudentRequest, fulfillStudentRequest,
     }}>
       {children}
     </BookingContext.Provider>

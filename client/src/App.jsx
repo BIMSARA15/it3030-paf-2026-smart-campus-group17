@@ -19,6 +19,7 @@ import StudentDashboard from './pages/user/StudentDashboard';
 import NewBooking from './pages/user/NewBooking';
 import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
+import StudentRequests from './pages/user/StudentRequests';
 
 function App() {
   const { user, loading, logout } = useAuth();
@@ -122,6 +123,15 @@ function App() {
                 )}
               </ProtectedRoute>
             } 
+          />
+
+          <Route
+            path="/lecturer/requests"
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                <StudentRequests />
+              </ProtectedRoute>
+            }
           />
 
           {/* User Folder: Student */}

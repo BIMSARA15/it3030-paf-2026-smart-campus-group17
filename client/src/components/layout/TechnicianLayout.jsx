@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Bell, Building2, GraduationCap, LayoutDashboard, LogOut, Wrench } from "lucide-react";
+import { Bell, Building2, GraduationCap, LayoutDashboard, LogOut, Wrench, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 /**
@@ -12,10 +12,10 @@ export default function TechnicianLayout() {
   const { user, logout } = useAuth();
 
   const navItem = ({ isActive }) =>
-    `flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+    `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
       isActive
-        ? "bg-blue-600 text-white shadow-sm"
-        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+        ? "bg-white/90 text-slate-800 shadow-[0_10px_30px_rgba(15,23,42,0.12)]"
+        : "text-slate-300 hover:bg-white/10 hover:text-white"
     }`;
 
   const initials = (user?.name || "MT")
@@ -26,20 +26,47 @@ export default function TechnicianLayout() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-[#F8FAFC]">
       {/* ── Sidebar ── */}
-      <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col p-4">
-        <div className="flex items-center gap-2.5 px-2 py-3 mb-6">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-white" />
+      <aside className="w-72 bg-gradient-to-b from-[#27324A] via-[#303B53] to-[#1F2937] text-slate-100 flex flex-col p-4 shadow-[12px_0_40px_rgba(15,23,42,0.08)]">
+        <div className="flex items-start justify-between px-2 py-2 mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <div className="leading-tight">
+              <h1 className="text-lg font-bold tracking-wide text-white">SMART CAMPUS</h1>
+              <p className="text-[11px] text-slate-300">Technician Portal</p>
+            </div>
           </div>
-          <div className="leading-tight">
-            <h1 className="text-sm font-bold">Northridge</h1>
-            <p className="text-[11px] text-slate-400">University Portal</p>
+          <button
+            type="button"
+            className="mt-1 rounded-full p-1 text-slate-300 hover:bg-white/10 hover:text-white"
+            aria-label="Close sidebar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="mx-1 mb-6 rounded-[24px] bg-white px-4 py-4 text-slate-800 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-slate-700 flex items-center justify-center text-white text-xs font-bold">
+              {initials}
+            </div>
+            <div className="leading-tight min-w-0">
+              <p className="text-sm font-bold truncate">{user?.name || "Dev Technician"}</p>
+              <p className="text-[10px] font-semibold tracking-wide uppercase text-slate-500">
+                {user?.role || "Technician"}
+              </p>
+            </div>
           </div>
         </div>
 
-        <nav className="space-y-1 flex-1">
+        <div className="px-2 mb-3">
+          <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-slate-400">Navigation</p>
+        </div>
+
+        <nav className="space-y-2 flex-1">
           <NavLink to="/staff" end className={navItem}>
             <LayoutDashboard className="w-4 h-4" /> Dashboard
           </NavLink>
@@ -57,23 +84,12 @@ export default function TechnicianLayout() {
           </NavLink>
         </nav>
 
-        <div className="mt-4 pt-4 border-t border-slate-800">
-          <div className="flex items-center gap-2.5 px-2 mb-2">
-            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
-              {initials}
-            </div>
-            <div className="leading-tight min-w-0">
-              <p className="text-sm font-semibold truncate">{user?.name || "Technician"}</p>
-              <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold tracking-wider">
-                {user?.role || "TECHNICIAN"}
-              </span>
-            </div>
-          </div>
+        <div className="mt-4 pt-4">
           <button
             onClick={logout}
-            className="w-full inline-flex items-center gap-2 px-2 py-2 text-sm text-slate-400 hover:text-white"
+            className="w-full inline-flex items-center gap-2 rounded-2xl border border-rose-200/30 bg-white/95 px-4 py-3 text-sm font-semibold text-rose-500 hover:bg-rose-50"
           >
-            <LogOut className="w-4 h-4" /> Sign Out
+            <LogOut className="w-4 h-4" /> Logout
           </button>
         </div>
       </aside>

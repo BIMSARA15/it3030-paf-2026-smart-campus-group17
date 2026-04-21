@@ -2,8 +2,6 @@ import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import {
   clearPreviewMode,
-  enableTechnicianPreview,
-  getPreviewUser,
 } from '../services/previewMode';
 
 
@@ -23,13 +21,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // When the app loads, ask Spring Boot if we are logged in
     const checkUserStatus = async () => {
-      const previewUser = getPreviewUser();
-      if (previewUser) {
-        setUser(previewUser);
-        setLoading(false);
-        return;
-      }
-
       try {
         const response = await axios.get('http://localhost:8080/api/auth/user');
         // Google returns a lot of data, we just want the core info for now
@@ -86,12 +77,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const openTechnicianPreview = () => {
-    const previewUser = enableTechnicianPreview();
-    setUser(previewUser);
-    window.location.href = '/staff';
-  };
-
   const logout = async () => {
     clearPreviewMode();
     try {
@@ -106,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
   return (
-    <AuthContext.Provider value={{ user, login, logout, devLogin, openTechnicianPreview, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, devLogin, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

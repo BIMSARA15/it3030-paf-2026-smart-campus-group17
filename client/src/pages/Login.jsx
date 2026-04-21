@@ -25,7 +25,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const { devLogin, login, openTechnicianPreview } = useAuth();
+  const { devLogin, login } = useAuth();
   const [faculty, setFaculty] = useState("");
   const [yearSemester, setYearSemester] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -635,15 +635,6 @@ export default function AuthPage() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={openTechnicianPreview}
-                className="w-full mt-3 py-2.5 px-3 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors uppercase tracking-wider"
-              >
-                Open technician preview with demo tickets
-              </button>
-              <p className="text-amber-700/70 text-[10px] mt-3 text-center leading-tight">
-                This panel bypasses OAuth2. The preview button opens the technician UI with browser-stored demo data only.
-              </p>
             </div>
           )}
         </div>

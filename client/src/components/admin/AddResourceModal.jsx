@@ -4,7 +4,7 @@ import { Building2, Loader2, ShieldCheck, Sparkles, Users, X } from 'lucide-reac
 const TYPE_OPTIONS = ['Lecture Room', 'Lab', 'Meeting Room'];
 const FEATURE_OPTIONS = ['Air Conditioning', 'Audio System', 'Projector'];
 const ACCESS_OPTIONS = ['Lecturer', 'Student', 'Anyone'];
-const STATUS_OPTIONS = ['Available', 'Not Available', 'Out Of Service'];
+const STATUS_OPTIONS = ['Available', 'Out Of Service'];
 
 const INITIAL_FORM = {
   resourceCode: '',

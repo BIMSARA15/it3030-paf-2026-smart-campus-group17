@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,6 +31,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     // --- 1. UPDATED: Handles BOTH OAuth2 and Manual Logins ---
@@ -71,8 +75,8 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // --- 2. UPDATED: Save the plain-text password during registration ---
-    // --- 2. UPDATED: Backend Validation Added ---
+    // Register local accounts using BCrypt so new passwords are never
+    // persisted in raw form.
     @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
         // Validation: Block empty submissions
@@ -89,7 +93,7 @@ public class AuthController {
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
-        user.setPassword(newUserRequest.getPassword());
+        user.setPassword(passwordEncoder.encode(newUserRequest.getPassword()));
         user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
         user.setFaculty(newUserRequest.getFaculty());
         
@@ -102,7 +106,8 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully!");
     }
 
-    // --- 3. NEW: Manual Login Endpoint ---
+    // Manual login supports a temporary migration path: legacy plain-text
+    // passwords are accepted once, then immediately replaced with a BCrypt hash.
     @PostMapping("/login")
     // Note the added HttpServletResponse parameter!
     public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginRequest, HttpServletRequest request, HttpServletResponse response) {
@@ -115,7 +120,18 @@ public class AuthController {
         }
 
         User user = userOpt.get();
-        if (!user.getPassword().equals(password)) {
+        String storedPassword = user.getPassword();
+        boolean authenticated = false;
+
+        if (storedPassword != null && isBcryptHash(storedPassword)) {
+            authenticated = passwordEncoder.matches(password, storedPassword);
+        } else if (storedPassword != null && storedPassword.equals(password)) {
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
+            authenticated = true;
+        }
+
+        if (!authenticated) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password");
         }
 
@@ -129,6 +145,10 @@ public class AuthController {
         securityContextRepository.saveContext(sc, request, response);
 
         return ResponseEntity.ok("Login successful");
+    }
+
+    private boolean isBcryptHash(String value) {
+        return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
     }
 
    @PostMapping("/complete-profile")

@@ -275,13 +275,13 @@ export default function AllBookings() {
                     onClick={() => setStatusFilter(s)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-colors ${
                         statusFilter === s
-                        ? 'bg-[#0f2b5b] text-white'
+                        ? 'bg-[#1E3A8A] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                     >
                     {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
                     <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
-                        statusFilter === s ? 'bg-white/20' : 'bg-white text-gray-500'
+                        statusFilter === s ? 'bg-white/20' : 'bg-blue-100 text-blue-700 font-medium' // <--- UPDATED COLORS
                     }`}>
                         {counts[s]}
                     </span>
@@ -386,7 +386,7 @@ export default function AllBookings() {
                                 </td>
                                 <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-[#0f2b5b] flex items-center justify-center flex-shrink-0">
+                                    <div className="w-7 h-7 rounded-full bg-[#1E3A8A] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-xs">{(booking.userName || 'User').split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
                                     </div>
                                     <div>
@@ -434,90 +434,114 @@ export default function AllBookings() {
                                         </button>
                                     </>
                                     )}
+                                    {/* View Details Button */}
                                     <button
-                                    onClick={() => setExpandedId(isExpanded ? null : booking.id)}
-                                    className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                      onClick={() => setExpandedId(isExpanded ? null : booking.id)}
+                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                                        isExpanded 
+                                          ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                      }`}
                                     >
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                      <Eye className={`w-3.5 h-3.5 ${isExpanded ? 'text-blue-600' : 'text-gray-400'}`} />
+                                      {isExpanded ? 'Hide Details' : 'View Details'}
                                     </button>
                                 </div>
                                 </td>
                             </tr>
+                            
                             {isExpanded && (
-                                <tr className="bg-gray-50/70">
-                                <td colSpan={6} className="px-4 py-4">
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                    <div>
-                                        <p className="text-gray-400 text-xs mb-0.5">Booking ID</p>
-                                        <p className="text-gray-700 text-sm font-mono">{booking.id.toUpperCase()}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs mb-0.5">Email</p>
-                                        <p className="text-gray-700 text-sm">{booking.userEmail}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs mb-0.5">Submitted</p>
-                                        <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-400 text-xs mb-0.5">Last Updated</p>
-                                        <p className="text-gray-700 text-sm">{formatCreated(booking.updatedAt)}</p>
-                                    </div>
-                                    </div>
-                                    <div className="mb-3">
-                                    <p className="text-gray-400 text-xs mb-0.5">Full Purpose</p>
-                                    <p className="text-gray-700 text-sm">{booking.purpose}</p>
-                                    </div>
-                                    {booking.lecturer && (
-                                    <div className="mb-3">
-                                        <p className="text-gray-400 text-xs mb-0.5">Lecturer in Charge</p>
-                                        <p className="text-gray-700 text-sm">{booking.lecturer}</p>
-                                    </div>
-                                    )}
-                                    {booking.specialRequests && (
-                                    <div className="mb-3">
-                                        <p className="text-gray-400 text-xs mb-0.5">Special Requests</p>
-                                        <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
-                                    </div>
-                                    )}
-                                    {resource && (
-                                    <div className="mb-3">
-                                        <p className="text-gray-400 text-xs mb-0.5">Resource Location</p>
-                                        <div className="flex items-center gap-1 text-gray-700 text-sm">
-                                        <MapPin className="w-3.5 h-3.5 text-gray-400" /> {resource.location}
-                                        </div>
-                                    </div>
-                                    )}
-                                    {booking.status === 'REJECTED' && booking.rejectionReason && (
-                                    <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
-                                        <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                <tr className="bg-white border-b border-gray-50">
+                                <td colSpan={6} className="px-6 py-5 bg-slate-50/50 border-x-4 border-l-[#1E3A8A] border-r-transparent">
+                                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-50">
                                         <div>
-                                        <p className="text-red-700 text-xs">Rejection Reason</p>
-                                        <p className="text-red-600 text-sm">{booking.rejectionReason}</p>
+                                          <p className="text-gray-400 text-xs mb-0.5">Booking ID</p>
+                                          <p className="text-gray-700 text-sm font-mono">{booking.id.toUpperCase()}</p>
                                         </div>
-                                    </div>
-                                    )}
-                                    {booking.adminNote && (
-                                    <div className="mt-2 flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-                                        <Eye className="w-4 h-4 text-blue-500 flex-shrink-0" />
                                         <div>
-                                        <p className="text-blue-700 text-xs">Admin Note</p>
-                                        <p className="text-blue-600 text-sm">{booking.adminNote}</p>
+                                          <p className="text-gray-400 text-xs mb-0.5">Email</p>
+                                          <p className="text-gray-700 text-sm">{booking.userEmail}</p>
                                         </div>
-                                    </div>
-                                    )}
-                                    {booking.status === 'CANCELLED' && booking.cancellationReason && (
-                                    <div className="mt-2 flex items-start gap-2 p-3 rounded-xl border bg-gray-50 border-gray-200">
-                                        <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         <div>
-                                        <p className="text-gray-700 text-xs">Cancellation Reason (User)</p>
-                                        <p className="text-gray-600 text-sm">{booking.cancellationReason}</p>
+                                          <p className="text-gray-400 text-xs mb-0.5">Submitted</p>
+                                          <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
                                         </div>
-                                    </div>
-                                    )}
-                                    {booking.reviewedBy && (
-                                    <p className="text-gray-400 text-xs mt-2">Reviewed by: {booking.reviewedBy}</p>
-                                    )}
+                                        <div>
+                                          <p className="text-gray-400 text-xs mb-0.5">Last Updated</p>
+                                          <p className="text-gray-700 text-sm">{formatCreated(booking.updatedAt)}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Second Row wrapped in a Grid for horizontal layout */}
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                        <div>
+                                          <p className="text-gray-400 text-xs mb-0.5">Full Purpose</p>
+                                          <p className="text-gray-700 text-sm">{booking.purpose}</p>
+                                        </div>
+                                        <div>
+                                          {booking.lecturer && (
+                                            <>
+                                              <p className="text-gray-400 text-xs mb-0.5">Lecturer in Charge</p>
+                                              <p className="text-gray-700 text-sm">{booking.lecturer}</p>
+                                            </>
+                                          )}
+                                        </div>
+                                        <div>
+                                          {resource && (
+                                            <>
+                                              <p className="text-gray-400 text-xs mb-0.5">Resource Location</p>
+                                              <div className="flex items-center gap-1 text-gray-700 text-sm">
+                                                <MapPin className="w-3.5 h-3.5 text-gray-400" /> {resource.location}
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+                                        <div>
+                                          {booking.specialRequests && (
+                                            <>
+                                              <p className="text-gray-400 text-xs mb-0.5">Special Requests</p>
+                                              <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {booking.status === 'REJECTED' && booking.rejectionReason && (
+                                        <div className="mt-3 flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+                                            <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                            <div>
+                                            <p className="text-red-700 text-xs">Rejection Reason</p>
+                                            <p className="text-red-600 text-sm">{booking.rejectionReason}</p>
+                                            </div>
+                                        </div>
+                                      )}
+
+                                      {booking.adminNote && (
+                                        <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                                            <Eye className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                            <div>
+                                            <p className="text-blue-700 text-xs">Admin Note</p>
+                                            <p className="text-blue-600 text-sm">{booking.adminNote}</p>
+                                            </div>
+                                        </div>
+                                      )}
+
+                                      {booking.status === 'CANCELLED' && booking.cancellationReason && (
+                                        <div className="mt-3 flex items-start gap-2 p-3 rounded-xl border bg-gray-50 border-gray-200">
+                                            <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                            <div>
+                                            <p className="text-gray-700 text-xs">Cancellation Reason (User)</p>
+                                            <p className="text-gray-600 text-sm">{booking.cancellationReason}</p>
+                                            </div>
+                                        </div>
+                                      )}
+
+                                      {booking.reviewedBy && (
+                                        <p className="text-gray-400 text-xs mt-3">Reviewed by: {booking.reviewedBy}</p>
+                                      )}
+
+                                    </div> {/* <-- Closes the white card wrapper */}
                                 </td>
                                 </tr>
                             )}
@@ -529,9 +553,6 @@ export default function AllBookings() {
                 </div>
                 <div className="px-4 py-3 border-t border-gray-50 flex items-center justify-between">
                     <p className="text-gray-400 text-xs">Showing {filtered.length} of {bookings.length} bookings</p>
-                    <div className="flex gap-3 text-xs text-gray-400">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Pending review</span>
-                    </div>
                 </div>
                 </div>
             )}

@@ -21,15 +21,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // When the app loads, ask Spring Boot if we are logged in
     const checkUserStatus = async () => {
-      try {
+    try {
         const response = await axios.get('http://localhost:8080/api/auth/user');
-        // Google returns a lot of data, we just want the core info for now
-        // 🛑 STRICT CHECK: If there is no email, kill the ghost user!
+        
         if (!response.data || !response.data.email) {
             setUser(null);
             setLoading(false);
             return;
         }
+<<<<<<< HEAD
        setUser({
           id: response.data.id,
           name: response.data.name,
@@ -42,6 +42,44 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error("Auth check failed:", error);
         // If it fails (e.g., 401 Unauthorized), the user is not logged in
+=======
+
+       // 🛑 NEW USER: CATCH THE SESSION HOLD
+       if (response.data.requiresRegistration) {
+           setUser({
+               name: response.data.name,
+               email: response.data.email,
+               picture: response.data.picture,
+               requiresRegistration: true, // Tells your router they are partially logged in
+               profileComplete: false
+           });
+           
+          // If they aren't on the login page, send them there to finish!
+           if (!window.location.pathname.includes('/login')) {
+               window.location.href = '/login';
+           }
+       } else {
+           // ✅ EXISTING USER: Normal login
+           setUser({
+              name: response.data.name,
+              email: response.data.email,
+              picture: response.data.picture,
+              role: response.data.role, 
+              profileComplete: response.data.profileComplete
+            });
+            
+            // Auto-redirect to the correct dashboard based on role!
+            if (window.location.pathname === '/' || window.location.pathname === '/login') {
+                const role = (response.data.role || 'student').toLowerCase();
+                if (role === 'admin') window.location.href = '/admin';
+                else if (role === 'technician') window.location.href = '/staff';
+                else if (role === 'lecturer') window.location.href = '/lecturer';
+                else window.location.href = '/student'; 
+            }
+       }
+      }catch (error) {
+        console.error("Auth check failed:", error);
+>>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
         setUser(null);
       } finally {
         setLoading(false);

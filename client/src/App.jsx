@@ -5,15 +5,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login'; 
 import CompleteProfile from './pages/CompleteProfile';
 
-// ------------------------------------------------------------------------
-// TEAM INSTRUCTIONS: 
-// When you pull this branch, uncomment your import below and replace the 
-// placeholder <div> tags in the Routes with your actual component!
-// ------------------------------------------------------------------------
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
 import AdminUtilities from './pages/admin/Utilities';
+import AdminTechnicians from './pages/admin/AdminTechnicians';
 //import StaffDashboard from './pages/staff/StaffDashboard';
 import LecturerDashboard from './pages/user/LecturerDashboard';
 import StudentDashboard from './pages/user/StudentDashboard';
@@ -100,6 +96,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AdminUtilities />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/admin/technicians" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminTechnicians />
               </ProtectedRoute>
             }
           />

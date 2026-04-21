@@ -18,6 +18,7 @@ public class User {
     private String registeredCourse; // New field for registered course
     private String phoneNumber; // New field for phone number
     private String specialization;
+    private boolean available = true; // Default to true when created
 
     // Constructors
     public User() {}
@@ -52,5 +53,7 @@ public void setPassword(String password) { this.password = password; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public String getSpecialization() { return specialization; }
     public void setSpecialization(String specialization) { this.specialization = specialization; }
+    public boolean isAvailable() {return available;} 
+    public void setAvailable(boolean available) { this.available = available;}
 
 }

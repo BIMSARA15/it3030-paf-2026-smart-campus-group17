@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin,
-  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package,
+  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package, ShieldAlert, Send, X,
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import StudentRequestModal from '../../components/user/StudentRequestModal';
 
 const TYPE_CONFIG = {
   room: {
@@ -23,9 +24,25 @@ const TYPE_CONFIG = {
   },
 };
 
+const getAccessLabel = (access = '') => {
+  const normalized = access.toLowerCase();
+  if (normalized === 'lecturer') return 'Lecturer Only';
+  if (normalized === 'student') return 'Student Only';
+  return 'Open Access';
+};
+
 export default function Resources() {
-  const { resources, bookings, getUtilitiesForResource } = useBooking();
+  const {
+    resources,
+    bookings,
+    studentRequests,
+    currentUser,
+    getUtilitiesForResource,
+    createStudentRequest,
+  } = useBooking();
   const navigate = useNavigate();
+  const currentRole = (currentUser?.role || '').toUpperCase();
+  const isStudentView = currentRole === 'STUDENT' || currentRole === 'USER';
   
   // 2. Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -33,6 +50,9 @@ export default function Resources() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
+  const [accessMessage, setAccessMessage] = useState('');
+  const [requestingResource, setRequestingResource] = useState(null);
+  const [requestSentPopup, setRequestSentPopup] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -59,6 +79,23 @@ export default function Resources() {
     room: resources.filter(r => r.type === 'room').length,
     lab: resources.filter(r => r.type === 'lab').length,
     equipment: resources.filter(r => r.type === 'equipment').length,
+  };
+
+  const hasExistingRequest = (resourceId) => studentRequests.some((request) => {
+    const sameResource = request.resourceId === resourceId;
+    const sameStudent = (request.studentEmail || '') === (currentUser?.email || '');
+    const isActive = request.status === 'PENDING' || request.status === 'BOOKING_CREATED';
+    return sameResource && sameStudent && isActive;
+  });
+
+  const handleStudentRequest = async (requestData) => {
+    const result = await createStudentRequest(requestData);
+    if (result.success) {
+      setAccessMessage('');
+      setRequestSentPopup(true);
+      setRequestingResource(null);
+    }
+    return result;
   };
 
   return (
@@ -116,15 +153,25 @@ export default function Resources() {
                 const cfg = TYPE_CONFIG[resource.type];
                 const stats = getResourceStats(resource.id);
                 const isSelected = selectedId === resource.id;
+                const isLecturerOnly = (resource.access || '').toLowerCase() === 'lecturer';
+                const isBlockedForStudent = isStudentView && isLecturerOnly;
+                const requestAlreadySent = isBlockedForStudent && hasExistingRequest(resource.id);
 
                 return (
                   <div
                     key={resource.id}
-                    onClick={() => setSelectedId(isSelected ? null : resource.id)}
-                    className={`bg-white rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
+                    onClick={() => {
+                      setSelectedId(isSelected ? null : resource.id);
+                      setAccessMessage('');
+                    }}
+                    className={`rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
                       isSelected 
-                        ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5' // UPDATED: Selected state
-                        : 'border-gray-100 hover:border-[#17A38A]/30'
+                        ? isBlockedForStudent
+                          ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80'
+                          : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5'
+                        : isBlockedForStudent
+                          ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300'
+                          : 'bg-white border-gray-100 hover:border-[#17A38A]/30'
                     }`}
                   >
                     {/* Top row */}
@@ -132,14 +179,27 @@ export default function Resources() {
                       <div className={`w-10 h-10 rounded-xl ${cfg.bg} ${cfg.border} border flex items-center justify-center ${cfg.color}`}>
                         {cfg.icon}
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color} capitalize`}>
-                        {cfg.label}
-                      </span>
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className={`text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color} capitalize`}>
+                          {cfg.label}
+                        </span>
+                        <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                          isBlockedForStudent
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {getAccessLabel(resource.access)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Name */}
                     {/* UPDATED: Title text color when selected */}
-                    <h4 className={`text-gray-900 font-medium mb-1 transition-colors ${isSelected ? 'text-[#0F6657]' : ''}`}>
+                    <h4 className={`font-medium mb-1 transition-colors ${
+                      isBlockedForStudent
+                        ? 'text-amber-900'
+                        : `text-gray-900 ${isSelected ? 'text-[#0F6657]' : ''}`
+                    }`}>
                       {resource.name}
                     </h4>
 
@@ -170,15 +230,18 @@ export default function Resources() {
                     </div>
 
                     {/* Stats row */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                    <div className={`flex items-center justify-between pt-3 ${isBlockedForStudent ? 'border-t border-amber-100' : 'border-t border-gray-50'}`}>
                       <div className="text-xs text-gray-400">
-                        {stats.upcoming > 0
+                        {isBlockedForStudent
+                          ? requestAlreadySent
+                            ? <span className="text-amber-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Request already sent</span>
+                            : <span className="text-amber-700 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Lecturer access required</span>
+                          : stats.upcoming > 0
                           ? <span className="text-amber-600">{stats.upcoming} upcoming booking{stats.upcoming !== 1 ? 's' : ''}</span>
                           : <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Available</span>
                         }
                       </div>
-                      {/* UPDATED: View text link color */}
-                      <div className="flex items-center gap-1 text-[#17A38A] text-xs font-medium">
+                      <div className={`flex items-center gap-1 text-xs font-medium ${isBlockedForStudent ? 'text-amber-700' : 'text-[#17A38A]'}`}>
                         View <ChevronRight className="w-3 h-3" />
                       </div>
                     </div>
@@ -215,6 +278,22 @@ export default function Resources() {
                   </div>
 
                   <div className="p-5">
+                    {isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && (
+                      <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <div className="flex items-start gap-2">
+                          <ShieldAlert className="mt-0.5 w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-amber-900">Lecturer-only resource</p>
+                            <p className="text-xs text-amber-800 mt-1">
+                              {hasExistingRequest(selectedResource.id)
+                                ? 'A request has already been sent for this resource. Please wait for the lecturer to review it.'
+                                : 'Students can send a request to a lecturer, and the lecturer can then place the booking from `Std Requests`.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Location */}
                     <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
                       <MapPin className="w-4 h-4 text-gray-400" />
@@ -299,11 +378,44 @@ export default function Resources() {
                     </div>
 
                     {/* UPDATED: Book button with Green Gradient */}
+                    {accessMessage && (
+                      <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        {accessMessage}
+                      </div>
+                    )}
+
                     <button
-                      onClick={() => navigate(`/booking/new?resource=${selectedResource.id}`)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] rounded-xl transition-all text-sm font-medium shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 active:scale-[0.98]"
+                      onClick={() => {
+                        const isLecturerOnly = (selectedResource.access || '').toLowerCase() === 'lecturer';
+                        const requestAlreadySent = hasExistingRequest(selectedResource.id);
+                        if (isStudentView && isLecturerOnly) {
+                          if (requestAlreadySent) {
+                            setAccessMessage('You have already sent a request for this resource.');
+                            return;
+                          }
+                          setAccessMessage('');
+                          setRequestingResource(selectedResource);
+                          return;
+                        }
+
+                        setAccessMessage('');
+                        navigate(`/booking/new?resource=${selectedResource.id}`);
+                      }}
+                      disabled={isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium border-t active:scale-[0.98] ${
+                        isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed shadow-none'
+                          : isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer'
+                          ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.28)] border-white/20'
+                          : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-white/20'
+                      }`}
                     >
-                      <CalendarPlus className="w-4 h-4" /> Book This Resource
+                      {isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
+                        ? <><CheckCircle className="w-4 h-4" /> Request Sent</>
+                        : isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer'
+                        ? <><Send className="w-4 h-4" /> Send Request to Lecturer</>
+                        : <><CalendarPlus className="w-4 h-4" /> Book This Resource</>
+                      }
                     </button>
                   </div>
                 </div>
@@ -312,6 +424,46 @@ export default function Resources() {
           </div>
         </div>
       </div>
+
+      <StudentRequestModal
+        key={requestingResource?.id || 'student-request'}
+        isOpen={Boolean(requestingResource)}
+        resource={requestingResource}
+        currentUser={currentUser}
+        getUtilitiesForResource={getUtilitiesForResource}
+        onClose={() => setRequestingResource(null)}
+        onSubmit={handleStudentRequest}
+      />
+
+      {requestSentPopup && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setRequestSentPopup(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-[28px] border border-white/60 bg-white p-8 text-center shadow-[0_30px_80px_rgba(15,23,42,0.2)]">
+            <button
+              type="button"
+              onClick={() => setRequestSentPopup(false)}
+              className="absolute right-4 top-4 rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle className="h-8 w-8 text-emerald-600" />
+            </div>
+            <h3 className="mt-4 text-xl font-semibold text-slate-900">Request Sent</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Your request has been sent to the lecturer successfully.
+            </p>
+            <button
+              type="button"
+              onClick={() => setRequestSentPopup(false)}
+              className="mt-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] px-5 py-2.5 text-sm font-medium text-white shadow-[0_4px_12px_rgba(23,163,138,0.3)] transition-all hover:from-[#0c5246] hover:to-[#128a74]"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

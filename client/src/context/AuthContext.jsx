@@ -1,5 +1,8 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
+import {
+  clearPreviewMode,
+} from '../services/previewMode';
 
 
 const AuthContext = createContext();
@@ -98,6 +101,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    clearPreviewMode();
     try {
       // Tell Spring Boot to destroy the session cookie
       await axios.post('http://localhost:8080/logout'); 

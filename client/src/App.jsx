@@ -2,9 +2,20 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
 import ProtectedRoute from './components/ProtectedRoute';
-import Login from './pages/Login'; 
+import Login from './pages/Login';
 import CompleteProfile from './pages/CompleteProfile';
 
+// Module C — Maintenance & Incident Ticketing (Technician)
+import TechnicianLayout from './components/layout/TechnicianLayout';
+import TechnicianDashboard from './pages/staff/TechnicianDashboard';
+import TechnicianMaintenance from './pages/staff/TechnicianMaintenance';
+import StaffPlaceholder from './pages/staff/StaffPlaceholder';
+
+// ------------------------------------------------------------------------
+// TEAM INSTRUCTIONS:
+// When you pull this branch, uncomment your import below and replace the
+// placeholder <div> tags in the Routes with your actual component!
+// ------------------------------------------------------------------------
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
@@ -50,13 +61,13 @@ function App() {
             element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
           />
 
-          <Route 
-            path="/complete-profile" 
+          <Route
+            path="/complete-profile"
             element={
               <ProtectedRoute allowedRoles={['USER', 'STUDENT', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
                 <CompleteProfile />
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* ========================================== */}
@@ -108,24 +119,36 @@ function App() {
             }
           />
 
-          {/* Member 3: Staff / Technician */}
-          <Route 
-            path="/staff" 
+          {/* Member 3: Staff / Technician — Module C */}
+          <Route
+            path="/staff"
             element={
               <ProtectedRoute allowedRoles={['TECHNICIAN']}>
-                <div className="p-8 bg-slate-50 min-h-screen">
-                  <h2 className="text-2xl font-bold">Staff Dashboard Placeholder</h2>
-                  <p className="text-slate-500">Create your page in the <b>/pages/staff/</b> folder and import it here.</p>
-                  <button 
-                    onClick={logout} 
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                </div>
+                <TechnicianLayout />
               </ProtectedRoute>
-            } 
-          />
+            }
+          >
+            <Route index element={<TechnicianDashboard />} />
+            <Route path="maintenance" element={<TechnicianMaintenance />} />
+            <Route
+              path="facilities"
+              element={
+                <StaffPlaceholder
+                  title="Facilities & Assets"
+                  message="Facilities & Assets module (Module A) will appear here."
+                />
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <StaffPlaceholder
+                  title="Notifications"
+                  message="Notifications module will appear here."
+                />
+              }
+            />
+          </Route>
 
          {/* User Folder: Lecturer */}
           <Route 
@@ -136,7 +159,7 @@ function App() {
                   <LecturerDashboard />
                 )}
               </ProtectedRoute>
-            } 
+            }
           />
 
           <Route
@@ -149,8 +172,8 @@ function App() {
           />
 
           {/* User Folder: Student */}
-          <Route 
-            path="/student" 
+          <Route
+            path="/student"
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
                  {user?.profileComplete === false ? (
@@ -190,7 +213,7 @@ function App() {
               <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
                 <Resources />
               </ProtectedRoute>
-            } 
+            }
           />
 
         </Routes>

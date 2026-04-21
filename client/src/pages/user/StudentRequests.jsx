@@ -407,9 +407,9 @@ export default function StudentRequests() {
 
         <div className="space-y-5 p-4 lg:p-6">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Std Requests</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">Studentd Requests</h1>
             <p className="mt-0.5 text-sm text-gray-500">
-              Lecturer-only resource requests sent by students for your review.
+              Lecturer-only resource requests sent by students for review
             </p>
           </div>
 

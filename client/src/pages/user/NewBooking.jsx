@@ -22,6 +22,106 @@ const TYPE_COLORS = {
   equipment: 'bg-orange-100 text-orange-600',
 };
 
+// Helper to convert 12h format back to 24h for math calculations behind the scenes
+const formatTo24Hour = (timeStr) => {
+  if (!timeStr) return '';
+  if (!timeStr.includes('M')) return timeStr; 
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  if (hours === '12') hours = '00';
+  if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
+  return `${hours.padStart(2, '0')}:${minutes}`;
+};
+
+// The Custom Popover Time Picker matching your screenshot
+const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const displayValue = value || "Select time";
+  const currentHour = value ? value.split(':')[0] : '12';
+  const currentMin = value ? value.split(':')[1].split(' ')[0] : '00';
+  const currentAmPm = value ? value.split(' ')[1] : 'AM';
+
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+  const ampm = ['AM', 'PM'];
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.time-picker-dropdown')) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (type, val) => {
+    let h = currentHour;
+    let m = currentMin;
+    let ap = currentAmPm;
+    if (type === 'h') h = val;
+    if (type === 'm') m = val;
+    if (type === 'ap') ap = val;
+    onChange(`${h}:${m} ${ap}`);
+  };
+
+  return (
+    <div className="relative time-picker-dropdown w-full">
+      <style>{`.hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+      <div 
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-all cursor-pointer flex items-center justify-between ${
+          error ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50 hover:bg-white'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <span className={value ? 'text-gray-900 font-medium' : 'text-gray-400'}>{displayValue}</span>
+        <Clock className="w-4 h-4 text-gray-400" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 top-full left-0 mt-2 bg-white border border-gray-100 shadow-xl rounded-xl flex overflow-hidden w-full h-48 ring-1 ring-black/5">
+          <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
+            {hours.map(h => (
+              <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
+            {hours.map(h => (
+              <div 
+                key={h} 
+                onClick={() => handleSelect('h', h)}
+                className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentHour === h ? (theme?.activeTime || 'bg-[#17A38A]/10 text-[#0F6657] font-bold') : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {h}
+              </div>
+            ))}
+          </div>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
+            {minutes.map(m => (
+              <div 
+                key={m} 
+                onClick={() => handleSelect('m', m)}
+                className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentMin === m ? (theme?.activeTime || 'bg-[#17A38A]/10 text-[#0F6657] font-bold') : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {m}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto hide-scroll py-2">
+            {ampm.map(ap => (
+              <div 
+                key={ap} 
+                onClick={() => handleSelect('ap', ap)}
+                className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentAmPm === ap ? (theme?.activeTime || 'bg-[#17A38A]/10 text-[#0F6657] font-bold') : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {ap}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function NewBooking() {
   const {
     resources,
@@ -37,6 +137,39 @@ export default function NewBooking() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentRole = (currentUser?.role || '').toUpperCase();
+
+  const isLecturer = currentRole === 'LECTURER'; 
+
+  // THEME OBJECT FOR CONSISTENT STYLING BASED ON ROLE
+  const theme = {
+    gradientBtn: isLecturer 
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106] shadow-[0_4px_12px_rgba(167,65,6,0.3)]' 
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)]',
+    gradientBtnLg: isLecturer
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106] shadow-[0_6px_20px_rgba(167,65,6,0.4)]' 
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_6px_20px_rgba(23,163,138,0.4)]',
+    activeStep: isLecturer
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] text-white shadow-md border-t border-white/20'
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20',
+    focusRing: isLecturer
+      ? 'focus:border-[#C54E08] focus:ring-[#C54E08]/10'
+      : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10',
+    focusRingLg: isLecturer
+      ? 'focus:border-[#C54E08] focus:ring-[#C54E08]/15'
+      : 'focus:border-[#17A38A] focus:ring-[#17A38A]/15',
+    activeTime: isLecturer
+      ? 'bg-[#A74106]/10 text-[#8A3505] font-bold'
+      : 'bg-[#17A38A]/10 text-[#0F6657] font-bold',
+    textLink: isLecturer ? 'text-[#C54E08]' : 'text-[#17A38A]',
+    textHover: isLecturer ? 'group-hover:text-[#8A3505]' : 'group-hover:text-[#0F6657]',
+    cardHover: isLecturer 
+      ? 'hover:border-[#C54E08]/50 hover:bg-[#C54E08]/5 hover:shadow-[0_8px_24px_rgba(167,65,6,0.12)]'
+      : 'hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)]',
+    checkboxActiveBg: isLecturer ? 'border-[#C54E08]/30 bg-[#C54E08]/5 text-[#8A3505]' : 'border-[#17A38A]/30 bg-[#17A38A]/5 text-[#0F6657]',
+    checkboxHover: isLecturer ? 'hover:border-[#C54E08]/20' : 'hover:border-[#17A38A]/20',
+    checkboxRing: isLecturer ? 'text-[#C54E08] focus:ring-[#C54E08]/30' : 'text-[#17A38A] focus:ring-[#17A38A]/30'
+    
+  };
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -89,17 +222,24 @@ export default function NewBooking() {
   }, [searchParams, resources, currentRole]);
 
   useEffect(() => {
-    if (selectedResource && date && startTime && endTime && startTime < endTime) {
-      const overlappingBooking = bookings.find(b =>
-        b.resourceId === selectedResource.id &&
-        b.date === date &&
-        (b.status === 'APPROVED' || b.status === 'PENDING') &&
-        (
-          (startTime >= b.startTime && startTime < b.endTime) ||
-          (endTime > b.startTime && endTime <= b.endTime) ||
-          (startTime <= b.startTime && endTime >= b.endTime)
-        )
-      );
+    // Convert to 24h for mathematical comparison
+    const start24 = formatTo24Hour(startTime);
+    const end24 = formatTo24Hour(endTime);
+
+    if (selectedResource && date && start24 && end24 && start24 < end24) {
+      const overlappingBooking = bookings.find(b => {
+        if (b.resourceId !== selectedResource.id || b.date !== date) return false;
+        if (b.status !== 'APPROVED' && b.status !== 'PENDING') return false;
+        
+        const bStart = formatTo24Hour(b.startTime);
+        const bEnd = formatTo24Hour(b.endTime);
+
+        return (
+          (start24 >= bStart && start24 < bEnd) ||
+          (end24 > bStart && end24 <= bEnd) ||
+          (start24 <= bStart && end24 >= bEnd)
+        );
+      });
       setConflict(overlappingBooking || null);
     } else {
       setConflict(null);
@@ -128,11 +268,13 @@ export default function NewBooking() {
     else if (date < today) e.date = 'Date cannot be in the past';
     if (!startTime) e.startTime = 'Please select start time';
     if (!endTime) e.endTime = 'Please select end time';
-    if (startTime && endTime && startTime >= endTime) e.endTime = 'End time must be after start time';
+    if (startTime && endTime && formatTo24Hour(startTime) >= formatTo24Hour(endTime)) {
+      e.endTime = 'End time must be after start time';
+    }
     if (!purpose.trim()) e.purpose = 'Please describe the purpose';
     else if (purpose.trim().length < 10) e.purpose = 'Purpose must be at least 10 characters';
     
-    if (!lecturer.trim()) e.lecturer = 'Please provide the name of the Lecturer in Charge';
+    if (!isLecturer && !lecturer.trim()) e.lecturer = 'Please provide the name of the Lecturer in Charge'; // Only for students, lecturer in charge is mandatory
 
     if (selectedResource?.capacity) {
       if (!attendees) {
@@ -175,7 +317,7 @@ export default function NewBooking() {
       date, startTime, endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
-      lecturer: lecturer.trim(),
+      lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(), // If the requester is a lecturer, we can auto-fill the lecturer in charge as themselves
       specialRequests: specialRequests.trim(),
       requestedUtilityIds,
     });
@@ -186,6 +328,9 @@ export default function NewBooking() {
     if (res.success) {
       setShowSuccessModal(true);
       setStep(3); 
+    } else {
+      // FIX: Add error handling so it doesn't fail silently
+      setErrors({ submit: res.message || 'Failed to submit booking. Please try again.' });
     }
   };
 
@@ -193,7 +338,7 @@ export default function NewBooking() {
     `w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-all ${
       errors[field]
         ? 'border-red-300 bg-red-50 focus:border-red-400'
-        : 'border-gray-200 bg-gray-50 focus:border-[#17A38A] focus:bg-white focus:ring-4 focus:ring-[#17A38A]/15'
+        : `border-gray-200 bg-gray-50 focus:bg-white focus:ring-4 ${theme.focusRingLg}`
     }`;
 
   return (
@@ -251,7 +396,7 @@ export default function NewBooking() {
                   
                   <button
                     onClick={() => navigate('/bookings/my')}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] text-sm font-medium shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 transition-all"
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-medium border-t border-white/20 transition-all ${theme.gradientBtn}`}
                   >
                     My Bookings
                   </button>
@@ -262,7 +407,7 @@ export default function NewBooking() {
 
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-gray-900">New Booking Request</h1>
-            <p className="text-gray-500 text-sm mt-1">Reserve a room, lab, or equipment</p>
+            <p className="text-gray-500 text-sm mt-1">Reserve a Lecture Hall, Lab, or Equipment</p>
           </div>
 
           <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 sm:pb-0">
@@ -274,7 +419,7 @@ export default function NewBooking() {
                 <div key={label} className="flex items-center gap-2 whitespace-nowrap">
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all ${
                     done ? 'bg-emerald-100 text-emerald-700' :
-                    active ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' : 'bg-gray-100 text-gray-400'
+                    active ? theme.activeStep : 'bg-gray-100 text-gray-400'
                   }`}>
                     <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs border border-current">
                       {done ? '✓' : stepNum}
@@ -304,17 +449,17 @@ export default function NewBooking() {
                       placeholder="Search resources..."
                       value={search}
                       onChange={e => setSearch(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
-                    />
+                      className={`w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:bg-white focus:ring-2 transition-all ${theme.focusRing}`}
+                      />
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    {['all', 'room', 'lab', 'equipment'].map(t => (
+                    {['all', 'Lecture Hall', 'lab', 'equipment'].map(t => (
                       <button
                         key={t}
                         onClick={() => setTypeFilter(t)}
                         className={`px-3 py-2 rounded-xl text-xs capitalize transition-all ${
                           typeFilter === t
-                            ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20'
+                            ? theme.activeStep
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -340,7 +485,7 @@ export default function NewBooking() {
                     <button
                       key={resource.id}
                       onClick={() => { setSelectedResource(resource); setStep(2); }}
-                      className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)] transition-all group"
+                      className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
@@ -350,7 +495,7 @@ export default function NewBooking() {
                           {resource.type}
                         </span>
                       </div>
-                      <h4 className="text-gray-900 mb-1 group-hover:text-[#0F6657] transition-colors">{resource.name}</h4>
+                      <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
                       <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
                         <MapPin className="w-3 h-3" />
                         {resource.location}
@@ -396,7 +541,7 @@ export default function NewBooking() {
                     {step === 2 && (
                       <button
                         onClick={() => setStep(1)}
-                        className="ml-auto text-[#17A38A] text-xs hover:underline flex items-center gap-1"
+                        className={`ml-auto text-xs hover:underline flex items-center gap-1 ${theme.textLink}`}
                       >
                         <ChevronLeft className="w-3.5 h-3.5" /> Change
                       </button>
@@ -426,12 +571,12 @@ export default function NewBooking() {
                           <Clock className="w-3.5 h-3.5 inline mr-1.5" />
                           Start Time <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="time"
+                        <CustomTimePicker
                           value={startTime}
                           disabled={step === 3}
-                          onChange={e => { setStartTime(e.target.value); setErrors(p => ({ ...p, startTime: '' })); }}
-                          className={inputClass('startTime')}
+                          error={errors.startTime}
+                          theme={theme}
+                          onChange={val => { setStartTime(val); setErrors(p => ({ ...p, startTime: '' })); }}
                         />
                         {errors.startTime && <p className="text-red-500 text-xs mt-1">{errors.startTime}</p>}
                       </div>
@@ -440,12 +585,12 @@ export default function NewBooking() {
                           <Clock className="w-3.5 h-3.5 inline mr-1.5" />
                           End Time <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="time"
+                        <CustomTimePicker
                           value={endTime}
                           disabled={step === 3}
-                          onChange={e => { setEndTime(e.target.value); setErrors(p => ({ ...p, endTime: '' })); }}
-                          className={inputClass('endTime')}
+                          error={errors.endTime}
+                          theme={theme}
+                          onChange={val => { setEndTime(val); setErrors(p => ({ ...p, endTime: '' })); }}
                         />
                         {errors.endTime && <p className="text-red-500 text-xs mt-1">{errors.endTime}</p>}
                       </div>
@@ -509,21 +654,24 @@ export default function NewBooking() {
                       </div>
                     )}
 
-                    <div>
-                      <label className="block text-gray-700 text-sm mb-1.5">
-                        <User className="w-3.5 h-3.5 inline mr-1.5" />
-                        Lecturer in Charge <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        disabled={step === 3}
-                        placeholder="e.g., Dr. Kamal Perera"
-                        value={lecturer}
-                        onChange={e => { setLecturer(e.target.value); setErrors(p => ({ ...p, lecturer: '' })); }}
-                        className={inputClass('lecturer')}
-                      />
-                      {errors.lecturer && <p className="text-red-500 text-xs mt-1">{errors.lecturer}</p>}
-                    </div>
+                    {/* Only shows if NOT a lecturer */}
+                    {!isLecturer && (
+                      <div>
+                        <label className="block text-gray-700 text-sm mb-1.5">
+                          <User className="w-3.5 h-3.5 inline mr-1.5" />
+                          Lecturer in Charge <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          disabled={step === 3}
+                          placeholder="e.g., Dr. Kamal Perera"
+                          value={lecturer}
+                          onChange={e => { setLecturer(e.target.value); setErrors(p => ({ ...p, lecturer: '' })); }}
+                          className={inputClass('lecturer')}
+                        />
+                        {errors.lecturer && <p className="text-red-500 text-xs mt-1">{errors.lecturer}</p>}
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-gray-700 text-sm mb-1.5">
@@ -536,7 +684,7 @@ export default function NewBooking() {
                         placeholder="Any specific setup requirements (e.g., extra chairs, projector adapter)..."
                         value={specialRequests}
                         onChange={e => setSpecialRequests(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 transition-all resize-none"
+                        className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:bg-white focus:ring-2 transition-all resize-none ${theme.focusRing}`}
                       />
                     </div>
 
@@ -582,6 +730,14 @@ export default function NewBooking() {
                 </div>
 
                 <div className="flex flex-col gap-3">
+                  {/* FIX: Display submit error to the user if the backend connection fails */}
+                  {errors.submit && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
+                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                      <p className="text-red-700 text-sm">{errors.submit}</p>
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     {step === 2 && (
                       <button
@@ -597,7 +753,7 @@ export default function NewBooking() {
                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-sm transition-all ${
                         submitting || conflict || step === 3
                           ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_6px_20px_rgba(23,163,138,0.4)] border-t border-white/30 active:scale-[0.98]'
+                          : `text-white border-t border-white/30 active:scale-[0.98] ${theme.gradientBtnLg}`
                       }`}
                     >
                       {submitting ? (
@@ -619,7 +775,7 @@ export default function NewBooking() {
                         setPurpose(''); setAttendees(''); setLecturer('');
                         setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
                       }}
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_6px_20px_rgba(23,163,138,0.4)] border-t border-white/30 text-sm font-medium transition-all active:scale-[0.98] mt-1"
+                      className={`w-full py-2.5 px-4 rounded-xl text-white text-sm font-medium transition-all active:scale-[0.98] mt-1 border-t border-white/30 ${theme.gradientBtnLg}`}
                     >
                       Make Another Booking
                     </button>
@@ -674,8 +830,8 @@ export default function NewBooking() {
                   {(() => {
                     const todayStr = today;
                     const existing = bookings
-                      .filter(b => b.resourceId === selectedResource.id && b.status === 'APPROVED' && b.date >= todayStr)
-                      .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
+                      .filter(b => b.resourceId === selectedResource.id && (b.status === 'APPROVED' || b.status === 'PENDING') && b.date >= todayStr)
+                      .sort((a, b) => a.date.localeCompare(b.date) || formatTo24Hour(a.startTime).localeCompare(formatTo24Hour(b.startTime)))
                       .slice(0, 5);
                     
                     if (existing.length === 0) {

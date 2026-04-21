@@ -25,8 +25,24 @@ const TYPE_COLORS = {
 export default function MyBookings() {
   const { currentUser, bookings, getResourceById, cancelBooking } = useBooking();
   const navigate = useNavigate();
-  
-  // 2. Add Sidebar State
+
+  // THEME: Determine if user is lecturer for styling purposes
+  const currentRole = (currentUser?.role || '').toUpperCase();
+  const isLecturer = currentRole === 'LECTURER';
+
+  const theme = {
+    gradientBtn: isLecturer 
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106] shadow-[0_4px_12px_rgba(167,65,6,0.3)]' 
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)]',
+    activeFilter: isLecturer
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] text-white shadow-md border-t border-white/20'
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20',
+    focusRing: isLecturer
+      ? 'focus:border-[#C54E08] focus:ring-[#C54E08]/10'
+      : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10'
+  };
+
+  // Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -102,10 +118,10 @@ export default function MyBookings() {
               <h1 className="text-2xl font-semibold text-gray-900">My Bookings</h1>
               <p className="text-gray-500 text-sm mt-0.5">{myBookings.length} total booking{myBookings.length !== 1 ? 's' : ''}</p>
             </div>
-            {/* UPDATED: Green Gradient Button */}
+            {/* Dynamic Gradient Button */}
             <button
               onClick={() => navigate('/booking/new')}
-              className="sm:ml-auto inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
+              className={`sm:ml-auto inline-flex items-center gap-2 px-4 py-2.5 text-white border-t border-white/20 rounded-xl transition-all text-sm font-medium ${theme.gradientBtn}`}
             >
               <CalendarPlus className="w-4 h-4" /> New Booking
             </button>
@@ -120,8 +136,8 @@ export default function MyBookings() {
                   onClick={() => setStatusFilter(s)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all ${
                     statusFilter === s
-                      ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Active state gradient
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    ? theme.activeFilter
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -141,7 +157,7 @@ export default function MyBookings() {
                 placeholder="Search bookings..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all w-full sm:w-56"
+                className={`pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 transition-all w-full sm:w-56 ${theme.focusRing}`}
               />
             </div>
           </div>
@@ -157,7 +173,7 @@ export default function MyBookings() {
               {myBookings.length === 0 && (
                 <button
                   onClick={() => navigate('/booking/new')}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
+                  className={`mt-4 inline-flex items-center gap-2 px-4 py-2 text-white border-t border-white/20 rounded-xl transition-all text-sm font-medium ${theme.gradientBtn}`}
                 >
                   <CalendarPlus className="w-4 h-4" /> Make Your First Booking
                 </button>

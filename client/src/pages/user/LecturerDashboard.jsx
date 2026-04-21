@@ -16,8 +16,9 @@ export default function LecturerDashboard() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Only get bookings belonging to this lecturer
-  const myBookings = bookings.filter(b => b.userId === currentUser?.id);
+  // Match bookings by email instead of ID to ensure test bookings show up
+  const testUserEmail = currentUser?.email || 'it23345478@my.sliit.lk';
+  const myBookings = bookings.filter(b => b.userEmail === testUserEmail);
 
   const stats = {
     total: myBookings.length,
@@ -29,13 +30,20 @@ export default function LecturerDashboard() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const upcoming = myBookings
+  
+  // FIX: Use spread operator [...] before sort() to prevent mutating the array
+  const upcoming = [...myBookings]
     .filter(b => b.status === 'APPROVED' && b.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
     .slice(0, 5);
 
-  const recent = myBookings
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  // FIX: Safe sorting for createdAt and prevent mutation
+  const recent = [...myBookings]
+    .sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 6);
 
   // Chart data – last 7 days bookings

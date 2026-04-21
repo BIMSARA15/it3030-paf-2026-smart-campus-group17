@@ -115,6 +115,44 @@ export const BookingProvider = ({ children }) => {
     fetchUtilities();
   }, []);
 
+  // FETCH REAL BOOKINGS FROM THE DATABASE
+  const fetchBookings = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/bookings`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache' // Prevents using stale cached data
+        },
+        credentials: 'include', // CRITICAL: Allows Spring Security to verify the session
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch bookings: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Overwrite the local storage data with the REAL database data
+      setBookings(Array.isArray(data) ? data : []);
+      
+    } catch (error) {
+      console.error('Error fetching bookings from database:', error);
+    }
+  };
+
+  // Run this function automatically when the app loads
+  useEffect(() => {
+    fetchBookings();
+
+  // Set up an interval to fetch fresh data every 5 seconds (5000 milliseconds)
+  const intervalId = setInterval(() => {
+      fetchBookings();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+  
   const getResourceById = (id) => resources.find(r => r.id === id);
   const getUtilityById = (id) => utilities.find(u => u.id === id);
   const getUtilitiesForResource = (resourceId) => {
@@ -140,7 +178,6 @@ const createBooking = async (bookingData) => {
       // 1. Send the actual POST request to your Spring Boot backend
       const response = await fetch('http://localhost:8080/api/bookings', {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -265,6 +302,7 @@ const createBooking = async (bookingData) => {
       createBooking, checkConflict, getResourceById, cancelBooking,
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
+      fetchBookings
     }}>
       {children}
     </BookingContext.Provider>

@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, CheckCircle, XCircle, Calendar, Clock,
@@ -118,7 +118,7 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 }
 
 export default function AllBookings() {
-  const { bookings, getResourceById, approveBooking, rejectBooking } = useBooking();
+  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings } = useBooking();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -133,6 +133,13 @@ export default function AllBookings() {
   
   // ADDED SIDEBAR STATE
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // This forces the page to get fresh data from the DB every time it opens
+  useEffect(() => {
+    if (fetchBookings) {
+      fetchBookings();
+    }
+  }, []);
 
   const filtered = bookings.filter(b => {
     const resource = getResourceById(b.resourceId);

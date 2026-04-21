@@ -11,6 +11,7 @@ import CompleteProfile from './pages/CompleteProfile';
 // placeholder <div> tags in the Routes with your actual component!
 // ------------------------------------------------------------------------
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
 import AdminUtilities from './pages/admin/Utilities';
 //import StaffDashboard from './pages/staff/StaffDashboard';
@@ -71,6 +72,15 @@ function App() {
            element={
              <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AdminDashboard />
+            </ProtectedRoute>
+          } 
+          />
+
+          <Route 
+           path="/admin/bookings" 
+           element={
+             <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AllBookings />
             </ProtectedRoute>
           } 
           />

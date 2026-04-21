@@ -517,45 +517,6 @@ export default function NewBooking() {
                         className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 transition-all resize-none"
                       />
                     </div>
-
-                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
-                      <div>
-                        <label className="block text-gray-700 text-sm mb-1.5">
-                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
-                          Requested Utilities
-                        </label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {getUtilitiesForResource(selectedResource.id).map((utility) => {
-                            const checked = requestedUtilityIds.includes(utility.id);
-
-                            return (
-                              <label
-                                key={utility.id}
-                                className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-sm transition-all ${
-                                  checked
-                                    ? 'border-[#17A38A]/30 bg-[#17A38A]/5 text-[#0F6657]'
-                                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-[#17A38A]/20 hover:bg-white'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleRequestedUtility(utility.id)}
-                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#17A38A] focus:ring-[#17A38A]/30"
-                                />
-                                <span>
-                                  <span className="block font-medium">{utility.utilityName}</span>
-                                  <span className="block text-xs text-gray-400">
-                                    {utility.utilityCode} · {utility.category}
-                                  </span>
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
                   </div>
                 </div>
 

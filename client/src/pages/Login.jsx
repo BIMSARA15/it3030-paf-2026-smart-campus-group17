@@ -29,9 +29,11 @@ export default function AuthPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [errors, setErrors] = useState({});
+  const [isRememberMe, setIsRememberMe] = useState(false);
 
   const { devLogin, login, user } = useAuth();
   const [prevUser, setPrevUser] = useState(null);
+
 
   if (user !== prevUser) {
     setPrevUser(user);
@@ -113,7 +115,11 @@ export default function AuthPage() {
       }
     } else {
       try {
-        await axios.post('http://localhost:8080/api/auth/login', { email, password });
+        await axios.post('http://localhost:8080/api/auth/login', { 
+            email, 
+            password,
+            rememberMe: isRememberMe // 👈 SEND IT HERE
+        });
         window.location.href = '/';
       } catch (error) {
         console.error("Login failed:", error);
@@ -238,6 +244,7 @@ export default function AuthPage() {
                     email={email} setEmail={setEmail} password={password} setPassword={setPassword}
                     errors={errors} accentColor={accentColor} selectedPortal={selectedPortal} 
                     isPrivileged={isPrivileged} onSubmit={handleSubmit}
+                    isRememberMe={isRememberMe} setIsRememberMe={setIsRememberMe} // 👈 PASS IT HERE
                   />
                 ) : (
                   <SignupForm 

@@ -137,12 +137,18 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully!");
     }
 
-    // --- 3. NEW: Manual Login Endpoint ---
+   // --- 3. NEW: Manual Login Endpoint ---
     @PostMapping("/login")
-    // Note the added HttpServletResponse parameter!
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginRequest, HttpServletRequest request, HttpServletResponse response) {
-        String email = loginRequest.get("email");
-        String password = loginRequest.get("password");
+    // 👇 Change Map<String, String> to Map<String, Object> to prevent boolean crashes!
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, Object> loginRequest, HttpServletRequest request, HttpServletResponse response) {
+        String email = (String) loginRequest.get("email");
+        String password = (String) loginRequest.get("password");
+        
+        // Extract the Remember Me boolean safely
+        boolean rememberMe = false;
+        if (loginRequest.containsKey("rememberMe")) {
+            rememberMe = (Boolean) loginRequest.get("rememberMe");
+        }
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
@@ -157,7 +163,15 @@ public class AuthController {
         SecurityContext sc = SecurityContextHolder.getContext();
         sc.setAuthentication(authReq);
 
-        // THIS IS THE MAGIC FIX: Explicitly save the context to the response cookie
+        // 👇 Extend the server session to 30 days if they clicked "Remember Me"
+        HttpSession session = request.getSession(true);
+        if (rememberMe) {
+            session.setMaxInactiveInterval(30 * 24 * 60 * 60); // 30 Days in seconds
+        } else {
+            session.setMaxInactiveInterval(1800); // 30 Minutes default
+        }
+
+        // Explicitly save the context to the response cookie
         securityContextRepository.saveContext(sc, request, response);
 
         return ResponseEntity.ok("Login successful");

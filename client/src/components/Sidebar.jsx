@@ -43,7 +43,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     ? [{ name: 'Dashboard', path: dashboardPath, icon: LayoutGrid }]
     : [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
-        ...(isLecturer ? [{ name: 'Std Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
+        ...(isLecturer ? [{ name: 'Student Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
         { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
         { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
         { name: 'Resources', path: '/resources', icon: Building2 },

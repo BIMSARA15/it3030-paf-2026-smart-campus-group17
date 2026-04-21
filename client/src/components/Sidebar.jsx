@@ -35,6 +35,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const navLinks = isAdmin
     ? [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
+        { name: 'All Bookings', path: '/admin/bookings', icon: BookOpen },
         { name: 'Resources', path: '/admin/resources', icon: Building2 },
         { name: 'Utilities', path: '/admin/utilities', icon: Wrench },
       ]
@@ -42,7 +43,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     ? [{ name: 'Dashboard', path: dashboardPath, icon: LayoutGrid }]
     : [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
-        ...(isLecturer ? [{ name: 'Std Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
+        ...(isLecturer ? [{ name: 'Student Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
         { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
         { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
         { name: 'Resources', path: '/resources', icon: Building2 },
@@ -101,7 +102,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     <GraduationCap className="w-6 h-6 text-white" />
                   </div>
                   <div className="overflow-hidden">
-                    <h1 className="font-bold text-lg leading-tight tracking-wider whitespace-nowrap text-white">SMART <span className="text-amber-400">CAMPUS</span></h1>
+                    <h1 className="font-bold text-lg leading-tight tracking-wider whitespace-nowrap text-white">UNI<span className="text-amber-400">BOOK</span></h1>
                     <p className="text-white/80 text-xs whitespace-nowrap">
                       {isAdmin ? 'Admin Portal' : isLecturer ? 'Lecturer Portal' : isTechnician ? 'Technician Portal' : 'Student Portal'}
                     </p>

@@ -169,26 +169,34 @@ export default function AllBookings() {
   };
 
   const handleReview = async (bookingId, action, reason) => {
+    // Format the ID to match your table UI (e.g., ID-1A2B3)
+    const formattedId = `ID-${bookingId.slice(-5).toUpperCase()}`;
+
     try {
       if (action === 'approve') {
         await approveBooking(bookingId, reason);
         setResultModal({
           type: 'success',
           title: 'Booking Approved!',
-          message: 'The booking has been successfully approved.'
+          bookingId: formattedId,
+          // NEW: Updated to include the ID in the text
+          message: `The Booking Request ${formattedId} has been Successfully Approved.` 
         });
       } else if (reason) {
         await rejectBooking(bookingId, reason);
         setResultModal({
-          type: 'success', // Using success theme for successful rejection
+          type: 'success', 
           title: 'Booking Rejected',
-          message: 'The booking request has been successfully rejected.'
+          bookingId: formattedId,
+          // NEW: Updated to include the ID in the text
+          message: `The Booking Request ${formattedId} has been Successfully Rejected.` 
         });
       }
     } catch (error) {
       setResultModal({
         type: 'error',
         title: 'Update Failed',
+        bookingId: formattedId,
         message: 'The booking status could not be changed. Please try again later.'
       });
     }
@@ -250,7 +258,21 @@ export default function AllBookings() {
                     )}
                   </div>
                   
-                  <h2 className="text-gray-900 text-xl font-semibold mb-2">{resultModal.title}</h2>
+                  <h2 className="text-gray-900 text-xl font-semibold mb-1">{resultModal.title}</h2>
+                  
+                  {/* Displays the formatted Booking ID in a neat little badge */}
+                  {resultModal.bookingId && (
+                    <div className="mb-3">
+                      <span className={`inline-block px-2.5 py-1 text-xs font-mono rounded-lg border shadow-sm ${
+                        resultModal.title.includes('Rejected')
+                          ? 'bg-red-50 text-red-600 border-red-200' 
+                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                      }`}>
+                        {resultModal.bookingId}
+                      </span>
+                    </div>
+                  )}
+
                   <p className="text-gray-500 text-sm mb-6">{resultModal.message}</p>
 
                   <button
@@ -518,7 +540,8 @@ export default function AllBookings() {
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-50">
                                         <div>
                                           <p className="text-gray-400 text-xs mb-0.5">Booking ID</p>
-                                          <p className="text-gray-700 text-sm font-mono">{booking.id.toUpperCase()}</p>
+                                          {/* Slices the last 5 characters and adds the ID- prefix */}
+                                          <p className="text-gray-700 text-sm font-mono">ID-{booking.id.slice(-5).toUpperCase()}</p>
                                         </div>
                                         <div>
                                           <p className="text-gray-400 text-xs mb-0.5">Email</p>

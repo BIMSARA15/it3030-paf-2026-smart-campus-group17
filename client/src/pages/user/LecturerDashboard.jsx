@@ -11,7 +11,7 @@ import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 
 export default function LecturerDashboard() {
-  const { currentUser, bookings, resources, getResourceById } = useBooking();
+  const { currentUser, bookings, resources, studentRequests, getResourceById } = useBooking();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -25,6 +25,7 @@ export default function LecturerDashboard() {
     approved: myBookings.filter(b => b.status === 'APPROVED').length,
     rejected: myBookings.filter(b => b.status === 'REJECTED').length,
     cancelled: myBookings.filter(b => b.status === 'CANCELLED').length,
+    studentRequests: studentRequests.filter((request) => request.status === 'PENDING').length,
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -61,7 +62,7 @@ export default function LecturerDashboard() {
     { label: 'Total Bookings', value: stats.total, icon: CalendarCheck, color: 'text-[#A74106]', bg: 'bg-[#A74106]/10', border: 'border-[#A74106]/20' },
     { label: 'Pending Review', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
     { label: 'Approved', value: stats.approved, icon: CalendarCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-    { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+    { label: 'Student Requests', value: stats.studentRequests, icon: Users, color: 'text-[#A74106]', bg: 'bg-orange-50', border: 'border-orange-100' },
   ];
 
   return (
@@ -159,6 +160,20 @@ export default function LecturerDashboard() {
                   <ChevronRight className="w-4 h-4 text-[#A74106] group-hover:translate-x-0.5 transition-transform" />
                 </button>
                 
+                <button
+                  onClick={() => navigate('/lecturer/requests')}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#A74106]/5 hover:bg-[#A74106]/10 transition-colors group text-left border border-transparent hover:border-[#A74106]/20"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8A3505] to-[#C54E08] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
+                    <Users className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[#8A3505] text-sm font-medium">Std Requests</p>
+                    <p className="text-[#A74106] text-xs">{stats.studentRequests} pending request{stats.studentRequests !== 1 ? 's' : ''}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#A74106] group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
                 <button
                   onClick={() => navigate('/resources')}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group text-left"

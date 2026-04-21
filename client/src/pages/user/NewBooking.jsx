@@ -58,6 +58,7 @@ export default function NewBooking() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [accessNotice, setAccessNotice] = useState('');
   
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -69,9 +70,23 @@ export default function NewBooking() {
     const rid = searchParams.get('resource');
     if (rid) {
       const r = getResourceById(rid);
-      if (r) { setSelectedResource(r); setStep(2); }
+      const isLecturerOnly = (r?.access || '').toLowerCase() === 'lecturer';
+      const isBlockedForStudent = (currentRole === 'STUDENT' || currentRole === 'USER') && isLecturerOnly;
+
+      if (isBlockedForStudent) {
+        setSelectedResource(null);
+        setStep(1);
+        setAccessNotice('Only accessible by a lecturer, please contact a lecturer.');
+        return;
+      }
+
+      if (r) {
+        setSelectedResource(r);
+        setStep(2);
+        setAccessNotice('');
+      }
     }
-  }, [searchParams, resources]);
+  }, [searchParams, resources, currentRole]);
 
   useEffect(() => {
     if (selectedResource && date && startTime && endTime && startTime < endTime) {
@@ -144,6 +159,10 @@ export default function NewBooking() {
   const handleSubmit = async () => {
     if (!validate() || !selectedResource) return;
     if ((selectedResource.status || '').toLowerCase() === 'out of service') return;
+    if ((currentRole === 'STUDENT' || currentRole === 'USER') && (selectedResource.access || '').toLowerCase() === 'lecturer') {
+      setAccessNotice('Only accessible by a lecturer, please contact a lecturer.');
+      return;
+    }
     if (conflict) return;
     setSubmitting(true);
     
@@ -267,6 +286,12 @@ export default function NewBooking() {
               );
             })}
           </div>
+
+          {accessNotice && (
+            <div className="mb-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {accessNotice}
+            </div>
+          )}
 
           {step === 1 && (
             <div className="bg-white rounded-xl border border-gray-100">

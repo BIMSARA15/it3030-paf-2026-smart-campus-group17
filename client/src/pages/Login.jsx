@@ -238,15 +238,36 @@ export default function AuthPage() {
                   </>
                 )}
 
-                {/* --- RENDERING THE REFACTORED FORMS --- */}
+               {/* --- RENDERING THE REFACTORED FORMS --- */}
                 {isLogin && !user?.requiresRegistration ? (
                   <LoginForm 
                     email={email} setEmail={setEmail} password={password} setPassword={setPassword}
                     errors={errors} accentColor={accentColor} selectedPortal={selectedPortal} 
                     isPrivileged={isPrivileged} onSubmit={handleSubmit}
-                    isRememberMe={isRememberMe} setIsRememberMe={setIsRememberMe} // 👈 PASS IT HERE
+                    isRememberMe={isRememberMe} setIsRememberMe={setIsRememberMe} 
                   />
+                ) : user?.requiresRegistration && isPrivileged ? (
+                  /* 🛑 THE BOUNCER: Block unregistered MS users on Admin/Tech portals */
+                  <div className="mt-4 p-6 bg-red-50 border border-red-200 rounded-xl text-center">
+                    <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-red-800 font-bold text-lg mb-2">Unauthorized User</h3>
+                    <p className="text-sm text-red-600 mb-6 leading-relaxed">
+                      Your email <strong>{user?.email}</strong> is not registered in the authorized staff pool. Please contact the IT Administrator to provision your account.
+                    </p>
+                    <button 
+                      onClick={() => {
+                        // Clear the held session and refresh
+                        axios.post('http://localhost:8080/logout').then(() => window.location.reload());
+                      }}
+                      className="px-6 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Sign Out & Try Again
+                    </button>
+                  </div>
                 ) : (
+                  /* Standard Signup Form for Students/Lecturers */
                   <SignupForm 
                     name={name} setName={setName} faculty={faculty} setFaculty={setFaculty}
                     phoneNumber={phoneNumber} setPhoneNumber={setPhoneNumber} specialization={specialization}

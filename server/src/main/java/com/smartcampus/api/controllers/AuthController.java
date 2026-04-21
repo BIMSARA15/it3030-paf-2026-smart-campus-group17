@@ -89,51 +89,42 @@ public class AuthController {
 
     // --- 2. UPDATED: Save the hashed password during registration ---
     // --- 2. UPDATED: Backend Validation Added ---
-   @PostMapping("/register")
+   // --- 2. UPDATED: Strictly Secured Registration ---
+    @PostMapping("/register")
     public ResponseEntity<?> registerNewUser(@RequestBody User newUserRequest) {
         
-        // 1. Validation: Block empty submissions for required fields
-        if (newUserRequest.getEmail() == null || newUserRequest.getEmail().isBlank() ||
-            newUserRequest.getPassword() == null || newUserRequest.getPassword().isBlank() ||
-            newUserRequest.getName() == null || newUserRequest.getName().isBlank()) {
+        if (newUserRequest.getEmail() == null || newUserRequest.getPassword() == null || newUserRequest.getName() == null) {
             return ResponseEntity.badRequest().body("Error: Name, Email, and Password are required!");
         }
 
-        // 2. Check if the user already exists to prevent duplicates
         if (userRepository.findByEmail(newUserRequest.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Error: Email is already in use!");
         }
 
-        // 3. Create the new user object
+        // 🛑 SECURITY CHECK: Block Privilege Escalation
+        String requestedRole = newUserRequest.getRole() != null ? newUserRequest.getRole().toUpperCase() : "STUDENT";
+        if (requestedRole.equals("ADMIN") || requestedRole.equals("TECHNICIAN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Security Violation: Cannot self-register privileged accounts.");
+        }
+
+        // Optional: If you want to restrict Lecturers to a specific university domain, uncomment this!
+        // if (requestedRole.equals("LECTURER") && !newUserRequest.getEmail().endsWith("@staff.university.edu")) {
+        //     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Error: Lecturers must use a valid staff email.");
+        // }
+
         User user = new User();
         user.setName(newUserRequest.getName());
         user.setEmail(newUserRequest.getEmail());
-        
-        // Hash and save the password!
         user.setPassword(passwordEncoder.encode(newUserRequest.getPassword())); 
+        user.setRole(requestedRole);
         
-        // Use the role provided, or default to STUDENT
-        user.setRole(newUserRequest.getRole() != null ? newUserRequest.getRole() : "STUDENT");
-        
-        // 4. Save ALL the specific fields
         user.setFaculty(newUserRequest.getFaculty());
-        
-        if (newUserRequest.getYearSemester() != null) {
-            user.setYearSemester(newUserRequest.getYearSemester());
-        }
-        if (newUserRequest.getRegisteredCourse() != null) {
-            user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
-        }
-        if (newUserRequest.getPhoneNumber() != null) {
-            user.setPhoneNumber(newUserRequest.getPhoneNumber());
-        }
-        if (newUserRequest.getSpecialization() != null) {
-            user.setSpecialization(newUserRequest.getSpecialization());
-        }
+        if (newUserRequest.getYearSemester() != null) user.setYearSemester(newUserRequest.getYearSemester());
+        if (newUserRequest.getRegisteredCourse() != null) user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
+        if (newUserRequest.getPhoneNumber() != null) user.setPhoneNumber(newUserRequest.getPhoneNumber());
+        if (newUserRequest.getSpecialization() != null) user.setSpecialization(newUserRequest.getSpecialization());
 
-        // 5. Save to MongoDB
         userRepository.save(user);
-
         return ResponseEntity.ok("User registered successfully!");
     }
 
@@ -177,12 +168,11 @@ public class AuthController {
         return ResponseEntity.ok("Login successful");
     }
 
-   @PostMapping("/complete-profile")
+   // --- 3. UPDATED: Strictly Secured Profile Completion (OAuth) ---
+    @PostMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(Authentication authentication, @RequestBody Map<String, String> updates) {
         
-        if (authentication == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+        if (authentication == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         String email = null;
         String name = null;
@@ -199,22 +189,24 @@ public class AuthController {
         Optional<User> userOpt = userRepository.findByEmail(email);
         User user;
 
+        // 🛑 SECURITY CHECK: Block Privilege Escalation for Microsoft/Google Users
+        String requestedRole = updates.get("role") != null ? updates.get("role").toUpperCase() : "STUDENT";
+        
         if (userOpt.isEmpty()) {
-            // ✨ SESSION HOLD COMPLETION: Create the new user in DB!
+            // It's a new user! Check their requested role.
+            if (requestedRole.equals("ADMIN") || requestedRole.equals("TECHNICIAN")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Security Violation: Cannot self-register privileged accounts.");
+            }
+            
             user = new User();
             user.setEmail(email);
             user.setName(name != null ? name : email.split("@")[0]);
-            
-            // Apply the role they chose in the form (or default to STUDENT)
-            String requestedRole = updates.get("role");
-            user.setRole(requestedRole != null ? requestedRole.toUpperCase() : "STUDENT");
+            user.setRole(requestedRole);
         } else {
-            // Existing user just updating their profile
+            // Existing user just updating profile (DO NOT let them change their role to Admin!)
             user = userOpt.get();
-            if (updates.containsKey("role")) user.setRole(updates.get("role").toUpperCase());
         }
 
-        // Save all form data
         if (updates.containsKey("phoneNumber")) user.setPhoneNumber(updates.get("phoneNumber"));
         if (updates.containsKey("faculty")) user.setFaculty(updates.get("faculty"));
         if (updates.containsKey("registeredCourse")) user.setRegisteredCourse(updates.get("registeredCourse"));

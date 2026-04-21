@@ -9,6 +9,7 @@ import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import { QRCodeSVG } from 'qrcode.react'; // QR Innovation
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -403,6 +404,44 @@ export default function MyBookings() {
                                   <XCircle className="w-4 h-4" /> Cancel Booking
                                 </button>
                               )}
+                            </div>
+                          )}
+
+                          {/* QR CODE CHECK-IN SECTION */}
+                          {booking.status === 'APPROVED' && (
+                            <div className={`mt-4 p-5 border rounded-xl flex flex-col sm:flex-row items-center gap-6 transition-colors ${
+                              isLecturer ? 'bg-[#8A3505]/5 border-[#8A3505]/20' : 'bg-[#0F6657]/5 border-[#0F6657]/20'
+                            }`}>
+                              <div className="bg-white p-3 rounded-lg shadow-sm">
+                                {/* The QR Code points to the Admin Verification Page */}
+                                <QRCodeSVG 
+                                  value={`${window.location.origin}/admin/verify/${booking.id}`}
+                                  size={120} 
+                                />
+                              </div>
+                              <div className="text-center sm:text-left">
+                                <h4 className={`font-semibold mb-1 ${
+                                  isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
+                                }`}>Check-in QR Code</h4>
+                                
+                                <p className={`text-sm mb-3 ${
+                                  isLecturer ? 'text-[#8A3505]/80' : 'text-[#0F6657]/80'
+                                }`}>
+                                  Show this code to the admin or facility manager when you arrive at the location.
+                                </p>
+                                
+                                {booking.checkedIn ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-medium border border-emerald-200">
+                                    <CheckCircle className="w-4 h-4 text-emerald-600" /> Checked In Successfully
+                                  </span>
+                                ) : (
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium ${
+                                    isLecturer ? 'bg-[#8A3505]/10 text-[#8A3505]' : 'bg-[#0F6657]/10 text-[#0F6657]'
+                                  }`}>
+                                    Awaiting Check-in
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

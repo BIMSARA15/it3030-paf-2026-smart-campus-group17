@@ -60,4 +60,18 @@ public class BookingController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    // 5. QR Code Check-in Endpoint
+    @PutMapping("/{id}/checkin")
+    public ResponseEntity<Booking> checkInBooking(@PathVariable String id) {
+        Optional<Booking> existingBooking = bookingRepository.findById(id);
+        
+        if (existingBooking.isPresent()) {
+            Booking booking = existingBooking.get();
+            booking.setCheckedIn(true);
+            booking.setUpdatedAt(LocalDateTime.now());
+            return ResponseEntity.ok(bookingRepository.save(booking));
+        }
+        return ResponseEntity.notFound().build();
+    }
 }

@@ -29,20 +29,6 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
             return;
         }
-<<<<<<< HEAD
-       setUser({
-          id: response.data.id,
-          name: response.data.name,
-          email: response.data.email,
-          picture: response.data.picture,
-          // 👇 CHANGED: Pull the actual role from Spring Boot instead of hardcoding "USER"
-          role: response.data.role, 
-          profileComplete: response.data.profileComplete
-        });
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        // If it fails (e.g., 401 Unauthorized), the user is not logged in
-=======
 
        // 🛑 NEW USER: CATCH THE SESSION HOLD
        if (response.data.requiresRegistration) {
@@ -79,7 +65,6 @@ export const AuthProvider = ({ children }) => {
        }
       }catch (error) {
         console.error("Auth check failed:", error);
->>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
         setUser(null);
       } finally {
         setLoading(false);

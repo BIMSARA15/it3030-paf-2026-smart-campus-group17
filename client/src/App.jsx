@@ -16,11 +16,6 @@ import StaffPlaceholder from './pages/staff/StaffPlaceholder';
 // When you pull this branch, uncomment your import below and replace the
 // placeholder <div> tags in the Routes with your actual component!
 // ------------------------------------------------------------------------
-<<<<<<< HEAD
-// import AdminDashboard from './pages/admin/AdminDashboard';
-// import LecturerDashboard from './pages/user/LecturerDashboard';
-// import StudentDashboard from './pages/user/StudentDashboard';
-=======
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
@@ -32,7 +27,6 @@ import NewBooking from './pages/user/NewBooking';
 import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
 import StudentRequests from './pages/user/StudentRequests';
->>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
 
 function App() {
   const { user, loading, logout } = useAuth();
@@ -54,17 +48,6 @@ function App() {
       <div className="app-container">
         <Routes>
           {/* Public Route: Landing Page */}
-<<<<<<< HEAD
-          <Route
-            path="/"
-            element={user ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Landing />}
-          />
-
-          {/* Public Route: Login Page */}
-          <Route
-            path="/login"
-            element={user ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />}
-=======
           {/* Public Route: Landing Page */}
           <Route 
             path="/" 
@@ -75,7 +58,6 @@ function App() {
           <Route 
             path="/login" 
             element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
->>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
           />
 
           <Route
@@ -92,24 +74,6 @@ function App() {
           {/* ========================================== */}
 
           {/* Member 1 & 2: Admin */}
-<<<<<<< HEAD
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <div className="p-8 bg-slate-50 min-h-screen">
-                  <h2 className="text-2xl font-bold">Admin Dashboard Placeholder</h2>
-                  <p className="text-slate-500">Create your page in the <b>/pages/admin/</b> folder and import it here.</p>
-                  <button
-                    onClick={logout}
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                </div>
-              </ProtectedRoute>
-            }
-=======
           <Route 
            path="/admin" 
            element={
@@ -144,7 +108,6 @@ function App() {
                 <AdminUtilities />
               </ProtectedRoute>
             }
->>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
           />
 
           {/* Member 3: Staff / Technician — Module C */}
@@ -178,24 +141,6 @@ function App() {
             />
           </Route>
 
-<<<<<<< HEAD
-          {/* User Folder: Lecturer */}
-          <Route
-            path="/lecturer"
-            element={
-              <ProtectedRoute allowedRoles={['LECTURER']}>
-                {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
-                  <div className="p-8 bg-slate-50 min-h-screen">
-                    <h2 className="text-2xl font-bold">Lecturer Dashboard Placeholder</h2>
-                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
-                    <button
-                    onClick={logout}
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                  </div>
-=======
          {/* User Folder: Lecturer */}
           <Route 
             path="/lecturer" 
@@ -203,7 +148,6 @@ function App() {
               <ProtectedRoute allowedRoles={['LECTURER']}>
                 {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
                   <LecturerDashboard />
->>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
                 )}
               </ProtectedRoute>
             }
@@ -223,20 +167,6 @@ function App() {
             path="/student"
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
-<<<<<<< HEAD
-                 {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
-                  <div className="p-8 bg-slate-50 min-h-screen">
-                    <h2 className="text-2xl font-bold">Student Dashboard Placeholder</h2>
-                    <p className="text-slate-500">Create your page in the <b>/pages/user/</b> folder and import it here.</p>
-                    <button
-                    onClick={logout}
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                  </div>
-                )}
-=======
                  {user?.profileComplete === false ? (
                    <Navigate to="/complete-profile" replace /> 
                  ) : (
@@ -273,7 +203,6 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
                 <Resources />
->>>>>>> 45370e1eddef72f568ab4a695f7580a792df6de3
               </ProtectedRoute>
             }
           />

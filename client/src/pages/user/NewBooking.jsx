@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
-  ChevronLeft, Info, Loader2, User, MessageSquare, X 
+  ChevronLeft, Info, Loader2, User, MessageSquare, X, Package 
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -23,9 +23,20 @@ const TYPE_COLORS = {
 };
 
 export default function NewBooking() {
-  const { resources, bookings, currentUser, createBooking, getResourceById } = useBooking();
+  const {
+    resources,
+    bookings,
+    currentUser,
+    createBooking,
+    getResourceById,
+    getUtilitiesForResource,
+    fetchResources,
+    resourcesLoading,
+    resourcesError,
+  } = useBooking();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const currentRole = (currentUser?.role || '').toUpperCase();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -41,6 +52,7 @@ export default function NewBooking() {
   const [attendees, setAttendees] = useState('');
   const [lecturer, setLecturer] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+  const [requestedUtilityIds, setRequestedUtilityIds] = useState([]);
 
   const [conflict, setConflict] = useState(null);
   const [errors, setErrors] = useState({});
@@ -50,12 +62,16 @@ export default function NewBooking() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
+    fetchResources();
+  }, []);
+
+  useEffect(() => {
     const rid = searchParams.get('resource');
     if (rid) {
       const r = getResourceById(rid);
       if (r) { setSelectedResource(r); setStep(2); }
     }
-  }, []);
+  }, [searchParams, resources]);
 
   useEffect(() => {
     if (selectedResource && date && startTime && endTime && startTime < endTime) {
@@ -78,10 +94,17 @@ export default function NewBooking() {
   const today = new Date().toISOString().split('T')[0];
 
   const filtered = resources.filter(r => {
+    const access = (r.access || '').toLowerCase();
+    const status = (r.status || '').toLowerCase();
+    const matchesAccess =
+      currentRole === 'ADMIN' || currentRole === 'LECTURER'
+        ? true
+        : access === 'student' || access === 'anyone';
+    const matchesStatus = status !== 'out of service';
     const matchType = typeFilter === 'all' || r.type === typeFilter;
     const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location.toLowerCase().includes(search.toLowerCase());
-    return matchType && matchSearch;
+    return matchesAccess && matchesStatus && matchType && matchSearch;
   });
 
   const validate = () => {
@@ -110,8 +133,17 @@ export default function NewBooking() {
     return Object.keys(e).length === 0;
   };
 
+  const toggleRequestedUtility = (utilityId) => {
+    setRequestedUtilityIds((current) =>
+      current.includes(utilityId)
+        ? current.filter((item) => item !== utilityId)
+        : [...current, utilityId]
+    );
+  };
+
   const handleSubmit = async () => {
     if (!validate() || !selectedResource) return;
+    if ((selectedResource.status || '').toLowerCase() === 'out of service') return;
     if (conflict) return;
     setSubmitting(true);
     
@@ -126,6 +158,7 @@ export default function NewBooking() {
       attendees: attendees ? parseInt(attendees) : undefined,
       lecturer: lecturer.trim(),
       specialRequests: specialRequests.trim(),
+      requestedUtilityIds,
     });
 
     setResult(res);
@@ -193,7 +226,7 @@ export default function NewBooking() {
                       setSelectedResource(null);
                       setDate(''); setStartTime(''); setEndTime('');
                       setPurpose(''); setAttendees(''); setLecturer('');
-                      setSpecialRequests(''); setResult(null);
+                      setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
                     }}
                     className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
                   >
@@ -271,42 +304,52 @@ export default function NewBooking() {
               </div>
 
               <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {filtered.map(resource => (
-                  <button
-                    key={resource.id}
-                    onClick={() => { setSelectedResource(resource); setStep(2); }}
-                    className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)] transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
-                        {TYPE_ICONS[resource.type]}
+                {resourcesLoading ? (
+                  <div className="col-span-full flex items-center justify-center gap-2 py-12 text-gray-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <p className="text-sm">Loading resources...</p>
+                  </div>
+                ) : resourcesError ? (
+                  <div className="col-span-full text-center py-12 text-red-400">
+                    <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Unable to load resources right now</p>
+                  </div>
+                ) : filtered.map(resource => (
+                    <button
+                      key={resource.id}
+                      onClick={() => { setSelectedResource(resource); setStep(2); }}
+                      className="text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#17A38A]/50 hover:bg-[#17A38A]/5 hover:shadow-[0_8px_24px_rgba(23,163,138,0.12)] transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
+                          {TYPE_ICONS[resource.type]}
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[resource.type]}`}>
+                          {resource.type}
+                        </span>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[resource.type]}`}>
-                        {resource.type}
-                      </span>
-                    </div>
-                    <h4 className="text-gray-900 mb-1 group-hover:text-[#0F6657] transition-colors">{resource.name}</h4>
-                    <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                      <MapPin className="w-3 h-3" />
-                      {resource.location}
-                    </div>
-                    {resource.capacity && (
-                      <div className="flex items-center gap-1 text-gray-400 text-xs">
-                        <Users className="w-3 h-3" />
-                        Capacity: {resource.capacity} persons
+                      <h4 className="text-gray-900 mb-1 group-hover:text-[#0F6657] transition-colors">{resource.name}</h4>
+                      <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
+                        <MapPin className="w-3 h-3" />
+                        {resource.location}
                       </div>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {resource.features.slice(0, 3).map(f => (
-                        <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
-                      ))}
-                      {resource.features.length > 3 && (
-                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                      {resource.capacity && (
+                        <div className="flex items-center gap-1 text-gray-400 text-xs">
+                          <Users className="w-3 h-3" />
+                          Capacity: {resource.capacity} persons
+                        </div>
                       )}
-                    </div>
-                  </button>
-                ))}
-                {filtered.length === 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {resource.features.slice(0, 3).map(f => (
+                          <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
+                        ))}
+                        {resource.features.length > 3 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                {!resourcesLoading && !resourcesError && filtered.length === 0 && (
                   <div className="col-span-full text-center py-12 text-gray-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No resources match your search</p>
@@ -475,6 +518,44 @@ export default function NewBooking() {
                       />
                     </div>
 
+                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
+                      <div>
+                        <label className="block text-gray-700 text-sm mb-1.5">
+                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
+                          Requested Utilities
+                        </label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {getUtilitiesForResource(selectedResource.id).map((utility) => {
+                            const checked = requestedUtilityIds.includes(utility.id);
+
+                            return (
+                              <label
+                                key={utility.id}
+                                className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-sm transition-all ${
+                                  checked
+                                    ? 'border-[#17A38A]/30 bg-[#17A38A]/5 text-[#0F6657]'
+                                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-[#17A38A]/20 hover:bg-white'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleRequestedUtility(utility.id)}
+                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#17A38A] focus:ring-[#17A38A]/30"
+                                />
+                                <span>
+                                  <span className="block font-medium">{utility.utilityName}</span>
+                                  <span className="block text-xs text-gray-400">
+                                    {utility.utilityCode} · {utility.category}
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
 
@@ -522,7 +603,7 @@ export default function NewBooking() {
                         setSelectedResource(null);
                         setDate(''); setStartTime(''); setEndTime('');
                         setPurpose(''); setAttendees(''); setLecturer('');
-                        setSpecialRequests(''); setResult(null);
+                        setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
                       }}
                       className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_6px_20px_rgba(23,163,138,0.4)] border-t border-white/30 text-sm font-medium transition-all active:scale-[0.98] mt-1"
                     >
@@ -554,6 +635,24 @@ export default function NewBooking() {
                       ))}
                     </div>
                   </div>
+
+                  {requestedUtilityIds.length > 0 && (
+                    <div className="border-t border-gray-50 pt-3 mt-3">
+                      <p className="text-gray-400 text-xs mb-2">Requested Utilities</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {requestedUtilityIds.map((utilityId) => {
+                          const utility = getUtilitiesForResource(selectedResource.id).find((item) => item.id === utilityId);
+                          if (!utility) return null;
+
+                          return (
+                            <span key={utilityId} className="text-xs px-2 py-0.5 bg-blue-50 text-[#2563EB] rounded-lg border border-blue-100">
+                              {utility.utilityName}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-100 p-5">

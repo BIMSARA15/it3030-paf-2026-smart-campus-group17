@@ -10,7 +10,9 @@ import CompleteProfile from './pages/CompleteProfile';
 // When you pull this branch, uncomment your import below and replace the 
 // placeholder <div> tags in the Routes with your actual component!
 // ------------------------------------------------------------------------
-//import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminResources from './pages/admin/Resources';
+import AdminUtilities from './pages/admin/Utilities';
 //import StaffDashboard from './pages/staff/StaffDashboard';
 import LecturerDashboard from './pages/user/LecturerDashboard';
 import StudentDashboard from './pages/user/StudentDashboard';
@@ -65,21 +67,30 @@ function App() {
 
           {/* Member 1 & 2: Admin */}
           <Route 
-            path="/admin" 
+           path="/admin" 
+           element={
+             <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDashboard />
+            </ProtectedRoute>
+          } 
+          />
+
+          <Route
+            path="/admin/resources"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <div className="p-8 bg-slate-50 min-h-screen">
-                  <h2 className="text-2xl font-bold">Admin Dashboard Placeholder</h2>
-                  <p className="text-slate-500">Create your page in the <b>/pages/admin/</b> folder and import it here.</p>
-                  <button 
-                    onClick={logout} 
-                    className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors"
-                  >
-                    Log Out to Landing Page
-                  </button>
-                </div>
+                <AdminResources />
               </ProtectedRoute>
-            } 
+            }
+          />
+
+          <Route
+            path="/admin/utilities"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminUtilities />
+              </ProtectedRoute>
+            }
           />
 
           {/* Member 3: Staff / Technician */}

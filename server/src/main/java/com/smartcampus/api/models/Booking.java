@@ -30,6 +30,8 @@ public class Booking {
     private String adminNote;
     private String reviewedBy;
     private String cancellationReason;
+
+    private boolean checkedIn = false; //QR Innovation
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -98,5 +100,8 @@ public class Booking {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public boolean isCheckedIn() { return checkedIn; }
+    public void setCheckedIn(boolean checkedIn) { this.checkedIn = checkedIn; } //QR Innovation
 
 }

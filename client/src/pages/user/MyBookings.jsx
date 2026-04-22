@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarPlus, Building2, FlaskConical, Wrench, MapPin,
   Calendar, Clock, Users, ChevronDown, XCircle, Info,
-  Search, AlertCircle, CheckCircle
+  Search, AlertCircle, CheckCircle, Eye
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import { QRCodeSVG } from 'qrcode.react'; // Corrected Import to fix React crash!
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -23,7 +24,8 @@ const TYPE_COLORS = {
 };
 
 export default function MyBookings() {
-  const { currentUser, bookings, getResourceById, cancelBooking } = useBooking();
+  // Pulled fetchUserBookings and bookings from Context
+  const { currentUser, bookings, getResourceById, cancelBooking, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   // THEME: Determine if user is lecturer for styling purposes
@@ -42,23 +44,34 @@ export default function MyBookings() {
       : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10'
   };
 
-  // Add Sidebar State
+  // Add Sidebar State and other UI states
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
-  
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
 
-  // Match bookings by email instead of ID
-  const testUserEmail = currentUser?.email || 'it23345478@my.sliit.lk';
+  // 1. Create a local state to hold JUST this user's bookings
+  const [myBookings, setMyBookings] = useState([]);
 
-  const myBookings = bookings
-    .filter(b => b.userEmail === testUserEmail)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // 2. Fetch the data using the REST API when the page loads (or when bookings change)
+  useEffect(() => {
+    const loadData = async () => {
+      const emailToSearch = currentUser?.email || 'it23345478@my.sliit.lk'; 
+      
+      const userSpecificBookings = await fetchUserBookings(emailToSearch);
+      
+      const sorted = userSpecificBookings.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setMyBookings(sorted);
+    };
+
+    loadData();
+  }, [currentUser, fetchUserBookings, bookings]); // Added 'bookings' so it updates automatically when you cancel!
 
   const filtered = myBookings.filter(b => {
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
@@ -105,7 +118,6 @@ export default function MyBookings() {
   };
 
   return (
-    // 3. Add Layout Wrapper
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       
@@ -151,7 +163,6 @@ export default function MyBookings() {
             </div>
             <div className="relative sm:ml-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              {/* UPDATED: Search input focus ring */}
               <input
                 type="text"
                 placeholder="Search bookings..."
@@ -202,13 +213,45 @@ export default function MyBookings() {
 
                       {/* Main info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-4">
+
+                          {/* Left side: Name and purpose */}
                           <div>
                             <p className="text-gray-900 text-sm font-medium">{resource?.name || 'Unknown Resource'}</p>
                             <p className="text-gray-400 text-xs truncate mt-0.5">{booking.purpose}</p>
                           </div>
-                          <StatusBadge status={booking.status} size="sm" />
+
+                          {/* Right side: Status, Button, and Submitted text grouped together */}
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                              <div className="scale-90 origin-right">
+                                <StatusBadge status={booking.status} />
+                              </div>
+                              
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); 
+                                  setExpandedId(isExpanded ? null : booking.id);
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                                  isExpanded 
+                                    ? (isLecturer 
+                                        ? 'bg-[#8A3505]/10 border-[#8A3505]/30 text-[#8A3505]' 
+                                        : 'bg-[#0F6657]/10 border-[#0F6657]/30 text-[#0F6657]')
+                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                }`}
+                              >
+                                <Eye className={`w-3.5 h-3.5 ${isExpanded ? (isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]') : 'text-gray-400'}`} />
+                                <span className="hidden sm:inline">{isExpanded ? 'Hide Details' : 'View Details'}</span>
+                              </button>
+                            </div>
+                            <span className="text-gray-400 text-[11px] hidden sm:block">
+                              Submitted {formatCreated(booking.createdAt)}
+                            </span>
+                          </div>
                         </div>
+
+                        {/* Bottom Row */}
                         <div className="flex flex-wrap items-center gap-3 mt-2">
                           <div className="flex items-center gap-1 text-gray-400 text-xs">
                             <Calendar className="w-3.5 h-3.5" />
@@ -232,147 +275,189 @@ export default function MyBookings() {
                           )}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-gray-300 text-xs hidden sm:block">Submitted {formatCreated(booking.createdAt)}</span>
-                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                      </div>
                     </div>
 
                     {/* Expanded detail */}
                     {isExpanded && (
-                      <div className="border-t border-gray-50 px-5 py-4 bg-gray-50/50">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-gray-400 text-xs mb-1.5">Booking ID</p>
-                            <p className="text-gray-700 text-sm font-mono">{booking.id}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-xs mb-1.5">Submitted On</p>
-                            <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
-                          </div>
-                          {booking.lecturer && (
+                      <div className={`border-t border-gray-50 bg-slate-50/50 border-l-4 border-r-transparent p-4 sm:p-5 ${isLecturer ? 'border-l-[#8A3505]' : 'border-l-[#0F6657]'}`}>
+                        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                          
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-50">
                             <div>
-                              <p className="text-gray-400 text-xs mb-1.5">Lecturer in Charge</p>
-                              <p className="text-gray-700 text-sm">{booking.lecturer}</p>
+                              <p className="text-gray-400 text-xs mb-1.5">Booking ID</p>
+                              {/* 5-character ID slice matches Admin view */}
+                              <p className="text-gray-700 text-sm font-mono">ID-{booking.id.slice(-5).toUpperCase()}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-xs mb-1.5">Submitted On</p>
+                              <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
+                            </div>
+                            <div>
+                              {booking.lecturer && (
+                                <>
+                                  <p className="text-gray-400 text-xs mb-1.5">Lecturer in Charge</p>
+                                  <p className="text-gray-700 text-sm">{booking.lecturer}</p>
+                                </>
+                              )}
+                            </div>
+                            <div>
+                              {booking.specialRequests && (
+                                <>
+                                  <p className="text-gray-400 text-xs mb-1.5">Special Requests</p>
+                                  <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {booking.status === 'PENDING' && (
+                            <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                              <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                              <p className="text-amber-700 text-sm">Your request is awaiting admin review. You'll be notified once a decision is made.</p>
                             </div>
                           )}
-                          {booking.specialRequests && (
-                            <div>
-                              <p className="text-gray-400 text-xs mb-1.5">Special Requests</p>
-                              <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
+
+                          {/* Admin Feedback Section */}
+                          {(booking.rejectionReason || booking.adminNote) && (
+                            <div className={`mt-3 p-3 rounded-xl border ${
+                              booking.status === 'REJECTED' 
+                                ? 'bg-red-50 border-red-100' 
+                                : 'bg-emerald-50 border-emerald-100'
+                            }`}>
+                              <div className="flex items-start gap-2">
+                                <div className="mt-0.5">
+                                  {booking.status === 'REJECTED' ? (
+                                    <AlertCircle className="w-4 h-4 text-red-600" />
+                                  ) : (
+                                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className={`text-xs font-semibold uppercase tracking-wider ${
+                                    booking.status === 'REJECTED' ? 'text-red-800' : 'text-emerald-800'
+                                  }`}>
+                                    {booking.status === 'REJECTED' ? 'Reason for Rejection' : 'Admin Note'}
+                                  </p>
+                                  <p className={`text-sm mt-1 ${
+                                    booking.status === 'REJECTED' ? 'text-red-700' : 'text-emerald-700'
+                                  }`}>
+                                    {booking.status === 'REJECTED' ? booking.rejectionReason : booking.adminNote}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           )}
-                        </div>
 
-                        {booking.status === 'PENDING' && (
-                          <div className="mt-3 flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-                            <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-amber-700 text-sm">Your request is awaiting admin review. You'll be notified once a decision is made.</p>
-                          </div>
-                        )}
+                          {booking.status === 'CANCELLED' && booking.cancellationReason && (
+                            <div className="mt-3 p-3 rounded-xl border bg-gray-50 border-gray-200">
+                              <div className="flex items-start gap-2">
+                                <div className="mt-0.5">
+                                  <Info className="w-4 h-4 text-gray-500" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">
+                                    Reason for Cancellation
+                                  </p>
+                                  <p className="text-sm mt-1 text-gray-600">
+                                    {booking.cancellationReason}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
-                        {/* Admin Feedback Section */}
-                        {(booking.rejectionReason || booking.adminNote) && (
-                          <div className={`mt-3 p-3 rounded-xl border ${
-                            booking.status === 'REJECTED' 
-                              ? 'bg-red-50 border-red-100' 
-                              : 'bg-emerald-50 border-emerald-100'
-                          }`}>
-                            <div className="flex items-start gap-2">
-                              <div className="mt-0.5">
-                                {booking.status === 'REJECTED' ? (
-                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                          {canCancel && (
+                            <div className="mt-5 pt-5 border-t border-gray-100">
+                              {cancellingId === booking.id ? (
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                                  <p className="text-red-800 text-sm font-medium mb-3">Are you sure you want to cancel this booking?</p>
+                                  
+                                  <div className="mb-4">
+                                    <label className="block text-red-800 text-xs mb-1.5">
+                                      Reason for cancellation <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                      rows={2}
+                                      placeholder="Please tell us why you are cancelling..."
+                                      value={cancelReason}
+                                      onChange={(e) => {
+                                        setCancelReason(e.target.value);
+                                        if (cancelError) setCancelError('');
+                                      }}
+                                      className={`w-full px-3 py-2 text-sm rounded-lg border outline-none resize-none transition-colors ${
+                                        cancelError 
+                                          ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:bg-white' 
+                                          : 'border-red-200 bg-white focus:border-red-400'
+                                      }`}
+                                    />
+                                    {cancelError && <p className="text-red-600 text-xs mt-1.5">{cancelError}</p>}
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleCancelSubmit(booking.id)}
+                                      className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                                    >
+                                      <XCircle className="w-4 h-4" /> Confirm Cancellation
+                                    </button>
+                                    <button
+                                      onClick={resetCancelState}
+                                      className="px-4 py-2 border border-red-200 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors bg-white"
+                                    >
+                                      Keep Booking
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={e => { e.stopPropagation(); setCancellingId(booking.id); }}
+                                  className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50 transition-colors bg-white"
+                                >
+                                  <XCircle className="w-4 h-4" /> Cancel Booking
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* QR CODE CHECK-IN SECTION WITH CORRECTED SVG IMPORT */}
+                          {booking.status === 'APPROVED' && (
+                            <div className={`mt-4 p-5 border rounded-xl flex flex-col sm:flex-row items-center gap-6 transition-colors ${
+                              isLecturer ? 'bg-[#8A3505]/5 border-[#8A3505]/20' : 'bg-[#0F6657]/5 border-[#0F6657]/20'
+                            }`}>
+                              <div className="bg-white p-3 rounded-lg shadow-sm">
+                                {/* The QR Code points to the Admin Verification Page */}
+                                <QRCodeSVG 
+                                  value={`${window.location.origin}/admin/verify/${booking.id}`}
+                                  size={120} 
+                                />
+                              </div>
+                              <div className="text-center sm:text-left">
+                                <h4 className={`font-semibold mb-1 ${
+                                  isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
+                                }`}>Check-in QR Code</h4>
+                                
+                                <p className={`text-sm mb-3 ${
+                                  isLecturer ? 'text-[#8A3505]/80' : 'text-[#0F6657]/80'
+                                }`}>
+                                  Show this code to the admin or facility manager when you arrive at the location.
+                                </p>
+                                
+                                {booking.checkedIn ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-medium border border-emerald-200">
+                                    <CheckCircle className="w-4 h-4 text-emerald-600" /> Checked In Successfully
+                                  </span>
                                 ) : (
-                                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium ${
+                                    isLecturer ? 'bg-[#8A3505]/10 text-[#8A3505]' : 'bg-[#0F6657]/10 text-[#0F6657]'
+                                  }`}>
+                                    Awaiting Check-in
+                                  </span>
                                 )}
                               </div>
-                              <div>
-                                <p className={`text-xs font-semibold uppercase tracking-wider ${
-                                  booking.status === 'REJECTED' ? 'text-red-800' : 'text-emerald-800'
-                                }`}>
-                                  {booking.status === 'REJECTED' ? 'Reason for Rejection' : 'Admin Note'}
-                                </p>
-                                <p className={`text-sm mt-1 ${
-                                  booking.status === 'REJECTED' ? 'text-red-700' : 'text-emerald-700'
-                                }`}>
-                                  {booking.status === 'REJECTED' ? booking.rejectionReason : booking.adminNote}
-                                </p>
-                              </div>
                             </div>
-                          </div>
-                        )}
-
-                        {booking.status === 'CANCELLED' && booking.cancellationReason && (
-                          <div className="mt-3 p-3 rounded-xl border bg-gray-50 border-gray-200">
-                            <div className="flex items-start gap-2">
-                              <div className="mt-0.5">
-                                <Info className="w-4 h-4 text-gray-500" />
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-gray-700">
-                                  Reason for Cancellation
-                                </p>
-                                <p className="text-sm mt-1 text-gray-600">
-                                  {booking.cancellationReason}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {canCancel && (
-                          <div className="mt-4 pt-4 border-t border-gray-200/50">
-                            {cancellingId === booking.id ? (
-                              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                                <p className="text-red-800 text-sm font-medium mb-3">Are you sure you want to cancel this booking?</p>
-                                
-                                <div className="mb-4">
-                                  <label className="block text-red-800 text-xs mb-1.5">
-                                    Reason for cancellation <span className="text-red-500">*</span>
-                                  </label>
-                                  <textarea
-                                    rows={2}
-                                    placeholder="Please tell us why you are cancelling..."
-                                    value={cancelReason}
-                                    onChange={(e) => {
-                                      setCancelReason(e.target.value);
-                                      if (cancelError) setCancelError('');
-                                    }}
-                                    className={`w-full px-3 py-2 text-sm rounded-lg border outline-none resize-none transition-colors ${
-                                      cancelError 
-                                        ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:bg-white' 
-                                        : 'border-red-200 bg-white focus:border-red-400'
-                                    }`}
-                                  />
-                                  {cancelError && <p className="text-red-600 text-xs mt-1.5">{cancelError}</p>}
-                                </div>
-
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleCancelSubmit(booking.id)}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" /> Confirm Cancellation
-                                  </button>
-                                  <button
-                                    onClick={resetCancelState}
-                                    className="px-4 py-2 border border-red-200 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors bg-white"
-                                  >
-                                    Keep Booking
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={e => { e.stopPropagation(); setCancellingId(booking.id); }}
-                                className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50 transition-colors bg-white"
-                              >
-                                <XCircle className="w-3.5 h-3.5" /> Cancel Booking
-                              </button>
-                            )}
-                          </div>
-                        )}
+                          )}
+                          
+                        </div>
                       </div>
                     )}
                   </div>

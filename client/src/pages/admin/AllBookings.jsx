@@ -318,9 +318,22 @@ export default function AllBookings() {
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        purgeBooking(deleteModalId);
-                        setDeleteModalId(null);
+                      onClick={async () => {
+                        // 1. Save the ID temporarily before we clear the state
+                        const idToDelete = deleteModalId; 
+                        
+                        // 2. Close the warning modal instantly
+                        setDeleteModalId(null); 
+                        
+                        // 3. Wait for the database to finish deleting
+                        await purgeBooking(idToDelete);
+                        
+                        // 4. Trigger your existing success modal!
+                        setResultModal({
+                          type: 'success',
+                          title: 'Record Deleted',
+                          message: `Booking record ID-${idToDelete.slice(-5).toUpperCase()} has been permanently removed from the system.`
+                        });
                       }}
                       className="flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-medium bg-red-600 hover:bg-red-700 shadow-[0_4px_12px_rgba(220,38,38,0.2)] transition-all"
                     >
@@ -544,23 +557,29 @@ export default function AllBookings() {
                                 <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                                     {/* 1. Show Approve and Reject ONLY when PENDING */}
-                                      {booking.status === 'PENDING' && (
-                                        <>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); approveBooking(booking.id, ''); }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
-                                          >
-                                            <CheckCircle className="w-3.5 h-3.5" /> Approve
-                                          </button>
+                                        {booking.status === 'PENDING' && (
+                                          <>
+                                            <button
+                                              onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setModal({ bookingId: booking.id, action: 'approve' }); // <-- Restored! Opens modal
+                                              }}
+                                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
+                                            >
+                                              <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                            </button>
 
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); /* trigger reject modal */ }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
-                                          >
-                                            <XCircle className="w-3.5 h-3.5" /> Reject
-                                          </button>
-                                        </>
-                                      )}
+                                            <button
+                                              onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setModal({ bookingId: booking.id, action: 'reject' }); // <-- Restored! Opens modal
+                                              }}
+                                              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
+                                            >
+                                              <XCircle className="w-3.5 h-3.5" /> Reject
+                                            </button>
+                                          </>
+                                        )}
 
                                       {/* 2. Show Delete Record ONLY when NOT PENDING (Approved, Rejected, Cancelled) */}
                                         {booking.status !== 'PENDING' && (

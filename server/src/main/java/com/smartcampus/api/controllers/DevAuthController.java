@@ -33,61 +33,98 @@ public class DevAuthController {
     private UserRepository userRepository;
 
     @GetMapping("/dev-login/{role}")
-    public ResponseEntity<?> devQuickLogin(@PathVariable String role, HttpServletRequest request) {
-        
+    public ResponseEntity<?> devLogin(@PathVariable String role, HttpServletRequest request) {
         String roleName = role.toUpperCase();
-        String email = "dev-" + role.toLowerCase() + "@smartcampus.edu";
-        String name = "Dev " + roleName;
-
-        // =========================================================================
-        // 🛠️ THE FIX: Ensure the user exists in MongoDB with the EXACT CORRECT ROLE 
-        // =========================================================================
-        Optional<User> existingUserOpt = userRepository.findByEmail(email);
         
-        if (existingUserOpt.isEmpty()) {
-            // If they don't exist at all, create them perfectly
-            User mockUser = new User();
-            mockUser.setEmail(email);
-            mockUser.setName(name);
-            mockUser.setRole(roleName); 
-            mockUser.setFaculty("Computing"); // Prevents the complete-profile redirect
-            mockUser.setPhoneNumber("+94000000000"); 
-            userRepository.save(mockUser);
-        } else {
-            // If they DO exist, but were corrupted to "USER" previously, AUTO-REPAIR THEM!
-            User existingUser = existingUserOpt.get();
-            if (!roleName.equals(existingUser.getRole())) {
-                existingUser.setRole(roleName);
-                existingUser.setFaculty("Computing");
-                existingUser.setPhoneNumber("+94000000000");
-                userRepository.save(existingUser);
-            }
+        // 1. Initialize user with common fields
+        User devUser = new User();
+        devUser.setRole(roleName);
+        devUser.setAvailable(true);
+        devUser.setPassword("dummy_dev_password"); 
+
+        // 2. Populate user matching the REAL database structure for each role
+        switch (roleName) {
+            case "STUDENT":
+                devUser.setId("IT99999991");
+                devUser.setName("Dev Student A.B.C");
+                devUser.setFirstName("Dev");
+                devUser.setLastName("Student");
+                devUser.setEmail("IT99999991@smartcampus.lk");
+                devUser.setFaculty("Faculty of Computing");
+                devUser.setYearSemester("Y3S2");
+                devUser.setSpecialization("Information Technology");
+                devUser.setPhoneNumber("0770000001");
+                break;
+                
+            case "ADMIN":
+                devUser.setId("SS99999991");
+                devUser.setName("Dev Admin");
+                devUser.setFirstName("Dev");
+                devUser.setLastName("Admin");
+                devUser.setEmail("Dev.A@kndyUNI.lk");
+                devUser.setDepartment("Student Services");
+                devUser.setPhoneNumber("0760000001");
+                break;
+                
+            case "LECTURER":
+                devUser.setId("IT99999992");
+                devUser.setName("Dev Lecturer");
+                devUser.setFirstName("Dev");
+                devUser.setLastName("Lecturer");
+                devUser.setEmail("Dev.L@KandyUNI.lk");
+                devUser.setFaculty("Faculty of Computing");
+                devUser.setPhoneNumber("0770000002");
+                break;
+                
+            case "TECHNICIAN":
+                devUser.setId("TS99999991");
+                devUser.setName("Dev Technician");
+                devUser.setFirstName("Dev");
+                devUser.setLastName("Technician");
+                devUser.setEmail("Dev.T@Tech.lk");
+                devUser.setDepartment("Technical");
+                devUser.setPhoneNumber("0750000001");
+                break;
+                
+            default:
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid role specified"));
         }
 
-        // 1. Create fake authorities based on the requested role
+        // 3. Save to database (Check by explicit ID so we don't duplicate keys)
+        Optional<User> existingUserOpt = userRepository.findById(devUser.getId());
+        if (existingUserOpt.isEmpty()) {
+            userRepository.save(devUser);
+        } else {
+            // Overwrite existing dev user to ensure schema updates are applied
+            userRepository.save(devUser);
+        }
+
+        // 4. Create fake authorities based on the requested role
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
 
-        // 2. Create fake user attributes to mimic Microsoft/Google
+        // 5. Create fake user attributes to mimic Microsoft/Google AND include our explicit String ID
         Map<String, Object> attributes = Map.of(
-            "email", email,
-            "name", name
+            "email", devUser.getEmail(),
+            "name", devUser.getName(),
+            "id", devUser.getId() // Crucial for the React frontend notifications!
         );
 
-        // 3. Build the fake OAuth2 user
+        // 6. Build the fake OAuth2 user
         DefaultOAuth2User fakeUser = new DefaultOAuth2User(authorities, attributes, "email");
         OAuth2AuthenticationToken authReq = new OAuth2AuthenticationToken(fakeUser, authorities, "developer-bypass");
 
-        // 4. Force Spring Security to accept this user
+        // 7. Force Spring Security to accept this user
         SecurityContext sc = SecurityContextHolder.getContext();
         sc.setAuthentication(authReq);
 
-        // 5. Save it to the session so the cookie is generated
+        // 8. Save it to the session so the cookie is generated
         HttpSession session = request.getSession(true);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, sc);
 
         return ResponseEntity.ok(Map.of(
-            "message", "Successfully bypassed login as " + roleName + " and repaired DB!",
-            "role", roleName
+            "message", "Successfully bypassed login as " + roleName + " with production-accurate schema!",
+            "role", roleName,
+            "user", devUser 
         ));
     }
 }

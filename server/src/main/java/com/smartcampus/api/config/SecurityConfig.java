@@ -56,13 +56,17 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Define the CORS rules
+   // Define the CORS rules
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        
         // Allow your Vite React app's URL
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // ADD "PATCH" TO THIS LIST!
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
         // This is crucial: it allows the browser to send the session cookie back to Spring Boot
         configuration.setAllowCredentials(true); 
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));

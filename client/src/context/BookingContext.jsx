@@ -139,7 +139,7 @@ export const BookingProvider = ({ children }) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache' // Prevents using stale cached data
         },
-        credentials: 'include', // CRITICAL: Allows Spring Security to verify the session
+        credentials: 'include', // Allows Spring Security to verify the session
       });
 
       if (!response.ok) {
@@ -167,6 +167,32 @@ export const BookingProvider = ({ children }) => {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  // Fetch bookings using the Email Query Parameter
+  const fetchUserBookings = async (email) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/search?email=${email}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user bookings: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+      
+    } catch (error) {
+      console.error('Error fetching user bookings:', error);
+      return [];
+    }
+  };
+
   
   const getResourceById = (id) => resources.find(r => r.id === id);
   const getUtilityById = (id) => utilities.find(u => u.id === id);
@@ -362,7 +388,8 @@ const createBooking = async (bookingData) => {
       createBooking, checkConflict, getResourceById, cancelBooking,
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
-      createStudentRequest, updateStudentRequest, fulfillStudentRequest,
+      createStudentRequest, updateStudentRequest, fulfillStudentRequest, 
+      fetchUserBookings,
     }}>
       {children}
     </BookingContext.Provider>

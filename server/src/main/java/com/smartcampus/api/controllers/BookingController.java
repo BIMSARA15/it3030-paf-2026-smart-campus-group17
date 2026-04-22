@@ -1,99 +1,60 @@
 package com.smartcampus.api.controllers;
 
 import com.smartcampus.api.models.Booking;
-import com.smartcampus.api.repositories.BookingRepository;
+import com.smartcampus.api.services.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/bookings")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // Allows your Vite React app to connect
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class BookingController {
 
+    // The Controller now strictly depends on the Service, NOT the Repository
     @Autowired
-    private BookingRepository bookingRepository;
+    private BookingService bookingService;
 
     // 1. Get ALL bookings (For Admin)
     @GetMapping
-    public List<Booking> getAllBookings() {
-        return bookingRepository.findAll();
+    public ResponseEntity<List<Booking>> getAllBookings() {
+        return ResponseEntity.ok(bookingService.getAllBookings());
     }
 
-    // 2. Get bookings for a specific user (For "My Bookings")
-    @GetMapping("/user/{userId}")
-    public List<Booking> getUserBookings(@PathVariable String userId) {
-        return bookingRepository.findByUserId(userId);
+    // 2. Get bookings for a specific user (RESTful Query Parameter Approach)
+    @GetMapping("/search") // URL will be: /api/bookings/search?email=test@sliit.lk
+    public ResponseEntity<List<Booking>> getUserBookingsByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
     }
 
     // 3. Create a new booking
     @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody Booking newBooking) {
-        // Fetch all approved bookings for this resource on this specific date
-        List<Booking> existingBookings = bookingRepository.findApprovedBookingsForResourceOnDate(
-            newBooking.getResourceId(), 
-            newBooking.getDate()
-        );
-
-        // Convert times to comparable formats (e.g., "14:00" -> 1400)
-        int newStart = Integer.parseInt(newBooking.getStartTime().replace(":", ""));
-        int newEnd = Integer.parseInt(newBooking.getEndTime().replace(":", ""));
-
-        // Check for time overlaps
-        for (Booking existing : existingBookings) {
-            int existingStart = Integer.parseInt(existing.getStartTime().replace(":", ""));
-            int existingEnd = Integer.parseInt(existing.getEndTime().replace(":", ""));
-
-            // Conflict logic: Does the new booking overlap with an existing one?
-            if (newStart < existingEnd && newEnd > existingStart) {
-                return ResponseEntity.badRequest().body("Scheduling conflict: This resource is already booked during the requested time.");
-            }
+    public ResponseEntity<?> createBooking(@RequestBody Booking booking) {
+        try {
+            Booking createdBooking = bookingService.createBooking(booking);
+            return ResponseEntity.ok(createdBooking);
+        } catch (Exception e) {
+            // Catches the scheduling conflict exception from the service
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        // If no conflict, save the booking
-        newBooking.setStatus("PENDING");
-        newBooking.setCreatedAt(LocalDateTime.now());
-        newBooking.setUpdatedAt(LocalDateTime.now());
-        return ResponseEntity.ok(bookingRepository.save(newBooking));
     }
 
-    // 4. Update booking status (Approve/Reject/Cancel)
+    // 4. Update booking status
     @PutMapping("/{id}/status")
     public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
-        Optional<Booking> existingBooking = bookingRepository.findById(id);
-        
-        if (existingBooking.isPresent()) {
-            Booking booking = existingBooking.get();
-            booking.setStatus(updateData.getStatus());
-            booking.setUpdatedAt(LocalDateTime.now());
-            
-            if (updateData.getAdminNote() != null) booking.setAdminNote(updateData.getAdminNote());
-            if (updateData.getRejectionReason() != null) booking.setRejectionReason(updateData.getRejectionReason());
-            if (updateData.getReviewedBy() != null) booking.setReviewedBy(updateData.getReviewedBy());
-
-            // ADDED THIS LINE TO SAVE CANCELLATION REASON
-            if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
-
-            return ResponseEntity.ok(bookingRepository.save(booking));
-        }
-        return ResponseEntity.notFound().build();
+        Optional<Booking> updatedBooking = bookingService.updateBookingStatus(id, updateData);
+        return updatedBooking.map(ResponseEntity::ok)
+                           .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // 5. QR Code Check-in Endpoint
     @PutMapping("/{id}/checkin")
     public ResponseEntity<Booking> checkInBooking(@PathVariable String id) {
-        Optional<Booking> existingBooking = bookingRepository.findById(id);
-        
-        if (existingBooking.isPresent()) {
-            Booking booking = existingBooking.get();
-            booking.setCheckedIn(true);
-            booking.setUpdatedAt(LocalDateTime.now());
-            return ResponseEntity.ok(bookingRepository.save(booking));
-        }
-        return ResponseEntity.notFound().build();
+        Optional<Booking> checkedInBooking = bookingService.checkInBooking(id);
+        return checkedInBooking.map(ResponseEntity::ok)
+                             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

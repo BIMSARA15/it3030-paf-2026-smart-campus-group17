@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarPlus, Building2, FlaskConical, Wrench, MapPin,
@@ -9,7 +9,7 @@ import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
-import { QRCodeSVG } from 'qrcode.react'; // QR Innovation
+import { QRCodeSVG } from 'qrcode.react'; // Corrected Import to fix React crash!
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -24,7 +24,8 @@ const TYPE_COLORS = {
 };
 
 export default function MyBookings() {
-  const { currentUser, bookings, getResourceById, cancelBooking } = useBooking();
+  // Pulled fetchUserBookings and bookings from Context
+  const { currentUser, bookings, getResourceById, cancelBooking, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   // THEME: Determine if user is lecturer for styling purposes
@@ -43,23 +44,34 @@ export default function MyBookings() {
       : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10'
   };
 
-  // Add Sidebar State
+  // Add Sidebar State and other UI states
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
-  
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
 
-  // Match bookings by email instead of ID
-  const testUserEmail = currentUser?.email || 'it23345478@my.sliit.lk';
+  // 1. Create a local state to hold JUST this user's bookings
+  const [myBookings, setMyBookings] = useState([]);
 
-  const myBookings = bookings
-    .filter(b => b.userEmail === testUserEmail)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // 2. Fetch the data using the REST API when the page loads (or when bookings change)
+  useEffect(() => {
+    const loadData = async () => {
+      const emailToSearch = currentUser?.email || 'it23345478@my.sliit.lk'; 
+      
+      const userSpecificBookings = await fetchUserBookings(emailToSearch);
+      
+      const sorted = userSpecificBookings.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setMyBookings(sorted);
+    };
+
+    loadData();
+  }, [currentUser, fetchUserBookings, bookings]); // Added 'bookings' so it updates automatically when you cancel!
 
   const filtered = myBookings.filter(b => {
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
@@ -202,16 +214,16 @@ export default function MyBookings() {
                       {/* Main info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4">
+
                           {/* Left side: Name and purpose */}
                           <div>
                             <p className="text-gray-900 text-sm font-medium">{resource?.name || 'Unknown Resource'}</p>
                             <p className="text-gray-400 text-xs truncate mt-0.5">{booking.purpose}</p>
                           </div>
-                          
+
                           {/* Right side: Status, Button, and Submitted text grouped together */}
                           <div className="flex flex-col items-end gap-2 flex-shrink-0">
                             <div className="flex items-center gap-3">
-                              {/* Scales the default badge down to 90% size */}
                               <div className="scale-90 origin-right">
                                 <StatusBadge status={booking.status} />
                               </div>
@@ -239,7 +251,7 @@ export default function MyBookings() {
                           </div>
                         </div>
 
-                        {/* Bottom Row: Calendar, Time, etc. */}
+                        {/* Bottom Row */}
                         <div className="flex flex-wrap items-center gap-3 mt-2">
                           <div className="flex items-center gap-1 text-gray-400 text-xs">
                             <Calendar className="w-3.5 h-3.5" />
@@ -270,10 +282,10 @@ export default function MyBookings() {
                       <div className={`border-t border-gray-50 bg-slate-50/50 border-l-4 border-r-transparent p-4 sm:p-5 ${isLecturer ? 'border-l-[#8A3505]' : 'border-l-[#0F6657]'}`}>
                         <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                           
-                          {/* Updated to 4 columns to match Admin View */}
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-50">
                             <div>
                               <p className="text-gray-400 text-xs mb-1.5">Booking ID</p>
+                              {/* 5-character ID slice matches Admin view */}
                               <p className="text-gray-700 text-sm font-mono">ID-{booking.id.slice(-5).toUpperCase()}</p>
                             </div>
                             <div>
@@ -407,7 +419,7 @@ export default function MyBookings() {
                             </div>
                           )}
 
-                          {/* QR CODE CHECK-IN SECTION */}
+                          {/* QR CODE CHECK-IN SECTION WITH CORRECTED SVG IMPORT */}
                           {booking.status === 'APPROVED' && (
                             <div className={`mt-4 p-5 border rounded-xl flex flex-col sm:flex-row items-center gap-6 transition-colors ${
                               isLecturer ? 'bg-[#8A3505]/5 border-[#8A3505]/20' : 'bg-[#0F6657]/5 border-[#0F6657]/20'
@@ -444,6 +456,7 @@ export default function MyBookings() {
                               </div>
                             </div>
                           )}
+                          
                         </div>
                       </div>
                     )}

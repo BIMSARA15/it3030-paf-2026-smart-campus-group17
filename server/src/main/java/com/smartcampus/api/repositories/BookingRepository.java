@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.repository.Query;
 import java.util.List;
 
 public interface BookingRepository extends MongoRepository<Booking, String> {
-    List<Booking> findByUserId(String userId);
+    List<Booking> findByUserEmail(String userEmail);
 
     // Custom query to find approved bookings for the same resource on the same date
     @Query("{ 'resourceId': ?0, 'date': ?1, 'status': 'APPROVED' }")

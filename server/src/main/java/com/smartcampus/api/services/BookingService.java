@@ -18,6 +18,10 @@ public class BookingService {
     @Autowired
     private BookingRepository bookingRepository;
 
+    // 1. INJECT THE EMAIL SERVICE HERE
+    @Autowired
+    private EmailService emailService;
+
     public List<Booking> getAllBookings() {
         return bookingRepository.findAll();
     }
@@ -58,7 +62,35 @@ public class BookingService {
         newBooking.setStatus("PENDING");
         newBooking.setCreatedAt(LocalDateTime.now());
         newBooking.setUpdatedAt(LocalDateTime.now());
-        return bookingRepository.save(newBooking);
+        
+        Booking savedBooking = bookingRepository.save(newBooking);
+
+        // -------------------------------------------------------------
+        // NEW: SEND AUTOMATED EMAILS FOR NEW BOOKING
+        // -------------------------------------------------------------
+        try {
+            // Email the user confirming we got their request
+            emailService.sendEmail(
+                savedBooking.getUserEmail(), 
+                "Booking Request Received", 
+                "We have received your booking request for " + savedBooking.getDate() + 
+                " from " + savedBooking.getStartTime() + " to " + savedBooking.getEndTime() + 
+                ". It is currently PENDING admin approval. You will be notified once reviewed."
+            );
+
+            // Notify the Admin team that a new booking needs review
+            // (You can replace this with a specific admin email or a distribution list)
+            emailService.sendEmail(
+                "admin@smartcampus.lk", // Placeholder for your admin email
+                "ACTION REQUIRED: New Booking Request", 
+                "A new booking request has been made by " + savedBooking.getUserEmail() + 
+                " for date: " + savedBooking.getDate() + ". Please check the dashboard to approve or reject."
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send booking creation emails: " + e.getMessage());
+        }
+
+        return savedBooking;
     }
 
     public Optional<Booking> updateBookingStatus(String id, Booking updateData) {
@@ -74,7 +106,34 @@ public class BookingService {
             if (updateData.getReviewedBy() != null) booking.setReviewedBy(updateData.getReviewedBy());
             if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
 
-            return Optional.of(bookingRepository.save(booking));
+            Booking savedBooking = bookingRepository.save(booking);
+
+            // -------------------------------------------------------------
+            // NEW: SEND AUTOMATED EMAILS FOR APPROVAL/REJECTION
+            // -------------------------------------------------------------
+            try {
+                if ("APPROVED".equalsIgnoreCase(savedBooking.getStatus())) {
+                    emailService.sendEmail(
+                        savedBooking.getUserEmail(),
+                        "Booking APPROVED!",
+                        "Great news! Your booking request for " + savedBooking.getDate() + 
+                        " (" + savedBooking.getStartTime() + " to " + savedBooking.getEndTime() + ") has been APPROVED."
+                    );
+                } 
+                else if ("REJECTED".equalsIgnoreCase(savedBooking.getStatus())) {
+                    String reason = savedBooking.getRejectionReason() != null ? savedBooking.getRejectionReason() : "No reason provided.";
+                    emailService.sendEmail(
+                        savedBooking.getUserEmail(),
+                        "Booking REJECTED",
+                        "Unfortunately, your booking request for " + savedBooking.getDate() + 
+                        " has been REJECTED by the administrator.\n\nReason: " + reason
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to send status update email: " + e.getMessage());
+            }
+
+            return Optional.of(savedBooking);
         }
         return Optional.empty();
     }

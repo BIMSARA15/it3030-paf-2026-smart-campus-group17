@@ -33,8 +33,7 @@ const formatTo24Hour = (timeStr) => {
   return `${hours.padStart(2, '0')}:${minutes}`;
 };
 
-// The Custom Popover Time Picker matching your screenshot
-// The Custom Popover Time Picker matching your screenshot
+// The Custom Popover Time Picker
 const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -542,7 +541,7 @@ export default function NewBooking() {
                         onClick={() => setStep(1)}
                         className={`ml-auto text-xs hover:underline flex items-center gap-1 ${theme.textLink}`}
                       >
-                        <ChevronLeft className="w-3.5 h-3.5" /> Change
+                        <ChevronLeft className="w-3.5 h-3.5" /> Back to Change the Resource
                       </button>
                     )}
                   </div>

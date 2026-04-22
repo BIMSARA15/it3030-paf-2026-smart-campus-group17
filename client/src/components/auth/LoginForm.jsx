@@ -10,7 +10,8 @@ export default function LoginForm({
   accentColor, 
   selectedPortal, 
   isPrivileged, 
-  onSubmit 
+  onSubmit,
+  isRememberMe, setIsRememberMe
 }) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -82,15 +83,18 @@ export default function LoginForm({
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
+          
         </div>
         {errors.password && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{errors.password}</p>}
       </div>
 
-      {/* Remember me */}
+    {/* Remember me */}
       <div className="flex items-center gap-2.5">
         <input
           id="remember"
           type="checkbox"
+          checked={isRememberMe} // 👈 BIND TO STATE
+          onChange={(e) => setIsRememberMe(e.target.checked)} // 👈 UPDATE STATE ON CLICK
           className="w-4 h-4 rounded"
           style={{ accentColor }}
         />

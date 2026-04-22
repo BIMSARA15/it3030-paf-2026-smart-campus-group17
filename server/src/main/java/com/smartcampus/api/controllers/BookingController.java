@@ -32,11 +32,33 @@ public class BookingController {
 
     // 3. Create a new booking
     @PostMapping
-    public Booking createBooking(@RequestBody Booking booking) {
-        booking.setStatus("PENDING");
-        booking.setCreatedAt(LocalDateTime.now());
-        booking.setUpdatedAt(LocalDateTime.now());
-        return bookingRepository.save(booking);
+    public ResponseEntity<?> createBooking(@RequestBody Booking newBooking) {
+        // Fetch all approved bookings for this resource on this specific date
+        List<Booking> existingBookings = bookingRepository.findApprovedBookingsForResourceOnDate(
+            newBooking.getResourceId(), 
+            newBooking.getDate()
+        );
+
+        // Convert times to comparable formats (e.g., "14:00" -> 1400)
+        int newStart = Integer.parseInt(newBooking.getStartTime().replace(":", ""));
+        int newEnd = Integer.parseInt(newBooking.getEndTime().replace(":", ""));
+
+        // Check for time overlaps
+        for (Booking existing : existingBookings) {
+            int existingStart = Integer.parseInt(existing.getStartTime().replace(":", ""));
+            int existingEnd = Integer.parseInt(existing.getEndTime().replace(":", ""));
+
+            // Conflict logic: Does the new booking overlap with an existing one?
+            if (newStart < existingEnd && newEnd > existingStart) {
+                return ResponseEntity.badRequest().body("Scheduling conflict: This resource is already booked during the requested time.");
+            }
+        }
+
+        // If no conflict, save the booking
+        newBooking.setStatus("PENDING");
+        newBooking.setCreatedAt(LocalDateTime.now());
+        newBooking.setUpdatedAt(LocalDateTime.now());
+        return ResponseEntity.ok(bookingRepository.save(newBooking));
     }
 
     // 4. Update booking status (Approve/Reject/Cancel)

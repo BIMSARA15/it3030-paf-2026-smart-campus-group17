@@ -1,89 +1,62 @@
 package com.smartcampus.api.controllers;
 
+import com.smartcampus.api.dto.ProvisionTechnicianDTO;
+import com.smartcampus.api.dto.ToggleStatusDTO;
 import com.smartcampus.api.models.User;
-import com.smartcampus.api.repositories.UserRepository;
+import com.smartcampus.api.services.AdminService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
 
+    // ==========================================
+    // 1. INJECT YOUR NEW SERVICE
+    // ==========================================
     @Autowired
-    private UserRepository userRepository;
+    private AdminService adminService; 
 
-    // 1. GET ALL TECHNICIANS
+    // ==========================================
+    // 2. YOUR TEAMMATES' EXISTING CODE
+    // (If they added any other endpoints here, leave them intact below!)
+    // ==========================================
+    
+    // ... Any of their @GetMapping or @PostMapping methods stay right here ...
+
+    // ==========================================
+    // 3. YOUR REFACTORED TECHNICIAN ENDPOINTS
+    // ==========================================
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/technicians")
     public ResponseEntity<List<User>> getAllTechnicians() {
-        List<User> technicians = userRepository.findByRole("TECHNICIAN");
-        return ResponseEntity.ok(technicians);
+        return ResponseEntity.ok(adminService.getAllTechnicians());
     }
 
-    // 2. PROVISION NEW TECHNICIAN
-    @PreAuthorize("hasRole('ADMIN')") 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/provision-technician")
-    public ResponseEntity<?> createTechnician(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String name = request.get("name");
-        String phoneNumber = request.get("phoneNumber"); // 👈 Capture the phone number
-
-        if (email == null || email.isBlank()) {
-            return ResponseEntity.badRequest().body("Error: Email is required.");
-        }
-
-        Optional<User> existingUser = userRepository.findByEmail(email);
-        if (existingUser.isPresent()) {
-            return ResponseEntity.badRequest().body("Error: This email is already registered in the system.");
-        }
-
-        User technician = new User();
-        technician.setEmail(email);
-        technician.setName(name != null && !name.isBlank() ? name : email.split("@")[0]);
-        technician.setPhoneNumber(phoneNumber); // 👈 Save the phone number
-        technician.setRole("TECHNICIAN");
-
-        userRepository.save(technician);
-        
+    public ResponseEntity<?> createTechnician(@Valid @RequestBody ProvisionTechnicianDTO request) {
+        adminService.provisionTechnician(request);
         return ResponseEntity.ok("Technician successfully provisioned.");
     }
-    // 3. TOGGLE TECHNICIAN AVAILABILITY STATUS
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/technicians/{id}/status")
-    public ResponseEntity<?> toggleTechnicianStatus(@PathVariable String id, @RequestBody Map<String, Boolean> request) {
-        Optional<User> userOpt = userRepository.findById(id);
-        
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Technician not found.");
-        }
 
-        User technician = userOpt.get();
-        Boolean isAvailable = request.get("available");
-        
-        if (isAvailable != null) {
-            technician.setAvailable(isAvailable);
-            userRepository.save(technician);
-        }
-        
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/technicians/{id}/status")
+    public ResponseEntity<?> toggleTechnicianStatus(@PathVariable String id, @Valid @RequestBody ToggleStatusDTO request) {
+        adminService.toggleTechnicianStatus(id, request.getAvailable());
         return ResponseEntity.ok("Technician status updated.");
     }
 
-    // 4. DELETE TECHNICIAN
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/technicians/{id}")
     public ResponseEntity<?> deleteTechnician(@PathVariable String id) {
-        Optional<User> userOpt = userRepository.findById(id);
-        
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Technician not found.");
-        }
-
-        userRepository.deleteById(id);
+        adminService.deleteTechnician(id);
         return ResponseEntity.ok("Technician successfully removed from the system.");
     }
 }

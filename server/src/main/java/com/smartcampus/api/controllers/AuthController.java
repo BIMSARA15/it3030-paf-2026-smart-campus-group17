@@ -120,7 +120,7 @@ public class AuthController {
         
         user.setFaculty(newUserRequest.getFaculty());
         if (newUserRequest.getYearSemester() != null) user.setYearSemester(newUserRequest.getYearSemester());
-        if (newUserRequest.getRegisteredCourse() != null) user.setRegisteredCourse(newUserRequest.getRegisteredCourse());
+    
         if (newUserRequest.getPhoneNumber() != null) user.setPhoneNumber(newUserRequest.getPhoneNumber());
         if (newUserRequest.getSpecialization() != null) user.setSpecialization(newUserRequest.getSpecialization());
 
@@ -209,7 +209,6 @@ public class AuthController {
 
         if (updates.containsKey("phoneNumber")) user.setPhoneNumber(updates.get("phoneNumber"));
         if (updates.containsKey("faculty")) user.setFaculty(updates.get("faculty"));
-        if (updates.containsKey("registeredCourse")) user.setRegisteredCourse(updates.get("registeredCourse"));
         if (updates.containsKey("specialization")) user.setSpecialization(updates.get("specialization"));
         if (updates.containsKey("currentSemester")) user.setYearSemester(updates.get("currentSemester"));
 

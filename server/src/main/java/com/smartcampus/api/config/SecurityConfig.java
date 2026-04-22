@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,6 +22,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     // 2. INJECT THE SERVICE HERE (Inside the class, before the methods)
@@ -42,9 +44,9 @@ public class SecurityConfig {
             // 3. USE THE INJECTED SERVICE IN THE OAUTH2 LOGIN BLOCK
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService) 
+                   .oidcUserService(customOAuth2UserService)
                 )
-                .defaultSuccessUrl("http://localhost:5173/login", true)
+                .defaultSuccessUrl("http://localhost:5173/", true)
             );
 
         return http.build();

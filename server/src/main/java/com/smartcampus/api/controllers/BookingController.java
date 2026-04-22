@@ -6,7 +6,6 @@ import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.BookingRepository;
 import com.smartcampus.api.repositories.UserRepository;
 import com.smartcampus.api.services.BookingService;
-import com.smartcampus.api.services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,9 +29,6 @@ public class BookingController {
     private BookingRepository bookingRepository; // Kept so your frontend API doesn't break
 
     @Autowired
-    private NotificationService notificationService;
-
-    @Autowired
     private UserRepository userRepository;
 
     @GetMapping
@@ -52,7 +48,7 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
     }
 
- // 3. MERGED Create Booking
+    // 3. MERGED Create Booking
     @PostMapping
     public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
         
@@ -96,30 +92,11 @@ public class BookingController {
         }
         
         try {
-            // Hand off to teammate's service
+            // Hand off to the Service (which now handles the saving AND the dynamic notifications cleanly)
             Booking createdBooking = bookingService.createBooking(booking);
-            
-            // Try to send notifications to Admins
-            try {
-                List<User> admins = userRepository.findByRole("ADMIN"); 
-                for (User admin : admins) {
-                    String adminIdentifier = admin.getId() != null ? admin.getId() : admin.getEmail();
-                    if (adminIdentifier != null) {
-                        notificationService.sendNotification(
-                            adminIdentifier, 
-                            "New Booking Request", 
-                            createdBooking.getUserName() + " submitted a new booking request for: " + createdBooking.getPurpose()
-                        );
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("FAILED to send admin notifications: " + e.getMessage());
-            }
-
             return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); 
             
         } catch (Exception e) {
-            // --- FIX: Return JSON instead of raw text so React doesn't crash ---
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
@@ -127,38 +104,11 @@ public class BookingController {
     // 4. MERGED Update booking status
     @PutMapping("/{id}/status")
     public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
-        // --- TEAMMATE'S FIX: Use Service for updating ---
+        // --- TEAMMATE'S FIX: Use Service for updating (Service handles notifications now!) ---
         Optional<Booking> updatedBookingOpt = bookingService.updateBookingStatus(id, updateData);
         
         if (updatedBookingOpt.isPresent()) {
-            Booking booking = updatedBookingOpt.get();
-
-            // --- YOUR FIX: Safely notify the student ---
-            try {
-                String notificationTitle = "";
-                String notificationMessage = "";
-
-                if ("APPROVED".equalsIgnoreCase(updateData.getStatus())) {
-                    notificationTitle = "Booking Approved ✅";
-                    notificationMessage = "Your booking request for '" + booking.getPurpose() + "' has been approved by " + (updateData.getReviewedBy() != null ? updateData.getReviewedBy() : "an Admin") + ".";
-                } else if ("REJECTED".equalsIgnoreCase(updateData.getStatus())) {
-                    notificationTitle = "Booking Rejected ❌";
-                    notificationMessage = "Your booking request for '" + booking.getPurpose() + "' was rejected. Reason: " + updateData.getRejectionReason();
-                }
-
-                if (!notificationTitle.isEmpty() && booking.getUserId() != null) {
-                    System.out.println("DEBUG: Sending status notification to exactly User ID: " + booking.getUserId());
-                    notificationService.sendNotification(
-                        booking.getUserId(),
-                        notificationTitle,
-                        notificationMessage
-                    );
-                }
-            } catch (Exception e) {
-                System.err.println("FAILED to send student notification: " + e.getMessage());
-            }
-
-            return ResponseEntity.ok(booking);
+            return ResponseEntity.ok(updatedBookingOpt.get());
         }
         return ResponseEntity.notFound().build();
     }

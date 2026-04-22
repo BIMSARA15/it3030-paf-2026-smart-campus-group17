@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UserPlus, Mail, Phone, User, Wrench, ShieldAlert } from 'lucide-react';
+import { UserPlus, Mail, Phone, User, Wrench, ShieldAlert, Trash2, Power } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import InputField from '../../components/auth/InputField';
@@ -16,10 +16,8 @@ export default function AdminTechnicians() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
 
-
- // Fetch the pool on load (Best Practice: Define inside the effect)
   useEffect(() => {
-    let isMounted = true; // Safety check to prevent updates if user navigates away
+    let isMounted = true; 
 
     const loadTechnicians = async () => {
       try {
@@ -34,7 +32,6 @@ export default function AdminTechnicians() {
 
     loadTechnicians();
 
-    // Cleanup function
     return () => {
       isMounted = false;
     };
@@ -45,7 +42,6 @@ export default function AdminTechnicians() {
     setStatusMessage({ type: "loading", text: "Provisioning..." });
 
     try {
-      // 1. Add the new technician
       await axios.post("http://localhost:8080/api/admin/provision-technician", {
         name, email, phoneNumber
       });
@@ -53,11 +49,10 @@ export default function AdminTechnicians() {
       setStatusMessage({ type: "success", text: "Technician added successfully!" });
       setName(""); setEmail(""); setPhoneNumber("");
       
-      // 2. Refresh the table (Directly re-fetch the data here!)
+      // Refresh the table
       const response = await axios.get("http://localhost:8080/api/admin/technicians");
       setTechnicians(response.data);
       
-      // Close modal after success
       setTimeout(() => {
         setShowModal(false);
         setStatusMessage({ type: "", text: "" });
@@ -70,6 +65,44 @@ export default function AdminTechnicians() {
     }
   };
 
+  // 🔴 NEW: Delete Technician Handler
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Are you sure you want to permanently delete ${name}? This action cannot be undone.`)) {
+      try {
+        await axios.delete(`http://localhost:8080/api/admin/technicians/${id}`);
+        // Refresh table
+        const response = await axios.get("http://localhost:8080/api/admin/technicians");
+        setTechnicians(response.data);
+      } catch (error) {
+        alert("Failed to delete technician.");
+        console.error(error);
+      }
+    }
+  };
+
+  // 🟠 NEW: Toggle Availability Status Handler
+  const handleToggleStatus = async (id, currentStatus) => {
+    // Safety check in case the database ID is missing
+    if (!id) {
+      alert("Error: No ID provided for technician!");
+      return;
+    }
+
+    try {
+      // 👈 Changed from axios.patch to axios.put
+      await axios.put(`http://localhost:8080/api/admin/technicians/${id}/status`, {
+        available: !currentStatus
+      });
+      
+      // Refresh table
+      const response = await axios.get("http://localhost:8080/api/admin/technicians");
+      setTechnicians(response.data);
+    } catch (error) {
+      alert("Failed to update status.");
+      console.error("Toggle Error:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
@@ -78,7 +111,6 @@ export default function AdminTechnicians() {
         <Header />
 
         <div className="p-4 lg:p-6 space-y-6">
-          {/* Header Section */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-gray-900 text-2xl font-semibold">Technician Management</h1>
@@ -93,7 +125,6 @@ export default function AdminTechnicians() {
             </button>
           </div>
 
-          {/* Technicians Table */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="p-5 border-b border-gray-100 flex items-center gap-2">
               <Wrench className="w-5 h-5 text-slate-400" />
@@ -113,6 +144,8 @@ export default function AdminTechnicians() {
                       <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email Address</th>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone Number</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -120,14 +153,51 @@ export default function AdminTechnicians() {
                       <tr key={tech.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${tech.available !== false ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
                               {tech.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium text-gray-900">{tech.name}</span>
+                            <span className={`font-medium ${tech.available !== false ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                              {tech.name}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{tech.email}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{tech.phoneNumber || "N/A"}</td>
+                        <td className="px-6 py-4">
+                          {/* 🟢 Status Badge */}
+                          {tech.available !== false ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Available
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                              On Leave / Offline
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* 🟠 Status Toggle Button */}
+                           <button
+                              // 👇 Added tech._id as a fallback here!
+                              onClick={() => handleToggleStatus(tech.id || tech._id, tech.available !== false)}
+                              title={tech.available !== false ? "Mark as Unavailable" : "Mark as Available"}
+                              className={`p-2 rounded-lg transition-colors ${tech.available !== false ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                            >
+                              <Power className="w-4 h-4" />
+                            </button>
+                            {/* 🔴 Delete Button */}
+                            <button
+                              onClick={() => handleDelete(tech.id, tech.name)}
+                              title="Delete Technician"
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -138,7 +208,6 @@ export default function AdminTechnicians() {
         </div>
       </div>
 
-      {/* Add Technician Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">

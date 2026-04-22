@@ -1,16 +1,18 @@
 //admin dashboard
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, UserPlus } from 'lucide-react'; // 👈 1. Import UserPlus
 import { useBooking } from '../../context/BookingContext';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import AddTechnicianModal from '../../components/admin/AddTechnicianModal'; // 👈 2. Import your new modal
 
 export default function AdminDashboard() {
   const { bookings } = useBooking();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
 
   // Filter pending count for the subtitle display
   const pendingCount = bookings.filter(b => b.status === 'PENDING').length;
@@ -38,23 +40,31 @@ export default function AdminDashboard() {
               </p>
             </div>
             
-            {/* UPDATED BUTTON: Navigate to All Bookings */}
-            <button
-              onClick={() => navigate('/bookings/all')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] text-white hover:from-[#172554] hover:to-[#1D4ED8] shadow-[0_4px_12px_rgba(37,99,235,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
-            >
-              <CalendarPlus className="w-4 h-4" />
-              All Bookings
-            </button>
+            {/* 👈 4. Wrap your buttons in a flex container */}
+            <div className="flex items-center gap-3">
+            
+
+              {/* EXISTING BUTTON: Navigate to All Bookings */}
+              <button
+                onClick={() => navigate('/bookings/all')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] text-white hover:from-[#172554] hover:to-[#1D4ED8] shadow-[0_4px_12px_rgba(37,99,235,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
+              >
+                <CalendarPlus className="w-4 h-4" />
+                All Bookings
+              </button>
+            </div>
           </div>
 
           {/* ALL OTHER CONTENT REMOVED - TO BE DEVELOPED BY TEAM MEMBER */}
-          <div className="mt-12 text-center py-20 border-2 border-dashed border-blue-100 rounded-3xl bg-blue-50/30">
-              <p className="text-blue-400 font-medium italic text-sm">Admin monitoring and request management modules coming soon...</p>
+          <div className="mt-12 text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
+             <p className="text-gray-400">Admin dashboard content will go here.</p>
           </div>
-          
         </div>
       </div>
+
+      {/* 👈 5. Render the Modal when state is true */}
+     
+
     </div>
   );
 }

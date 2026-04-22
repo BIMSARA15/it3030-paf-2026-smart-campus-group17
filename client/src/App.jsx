@@ -3,7 +3,6 @@ import { useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
-import CompleteProfile from './pages/CompleteProfile';
 
 // Module C — Maintenance & Incident Ticketing (Technician)
 import TechnicianLayout from './components/layout/TechnicianLayout';
@@ -20,6 +19,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
 import AdminUtilities from './pages/admin/Utilities';
+import AdminTechnicians from './pages/admin/AdminTechnicians';
 //import StaffDashboard from './pages/staff/StaffDashboard';
 import LecturerDashboard from './pages/user/LecturerDashboard';
 import StudentDashboard from './pages/user/StudentDashboard';
@@ -29,7 +29,7 @@ import Resources from './pages/user/Resources';
 import StudentRequests from './pages/user/StudentRequests';
 
 function App() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <div style={{ textAlign: 'center', marginTop: '20%' }}>Loading...</div>;
@@ -60,14 +60,7 @@ function App() {
             element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
           />
 
-          <Route
-            path="/complete-profile"
-            element={
-              <ProtectedRoute allowedRoles={['USER', 'STUDENT', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
-                <CompleteProfile />
-              </ProtectedRoute>
-            }
-          />
+        
 
           {/* ========================================== */}
           {/* TEAM DASHBOARD ROUTES (PLACEHOLDERS)         */}
@@ -109,6 +102,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route 
+            path="/admin/technicians" 
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminTechnicians />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Member 3: Staff / Technician — Module C */}
           <Route
@@ -142,13 +143,11 @@ function App() {
           </Route>
 
          {/* User Folder: Lecturer */}
-          <Route 
+        <Route 
             path="/lecturer" 
             element={
               <ProtectedRoute allowedRoles={['LECTURER']}>
-                {user?.profileComplete === false ? <Navigate to="/complete-profile" replace /> : (
                   <LecturerDashboard />
-                )}
               </ProtectedRoute>
             }
           />
@@ -163,15 +162,12 @@ function App() {
           />
 
           {/* User Folder: Student */}
-          <Route
+         <Route
             path="/student"
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
-                 {user?.profileComplete === false ? (
-                   <Navigate to="/complete-profile" replace /> 
-                 ) : (
-                   <StudentDashboard />
-                 )}
+               
+                  <StudentDashboard />
               </ProtectedRoute>
             } 
           />

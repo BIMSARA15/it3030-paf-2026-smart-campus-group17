@@ -7,6 +7,8 @@ import com.smartcampus.api.repositories.UserRepository;
 import com.smartcampus.api.services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -21,7 +23,6 @@ public class BookingController {
     @Autowired
     private BookingRepository bookingRepository;
 
-    // Injecting the services needed for notifications
     @Autowired
     private NotificationService notificationService;
 
@@ -40,23 +41,49 @@ public class BookingController {
 
     // 3. Create a new booking
     @PostMapping
-    public Booking createBooking(@RequestBody Booking booking) {
+    public Booking createBooking(@RequestBody Booking booking, Authentication authentication) {
+        
+        // --- NEW FIX: Force the correct User ID from the secure backend session ---
+        // This overrides the hardcoded 'IT23345478' fallback from React
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            String realUserId = null;
+            
+            if (principal instanceof OAuth2User) {
+                OAuth2User oauth2User = (OAuth2User) principal;
+                realUserId = oauth2User.getAttribute("id");
+                if (realUserId == null) realUserId = oauth2User.getAttribute("employeeId");
+            }
+            if (realUserId == null) {
+                realUserId = authentication.getName();
+            }
+            
+            if (realUserId != null) {
+                booking.setUserId(realUserId); // Guarantee exact match for notifications!
+            }
+        }
+        
         booking.setStatus("PENDING");
         booking.setCreatedAt(LocalDateTime.now());
         booking.setUpdatedAt(LocalDateTime.now());
         
         Booking savedBooking = bookingRepository.save(booking);
 
-        // --- NEW: Notify all Admins that a new booking was created ---
-        List<User> admins = userRepository.findByRole("ADMIN"); // Assuming role is stored as "ADMIN"
-        // Debugging log: Check your Spring Boot console to see if this prints!
-        System.out.println("Found " + admins.size() + " admins to notify.");
-        for (User admin : admins) {
-            notificationService.sendNotification(
-                admin.getId(), 
-                "New Booking Request", 
-                booking.getUserName() + " submitted a new booking request for: " + booking.getPurpose()
-            );
+        // Try to send notifications to Admins
+        try {
+            List<User> admins = userRepository.findByRole("ADMIN"); 
+            for (User admin : admins) {
+                String adminIdentifier = admin.getId() != null ? admin.getId() : admin.getEmail();
+                if (adminIdentifier != null) {
+                    notificationService.sendNotification(
+                        adminIdentifier, 
+                        "New Booking Request", 
+                        booking.getUserName() + " submitted a new booking request for: " + booking.getPurpose()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("FAILED to send admin notifications: " + e.getMessage());
         }
 
         return savedBooking;
@@ -79,25 +106,29 @@ public class BookingController {
 
             Booking savedBooking = bookingRepository.save(booking);
 
-            // --- NEW: Notify the User/Lecturer if their booking was Approved or Rejected ---
-            String notificationTitle = "";
-            String notificationMessage = "";
+            // Safely notify the student
+            try {
+                String notificationTitle = "";
+                String notificationMessage = "";
 
-            if ("APPROVED".equalsIgnoreCase(updateData.getStatus())) {
-                notificationTitle = "Booking Approved";
-                notificationMessage = "Your booking request for '" + booking.getPurpose() + "' has been approved.";
-            } else if ("REJECTED".equalsIgnoreCase(updateData.getStatus())) {
-                notificationTitle = "Booking Rejected";
-                notificationMessage = "Your booking request for '" + booking.getPurpose() + "' was rejected. Reason: " + updateData.getRejectionReason();
-            }
+                if ("APPROVED".equalsIgnoreCase(updateData.getStatus())) {
+                    notificationTitle = "Booking Approved \u2705";
+                    notificationMessage = "Your booking request for '" + booking.getPurpose() + "' has been approved by " + (updateData.getReviewedBy() != null ? updateData.getReviewedBy() : "an Admin") + ".";
+                } else if ("REJECTED".equalsIgnoreCase(updateData.getStatus())) {
+                    notificationTitle = "Booking Rejected \u274C";
+                    notificationMessage = "Your booking request for '" + booking.getPurpose() + "' was rejected. Reason: " + updateData.getRejectionReason();
+                }
 
-            // If it's an approve or reject action, send the notification to the user who created it
-            if (!notificationTitle.isEmpty() && booking.getUserId() != null) {
-                notificationService.sendNotification(
-                    booking.getUserId(),
-                    notificationTitle,
-                    notificationMessage
-                );
+                if (!notificationTitle.isEmpty() && booking.getUserId() != null) {
+                    System.out.println("DEBUG: Sending status notification to exactly User ID: " + booking.getUserId());
+                    notificationService.sendNotification(
+                        booking.getUserId(),
+                        notificationTitle,
+                        notificationMessage
+                    );
+                }
+            } catch (Exception e) {
+                System.err.println("FAILED to send student notification: " + e.getMessage());
             }
 
             return ResponseEntity.ok(savedBooking);

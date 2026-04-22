@@ -1,9 +1,11 @@
 package com.smartcampus.api.controllers;
 
+import org.springframework.http.HttpStatus;
 import com.smartcampus.api.models.Booking;
 import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.BookingRepository;
 import com.smartcampus.api.repositories.UserRepository;
+import com.smartcampus.api.services.BookingService;
 import com.smartcampus.api.services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +22,12 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") 
 public class BookingController {
 
+    // --- ALL INJECTIONS KEPT (Yours + Teammate's) ---
     @Autowired
-    private BookingRepository bookingRepository;
+    private BookingService bookingService;
+
+    @Autowired
+    private BookingRepository bookingRepository; // Kept so your frontend API doesn't break
 
     @Autowired
     private NotificationService notificationService;
@@ -30,21 +36,27 @@ public class BookingController {
     private UserRepository userRepository;
 
     @GetMapping
-    public List<Booking> getAllBookings() {
-        return bookingRepository.findAll();
+    public ResponseEntity<List<Booking>> getAllBookings() {
+        return ResponseEntity.ok(bookingService.getAllBookings());
     }
 
+    // 1. YOUR endpoint for fetching bookings by ID
     @GetMapping("/user/{userId}")
     public List<Booking> getUserBookings(@PathVariable String userId) {
         return bookingRepository.findByUserId(userId);
     }
 
-    // 3. Create a new booking
+    // 2. TEAMMATE'S endpoint for searching by email
+    @GetMapping("/search") 
+    public ResponseEntity<List<Booking>> getUserBookingsByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
+    }
+
+    // 3. MERGED Create Booking
     @PostMapping
-    public Booking createBooking(@RequestBody Booking booking, Authentication authentication) {
+    public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
         
-        // --- NEW FIX: Force the correct User ID from the secure backend session ---
-        // This overrides the hardcoded 'IT23345478' fallback from React
+        // --- YOUR FIX: Force the correct User ID from the secure backend session ---
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
             String realUserId = null;
@@ -63,59 +75,52 @@ public class BookingController {
             }
         }
         
-        booking.setStatus("PENDING");
-        booking.setCreatedAt(LocalDateTime.now());
-        booking.setUpdatedAt(LocalDateTime.now());
-        
-        Booking savedBooking = bookingRepository.save(booking);
-
-        // Try to send notifications to Admins
         try {
-            List<User> admins = userRepository.findByRole("ADMIN"); 
-            for (User admin : admins) {
-                String adminIdentifier = admin.getId() != null ? admin.getId() : admin.getEmail();
-                if (adminIdentifier != null) {
-                    notificationService.sendNotification(
-                        adminIdentifier, 
-                        "New Booking Request", 
-                        booking.getUserName() + " submitted a new booking request for: " + booking.getPurpose()
-                    );
+            // --- TEAMMATE'S FIX: Use Service to handle saving ---
+            Booking createdBooking = bookingService.createBooking(booking);
+            
+            // --- YOUR FIX: Try to send notifications to Admins ---
+            try {
+                List<User> admins = userRepository.findByRole("ADMIN"); 
+                for (User admin : admins) {
+                    String adminIdentifier = admin.getId() != null ? admin.getId() : admin.getEmail();
+                    if (adminIdentifier != null) {
+                        notificationService.sendNotification(
+                            adminIdentifier, 
+                            "New Booking Request", 
+                            createdBooking.getUserName() + " submitted a new booking request for: " + createdBooking.getPurpose()
+                        );
+                    }
                 }
+            } catch (Exception e) {
+                System.err.println("FAILED to send admin notifications: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("FAILED to send admin notifications: " + e.getMessage());
-        }
 
-        return savedBooking;
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); 
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
-    // 4. Update booking status (Approve/Reject/Cancel)
+    // 4. MERGED Update booking status
     @PutMapping("/{id}/status")
     public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
-        Optional<Booking> existingBooking = bookingRepository.findById(id);
+        // --- TEAMMATE'S FIX: Use Service for updating ---
+        Optional<Booking> updatedBookingOpt = bookingService.updateBookingStatus(id, updateData);
         
-        if (existingBooking.isPresent()) {
-            Booking booking = existingBooking.get();
-            booking.setStatus(updateData.getStatus());
-            booking.setUpdatedAt(LocalDateTime.now());
-            
-            if (updateData.getAdminNote() != null) booking.setAdminNote(updateData.getAdminNote());
-            if (updateData.getRejectionReason() != null) booking.setRejectionReason(updateData.getRejectionReason());
-            if (updateData.getReviewedBy() != null) booking.setReviewedBy(updateData.getReviewedBy());
-            if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
+        if (updatedBookingOpt.isPresent()) {
+            Booking booking = updatedBookingOpt.get();
 
-            Booking savedBooking = bookingRepository.save(booking);
-
-            // Safely notify the student
+            // --- YOUR FIX: Safely notify the student ---
             try {
                 String notificationTitle = "";
                 String notificationMessage = "";
 
                 if ("APPROVED".equalsIgnoreCase(updateData.getStatus())) {
-                    notificationTitle = "Booking Approved \u2705";
+                    notificationTitle = "Booking Approved ✅";
                     notificationMessage = "Your booking request for '" + booking.getPurpose() + "' has been approved by " + (updateData.getReviewedBy() != null ? updateData.getReviewedBy() : "an Admin") + ".";
                 } else if ("REJECTED".equalsIgnoreCase(updateData.getStatus())) {
-                    notificationTitle = "Booking Rejected \u274C";
+                    notificationTitle = "Booking Rejected ❌";
                     notificationMessage = "Your booking request for '" + booking.getPurpose() + "' was rejected. Reason: " + updateData.getRejectionReason();
                 }
 
@@ -131,8 +136,26 @@ public class BookingController {
                 System.err.println("FAILED to send student notification: " + e.getMessage());
             }
 
-            return ResponseEntity.ok(savedBooking);
+            return ResponseEntity.ok(booking);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // 5. TEAMMATE'S QR Code Check-in Endpoint
+    @PutMapping("/{id}/checkin")
+    public ResponseEntity<Booking> checkInBooking(@PathVariable String id) {
+        Optional<Booking> checkedInBooking = bookingService.checkInBooking(id);
+        return checkedInBooking.map(ResponseEntity::ok)
+                               .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // 6. TEAMMATE'S Delete Endpoint
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBooking(@PathVariable String id) {
+        boolean isDeleted = bookingService.deleteBooking(id);
+        if (isDeleted) {
+            return ResponseEntity.noContent().build(); 
+        }
+        return ResponseEntity.notFound().build(); 
     }
 }

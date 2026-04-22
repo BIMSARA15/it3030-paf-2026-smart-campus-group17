@@ -28,6 +28,8 @@ import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
 import StudentRequests from './pages/user/StudentRequests';
 
+import VerifyBooking from './pages/admin/VerifyBooking'; //QR Innovation: Booking Verification Page for Admins
+
 function App() {
   const { user, loading } = useAuth();
 
@@ -84,6 +86,8 @@ function App() {
             </ProtectedRoute>
           } 
           />
+
+          <Route path="/admin/verify/:id" element={<VerifyBooking />} />
 
           <Route
             path="/admin/resources"

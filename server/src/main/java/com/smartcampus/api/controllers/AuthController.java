@@ -33,6 +33,10 @@ public class AuthController {
         
         if (authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+            
+            // 👈 NEW: Prints ALL data Microsoft sends so you can find the real email field!
+            System.out.println("DEBUG: All Microsoft Attributes: " + oauthUser.getAttributes());
+
             email = oauthUser.getAttribute("email");
             picture = oauthUser.getAttribute("picture");
             name = oauthUser.getAttribute("name"); 
@@ -109,7 +113,10 @@ public class AuthController {
         if (updates.containsKey("specialization")) user.setSpecialization(updates.get("specialization"));
         if (updates.containsKey("currentSemester")) user.setYearSemester(updates.get("currentSemester"));
 
-        userRepository.save(user);
+        // 👈 Check what the email is exactly before saving to MongoDB
+        System.out.println("DEBUG: Right before saving, the user email is: " + user.getEmail());
+        userRepository.save(user); // (I also removed the duplicated save line here)
+        
         return ResponseEntity.ok("Profile updated and saved to DB!");
     }
 }

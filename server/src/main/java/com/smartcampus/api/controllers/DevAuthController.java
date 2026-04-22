@@ -40,7 +40,7 @@ public class DevAuthController {
         User devUser = new User();
         devUser.setRole(roleName);
         devUser.setAvailable(true);
-        devUser.setPassword("dummy_dev_password"); // Optional
+        devUser.setPassword("dummy_dev_password"); 
 
         // 2. Populate user matching the REAL database structure for each role
         switch (roleName) {
@@ -106,7 +106,7 @@ public class DevAuthController {
         Map<String, Object> attributes = Map.of(
             "email", devUser.getEmail(),
             "name", devUser.getName(),
-            "id", devUser.getId() // Crucial for the React frontend!
+            "id", devUser.getId() // Crucial for the React frontend notifications!
         );
 
         // 6. Build the fake OAuth2 user
@@ -124,7 +124,7 @@ public class DevAuthController {
         return ResponseEntity.ok(Map.of(
             "message", "Successfully bypassed login as " + roleName + " with production-accurate schema!",
             "role", roleName,
-            "user", devUser // Returns the full object so you can verify it on the frontend network tab
+            "user", devUser 
         ));
     }
 }

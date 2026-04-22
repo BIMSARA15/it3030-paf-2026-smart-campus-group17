@@ -52,34 +52,54 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
     }
 
-    // 3. MERGED Create Booking
+ // 3. MERGED Create Booking
     @PostMapping
     public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
         
-        // --- YOUR FIX: Force the correct User ID from the secure backend session ---
+        // --- ULTIMATE FIX: Map Microsoft Email to Real MongoDB ID ---
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
             String realUserId = null;
             
             if (principal instanceof OAuth2User) {
                 OAuth2User oauth2User = (OAuth2User) principal;
+                
                 realUserId = oauth2User.getAttribute("id");
-                if (realUserId == null) realUserId = oauth2User.getAttribute("employeeId");
+                
+                if (realUserId == null) {
+                    String email = oauth2User.getAttribute("email");
+                    if (email != null) {
+                        Optional<User> dbUser = userRepository.findByEmail(email);
+                        if (dbUser.isPresent()) {
+                            realUserId = dbUser.get().getId(); 
+                        }
+                    }
+                }
             }
+            
             if (realUserId == null) {
                 realUserId = authentication.getName();
             }
             
             if (realUserId != null) {
-                booking.setUserId(realUserId); // Guarantee exact match for notifications!
+                booking.setUserId(realUserId); 
             }
         }
         
+        // --- SAFETY NET: Re-add these lines in case the Service forgets them! ---
+        if (booking.getStatus() == null) {
+            booking.setStatus("PENDING");
+        }
+        if (booking.getCreatedAt() == null) {
+            booking.setCreatedAt(LocalDateTime.now());
+            booking.setUpdatedAt(LocalDateTime.now());
+        }
+        
         try {
-            // --- TEAMMATE'S FIX: Use Service to handle saving ---
+            // Hand off to teammate's service
             Booking createdBooking = bookingService.createBooking(booking);
             
-            // --- YOUR FIX: Try to send notifications to Admins ---
+            // Try to send notifications to Admins
             try {
                 List<User> admins = userRepository.findByRole("ADMIN"); 
                 for (User admin : admins) {
@@ -97,8 +117,10 @@ public class BookingController {
             }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); 
+            
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            // --- FIX: Return JSON instead of raw text so React doesn't crash ---
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 

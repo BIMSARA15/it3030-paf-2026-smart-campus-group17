@@ -1,6 +1,8 @@
 package com.smartcampus.api.controllers;
 
 import com.smartcampus.api.models.Notification;
+import com.smartcampus.api.models.User;
+import com.smartcampus.api.repositories.UserRepository;
 import com.smartcampus.api.services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +11,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -17,25 +20,38 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
-    // Helper method to safely extract the user ID regardless of how they logged in
+    // INJECT THE USER REPO HERE TOO!
+    @Autowired
+    private UserRepository userRepository;
+
+    // Helper method to safely extract the REAL Database ID
     private String extractUserIdSafe(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            return null; // Not logged in
+            return null; 
         }
 
         Object principal = authentication.getPrincipal();
         String userId = null;
 
-        // If logged in via DevAuthController or Azure OAuth2
         if (principal instanceof OAuth2User) {
             OAuth2User oauth2User = (OAuth2User) principal;
+            
+            // 1. Try Dev Account ID
             userId = oauth2User.getAttribute("id");
+
+            // 2. Real Microsoft Login: Match email to database!
             if (userId == null) {
-                userId = oauth2User.getAttribute("employeeId");
+                String email = oauth2User.getAttribute("email");
+                if (email != null) {
+                    Optional<User> dbUser = userRepository.findByEmail(email);
+                    if (dbUser.isPresent()) {
+                        userId = dbUser.get().getId(); // Securely returns SS12345678, etc.
+                    }
+                }
             }
         }
 
-        // Fallback for standard form login or if OAuth2 attributes are missing
+        // 3. Ultimate Fallback
         if (userId == null) {
             userId = authentication.getName();
         }
@@ -43,31 +59,23 @@ public class NotificationController {
         return userId;
     }
 
-    // 1. Get all notifications for the currently logged-in user
     @GetMapping
     public ResponseEntity<List<Notification>> getMyNotifications(Authentication authentication) {
         String userId = extractUserIdSafe(authentication);
-        
-        if (userId == null) {
-            // If the user isn't logged in, gracefully return a 401 Unauthorized instead of crashing
-            return ResponseEntity.status(401).build();
-        }
+        if (userId == null) return ResponseEntity.status(401).build();
 
         return ResponseEntity.ok(notificationService.getUserNotifications(userId));
     }
 
-    // 2. Mark one as read
     @PatchMapping("/{id}/read")
     public ResponseEntity<?> markRead(@PathVariable String id) {
         notificationService.markAsRead(id);
         return ResponseEntity.ok().build();
     }
 
-    // 3. Mark all as read
     @PatchMapping("/read-all")
     public ResponseEntity<?> markAllRead(Authentication authentication) {
         String userId = extractUserIdSafe(authentication);
-        
         if (userId != null) {
             notificationService.markAllAsRead(userId);
         }

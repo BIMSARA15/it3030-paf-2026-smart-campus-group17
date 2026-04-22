@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, ChevronDown, CheckCircle, X } from 'lucide-react'; // ADDED 'X' ICON HERE
+import { Bell, ChevronDown, CheckCircle, X } from 'lucide-react'; 
 import { useAuth } from '../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead } from '../services/api';
+// NEW IMPORTS FOR WEBSOCKETS
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 export default function Header() {
   const { user } = useAuth();
@@ -9,8 +12,6 @@ export default function Header() {
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
-  // NEW: State to track which notification is selected for the popup modal
   const [selectedNotif, setSelectedNotif] = useState(null); 
   
   const dropdownRef = useRef(null);
@@ -49,20 +50,49 @@ export default function Header() {
           : 'text-[#17A38A]',
   };
 
-  // --- FETCH NOTIFICATIONS EFFECT ---
+  // --- FETCH NOTIFICATIONS & WEBSOCKET EFFECT ---
   useEffect(() => {
     const identifier = user?.id || user?.email; 
     
-    if (identifier) {
-      const fetchNotifications = async () => {
+    if (!identifier) return;
+
+    // 1. Fetch existing notifications on load
+    const fetchInitialNotifications = async () => {
+      try {
         const data = await getUserNotifications(); 
         setNotifications(data);
-      };
-      
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
-    }
+      } catch (error) {
+        console.error("Failed to fetch initial notifications:", error);
+      }
+    };
+    
+    fetchInitialNotifications();
+
+    // 2. Connect to the Spring Boot WebSocket for REAL-TIME updates
+    const client = new Client({
+      // We use SockJS as a fallback to ensure cross-browser compatibility
+      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      onConnect: () => {
+        console.log('Connected to Real-Time Notifications!');
+        
+       // 👇 NEW: Listen to the explicit custom topic path!
+        client.subscribe(`/topic/notifications/${identifier}`, (message) => {
+          const newNotification = JSON.parse(message.body);
+          setNotifications(prev => [newNotification, ...prev]); 
+        });
+      },
+      onStompError: (frame) => {
+        console.error('Broker reported error: ' + frame.headers['message']);
+        console.error('Additional details: ' + frame.body);
+      }
+    });
+
+    client.activate();
+
+    // Cleanup connection when user logs out or closes the component
+    return () => {
+      client.deactivate();
+    };
   }, [user]);
 
   // Handle clicking outside to close dropdown
@@ -76,14 +106,13 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // UPDATED: Now it opens the modal and closes the dropdown menu
+  // Opens the modal and closes the dropdown menu
   const handleNotificationClick = async (notification) => {
-    setSelectedNotif(notification); // Opens the popup modal
-    setIsDropdownOpen(false); // Closes the tiny dropdown menu
+    setSelectedNotif(notification); 
+    setIsDropdownOpen(false); 
     
     if (!notification.read) {
       await markNotificationAsRead(notification.id);
-      // Update local state to mark it as read instantly
       setNotifications(prev => 
         prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
       );
@@ -175,7 +204,7 @@ export default function Header() {
         </button>
       </div>
 
-      {/* NEW: THE POPUP MODAL */}
+      {/* THE POPUP MODAL */}
       {selectedNotif && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
           <div className="bg-white rounded-xl p-6 max-w-md w-full relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">

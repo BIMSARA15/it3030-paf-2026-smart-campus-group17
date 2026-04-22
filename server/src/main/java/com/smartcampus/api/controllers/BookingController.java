@@ -1,5 +1,6 @@
 package com.smartcampus.api.controllers;
 
+import org.springframework.http.HttpStatus;
 import com.smartcampus.api.models.Booking;
 import com.smartcampus.api.services.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,8 @@ public class BookingController {
     public ResponseEntity<?> createBooking(@RequestBody Booking booking) {
         try {
             Booking createdBooking = bookingService.createBooking(booking);
-            return ResponseEntity.ok(createdBooking);
+            // Changed from .ok() to .status(HttpStatus.CREATED)
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); 
         } catch (Exception e) {
             // Catches the scheduling conflict exception from the service
             return ResponseEntity.badRequest().body(e.getMessage());

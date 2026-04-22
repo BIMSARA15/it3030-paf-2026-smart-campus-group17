@@ -36,11 +36,10 @@ public class DevAuthController {
     public ResponseEntity<?> devLogin(@PathVariable String role, HttpServletRequest request) {
         String roleName = role.toUpperCase();
         
-        // 1. Initialize user with common fields
+        // 1. Initialize user with common fields (NO PASSWORD INCLUDED)
         User devUser = new User();
         devUser.setRole(roleName);
         devUser.setAvailable(true);
-        devUser.setPassword("dummy_dev_password"); 
 
         // 2. Populate user matching the REAL database structure for each role
         switch (roleName) {
@@ -102,7 +101,7 @@ public class DevAuthController {
         // 4. Create fake authorities based on the requested role
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
 
-        // 5. Create fake user attributes to mimic Microsoft/Google AND include our explicit String ID
+        // 5. Create fake user attributes to mimic Microsoft SSO AND include our explicit String ID
         Map<String, Object> attributes = Map.of(
             "email", devUser.getEmail(),
             "name", devUser.getName(),

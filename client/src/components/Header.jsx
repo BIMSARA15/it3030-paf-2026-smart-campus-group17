@@ -46,22 +46,20 @@ export default function Header() {
   };
 
   // --- FETCH NOTIFICATIONS EFFECT ---
+  // --- FETCH NOTIFICATIONS EFFECT ---
   useEffect(() => {
-    // Check for id OR email to ensure it runs
     const identifier = user?.id || user?.email; 
     
     if (identifier) {
       const fetchNotifications = async () => {
-        // Use the identifier we found
-        const data = await getUserNotifications(identifier); 
+        // CHANGED: We don't pass the identifier anymore, axios handles the session
+        const data = await getUserNotifications(); 
         setNotifications(data);
       };
       
       fetchNotifications();
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
-    } else {
-      console.log("No user identifier found, skipping notifications fetch");
     }
   }, [user]);
 

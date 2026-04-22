@@ -180,7 +180,7 @@ export default function AllBookings() {
           type: 'success',
           title: 'Booking Approved!',
           bookingId: formattedId,
-          // NEW: Updated to include the ID in the text
+          // Updated to include the ID in the text
           message: `The Booking Request ${formattedId} has been Successfully Approved.` 
         });
       } else if (reason) {
@@ -189,7 +189,7 @@ export default function AllBookings() {
           type: 'success', 
           title: 'Booking Rejected',
           bookingId: formattedId,
-          // NEW: Updated to include the ID in the text
+          // Updated to include the ID in the text
           message: `The Booking Request ${formattedId} has been Successfully Rejected.` 
         });
       }
@@ -237,7 +237,7 @@ export default function AllBookings() {
                 />
             )}
 
-            {/* NEW: Result Popup Modal */}
+            {/* Result Popup Modal */}
             {resultModal && (
               <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setResultModal(null)}></div>
@@ -319,16 +319,16 @@ export default function AllBookings() {
                     </button>
                     <button
                       onClick={async () => {
-                        // 1. Save the ID temporarily before we clear the state
+                        // Save the ID temporarily before we clear the state
                         const idToDelete = deleteModalId; 
                         
-                        // 2. Close the warning modal instantly
+                        // Close the warning modal instantly
                         setDeleteModalId(null); 
                         
-                        // 3. Wait for the database to finish deleting
+                        // Wait for the database to finish deleting
                         await purgeBooking(idToDelete);
                         
-                        // 4. Trigger your existing success modal!
+                        // Trigger your existing success modal!
                         setResultModal({
                           type: 'success',
                           title: 'Record Deleted',
@@ -347,8 +347,8 @@ export default function AllBookings() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div>
-                <h1 className="text-gray-900">All Bookings</h1>
-                <p className="text-gray-500 text-sm mt-0.5">{filtered.length} of {bookings.length} bookings shown</p>
+                <h1 className="text-gray-900 text-2xl font-semibold">All Bookings</h1>
+                <p className="text-gray-500 text-sm mt-0.5">Manage and oversee all campus resource requests.</p>
                 </div>
                 <div className="sm:ml-auto flex gap-2">
                 {counts.PENDING > 0 && (
@@ -426,6 +426,9 @@ export default function AllBookings() {
                     </button>
                 ))}
                 </div>
+
+                {/* Record count moved here */}
+                <p className="text-gray-500 text-xs font-medium pl-1">Showing {filtered.length} of {bookings.length} bookings</p>
 
                 {/* Advanced filters */}
                 {showFilters && (
@@ -706,9 +709,6 @@ export default function AllBookings() {
                         })}
                     </tbody>
                     </table>
-                </div>
-                <div className="px-4 py-3 border-t border-gray-50 flex items-center justify-between">
-                    <p className="text-gray-400 text-xs">Showing {filtered.length} of {bookings.length} bookings</p>
                 </div>
                 </div>
             )}

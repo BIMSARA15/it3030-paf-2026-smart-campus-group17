@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, ChevronDown, CheckCircle } from 'lucide-react';
+import { Bell, ChevronDown, CheckCircle, X } from 'lucide-react'; // ADDED 'X' ICON HERE
 import { useAuth } from '../context/AuthContext';
 import { getUserNotifications, markNotificationAsRead } from '../services/api';
 
@@ -9,6 +9,10 @@ export default function Header() {
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // NEW: State to track which notification is selected for the popup modal
+  const [selectedNotif, setSelectedNotif] = useState(null); 
+  
   const dropdownRef = useRef(null);
 
   const getInitials = (name) => {
@@ -46,13 +50,11 @@ export default function Header() {
   };
 
   // --- FETCH NOTIFICATIONS EFFECT ---
-  // --- FETCH NOTIFICATIONS EFFECT ---
   useEffect(() => {
     const identifier = user?.id || user?.email; 
     
     if (identifier) {
       const fetchNotifications = async () => {
-        // CHANGED: We don't pass the identifier anymore, axios handles the session
         const data = await getUserNotifications(); 
         setNotifications(data);
       };
@@ -74,7 +76,11 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // UPDATED: Now it opens the modal and closes the dropdown menu
   const handleNotificationClick = async (notification) => {
+    setSelectedNotif(notification); // Opens the popup modal
+    setIsDropdownOpen(false); // Closes the tiny dropdown menu
+    
     if (!notification.read) {
       await markNotificationAsRead(notification.id);
       // Update local state to mark it as read instantly
@@ -168,6 +174,44 @@ export default function Header() {
           <ChevronDown className="w-4 h-4 text-gray-400 ml-1 hidden md:block" />
         </button>
       </div>
+
+      {/* NEW: THE POPUP MODAL */}
+      {selectedNotif && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] px-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full relative shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Close Button */}
+            <button 
+              onClick={() => setSelectedNotif(null)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors bg-gray-50 hover:bg-gray-100 p-1.5 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h2 className="text-xl font-bold text-slate-800 mb-1 pr-8">{selectedNotif.title}</h2>
+            <p className="text-xs font-medium text-gray-500 mb-4">
+              {new Date(selectedNotif.createdAt).toLocaleString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' 
+              })}
+            </p>
+            
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 max-h-60 overflow-y-auto">
+              <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
+                {selectedNotif.message}
+              </p>
+            </div>
+            
+            {/* Optional: Add a button to navigate to the exact booking/ticket if you add URLs to notifications in the DB later */}
+            {selectedNotif.targetUrl && (
+              <a 
+                href={selectedNotif.targetUrl} 
+                className="mt-5 block text-center bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+              >
+                View Details
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

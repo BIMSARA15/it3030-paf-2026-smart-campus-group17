@@ -59,4 +59,17 @@ public class BookingController {
         return checkedInBooking.map(ResponseEntity::ok)
                              .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    // 6. Hard Delete a booking (For Admin cleanup)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBooking(@PathVariable String id) {
+        boolean isDeleted = bookingService.deleteBooking(id);
+        
+        if (isDeleted) {
+            // 204 No Content is the textbook standard for a successful DELETE
+            return ResponseEntity.noContent().build(); 
+        }
+        // 404 Not Found if the ID didn't exist
+        return ResponseEntity.notFound().build(); 
+    }
 }

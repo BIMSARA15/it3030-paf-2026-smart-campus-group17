@@ -80,4 +80,13 @@ public class BookingService {
         }
         return Optional.empty();
     }
+
+    // Delete booking method (for cancellation)
+    public boolean deleteBooking(String id) {
+        if (bookingRepository.existsById(id)) {
+            bookingRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
 }

@@ -17,4 +17,40 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// ==========================================
+// NOTIFICATION API CALLS
+// ==========================================
+
+// Fetch notifications for the currently logged-in user
+export const getUserNotifications = async () => {
+  try {
+    // The backend uses @AuthenticationPrincipal, so we just hit the base endpoint
+    const response = await api.get('/api/notifications');
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch notifications:", error);
+    return [];
+  }
+};
+
+// Mark a single notification as read
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    // Controller uses PATCH /api/notifications/{id}/read
+    await api.patch(`/api/notifications/${notificationId}/read`);
+  } catch (error) {
+    console.error("Failed to mark notification as read:", error);
+  }
+};
+
+// Mark all notifications as read
+export const markAllNotificationsAsRead = async () => {
+  try {
+    // Controller uses PATCH /api/notifications/read-all
+    await api.patch('/api/notifications/read-all');
+  } catch (error) {
+    console.error("Failed to mark all notifications as read:", error);
+  }
+};
+
 export default api;

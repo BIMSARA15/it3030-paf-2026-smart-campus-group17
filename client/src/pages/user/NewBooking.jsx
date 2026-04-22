@@ -34,12 +34,13 @@ const formatTo24Hour = (timeStr) => {
 };
 
 // The Custom Popover Time Picker matching your screenshot
+// The Custom Popover Time Picker matching your screenshot
 const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const displayValue = value || "Select time";
   const currentHour = value ? value.split(':')[0] : '12';
-  const currentMin = value ? value.split(':')[1].split(' ')[0] : '00';
+  const currentMin = value ? value.split(':')[1]?.split(' ')[0] : '00';
   const currentAmPm = value ? value.split(' ')[1] : 'AM';
 
   const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
@@ -81,10 +82,8 @@ const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
         <div className="absolute z-50 top-full left-0 mt-2 bg-white border border-gray-100 shadow-xl rounded-xl flex overflow-hidden w-full h-48 ring-1 ring-black/5">
           <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
             {hours.map(h => (
-              <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
-            {hours.map(h => (
               <div 
-                key={h} 
+                key={`hour-${h}`} 
                 onClick={() => handleSelect('h', h)}
                 className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentHour === h ? (theme?.activeTime || 'bg-[#17A38A]/10 text-[#0F6657] font-bold') : 'text-gray-600 hover:bg-gray-50'}`}
               >
@@ -92,12 +91,10 @@ const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
               </div>
             ))}
           </div>
-            ))}
-          </div>
           <div className="flex-1 overflow-y-auto hide-scroll border-r border-gray-50 py-2">
             {minutes.map(m => (
               <div 
-                key={m} 
+                key={`min-${m}`} 
                 onClick={() => handleSelect('m', m)}
                 className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentMin === m ? (theme?.activeTime || 'bg-[#17A38A]/10 text-[#0F6657] font-bold') : 'text-gray-600 hover:bg-gray-50'}`}
               >
@@ -108,7 +105,7 @@ const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
           <div className="flex-1 overflow-y-auto hide-scroll py-2">
             {ampm.map(ap => (
               <div 
-                key={ap} 
+                key={`ap-${ap}`} 
                 onClick={() => handleSelect('ap', ap)}
                 className={`px-3 py-2 text-sm text-center cursor-pointer transition-colors ${currentAmPm === ap ? (theme?.activeTime || 'bg-[#17A38A]/10 text-[#0F6657] font-bold') : 'text-gray-600 hover:bg-gray-50'}`}
               >
@@ -314,7 +311,9 @@ export default function NewBooking() {
       userName: currentUser?.name || 'Chathurya',
       userEmail: currentUser?.email || 'it23345478@my.sliit.lk',
       userDept: currentUser?.department || 'Faculty of Computing',
-      date, startTime, endTime,
+      date, 
+      startTime,
+      endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
       lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(), // If the requester is a lecturer, we can auto-fill the lecturer in charge as themselves

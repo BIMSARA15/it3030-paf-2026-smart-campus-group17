@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, CheckCircle, XCircle, Calendar, Clock,
   Users, MapPin, ChevronDown, Building2, FlaskConical, Wrench,
-  Eye, SlidersHorizontal, X, AlertCircle, Info
+  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info
 } from 'lucide-react';
 // Change these two lines
 import { useBooking } from "../../context/BookingContext";
@@ -118,7 +118,7 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 }
 
 export default function AllBookings() {
-  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings } = useBooking();
+  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings, purgeBooking } = useBooking();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -130,6 +130,7 @@ export default function AllBookings() {
   const [expandedId, setExpandedId] = useState(null);
   const [modal, setModal] = useState(null);
   const [resultModal, setResultModal] = useState(null);
+  const [deleteModalId, setDeleteModalId] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
   
   // ADDED SIDEBAR STATE
@@ -285,6 +286,47 @@ export default function AllBookings() {
                   >
                     Close
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* NEW: Custom Delete Confirmation Modal */}
+            {deleteModalId && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteModalId(null)}></div>
+                <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center z-10 border border-gray-100 animate-in zoom-in-95 duration-200">
+                  
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 mt-2 bg-red-100">
+                    <Trash2 className="w-8 h-8 text-red-600" />
+                  </div>
+                  
+                  <h2 className="text-gray-900 text-xl font-semibold mb-2">Delete Record?</h2>
+                  <p className="text-gray-500 text-sm mb-6">
+                    <span className="block mb-1.5">
+                      Are you sure you want to permanently delete booking record <strong className="text-gray-800 font-mono">ID-{deleteModalId.slice(-5).toUpperCase()}?</strong>
+                    </span>
+                    <span className="block text-gray-400">
+                      This action cannot be undone.
+                    </span>
+                  </p>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteModalId(null)}
+                      className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        purgeBooking(deleteModalId);
+                        setDeleteModalId(null);
+                      }}
+                      className="flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-medium bg-red-600 hover:bg-red-700 shadow-[0_4px_12px_rgba(220,38,38,0.2)] transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -501,34 +543,45 @@ export default function AllBookings() {
                                 </td>
                                 <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                                    {booking.status === 'PENDING' && (
-                                    <>
-                                        <button
-                                        onClick={() => setModal({ bookingId: booking.id, action: 'approve' })}
-                                        className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700 transition-colors"
-                                        >
-                                        <CheckCircle className="w-3.5 h-3.5" /> Approve
-                                        </button>
-                                        <button
-                                        onClick={() => setModal({ bookingId: booking.id, action: 'reject' })}
-                                        className="flex items-center gap-1 px-2.5 py-1.5 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700 transition-colors"
-                                        >
-                                        <XCircle className="w-3.5 h-3.5" /> Reject
-                                        </button>
-                                    </>
-                                    )}
-                                    {/* View Details Button */}
-                                    <button
-                                      onClick={() => setExpandedId(isExpanded ? null : booking.id)}
-                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                                        isExpanded 
-                                          ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                                          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                                      }`}
-                                    >
-                                      <Eye className={`w-3.5 h-3.5 ${isExpanded ? 'text-blue-600' : 'text-gray-400'}`} />
-                                      {isExpanded ? 'Hide Details' : 'View Details'}
-                                    </button>
+                                    {/* 1. Show Approve and Reject ONLY when PENDING */}
+                                      {booking.status === 'PENDING' && (
+                                        <>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); approveBooking(booking.id, ''); }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
+                                          >
+                                            <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); /* trigger reject modal */ }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
+                                          >
+                                            <XCircle className="w-3.5 h-3.5" /> Reject
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {/* 2. Show Delete Record ONLY when NOT PENDING (Approved, Rejected, Cancelled) */}
+                                        {booking.status !== 'PENDING' && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setDeleteModalId(booking.id); // <--- Simply opens the custom modal!
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 bg-white rounded-lg text-xs font-medium hover:bg-red-50 hover:border-red-600 transition-colors"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" /> Delete Record
+                                          </button>
+                                        )}
+
+                                      {/* 3. ALWAYS show the View Details button at the very end */}
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === booking.id ? null : booking.id); }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 bg-white rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" /> View Details
+                                      </button>
                                 </div>
                                 </td>
                             </tr>

@@ -382,6 +382,26 @@ const createBooking = async (bookingData) => {
     }
   };
 
+  // Hard Delete a booking (Admin Only)
+  const purgeBooking = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}`, {
+        method: 'DELETE', // Uses your new REST endpoint!
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      // Remove the booking from the React state so it disappears from the screen
+      setBookings(prevBookings => prevBookings.filter(b => b.id !== id));
+      
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+    }
+  };
+
   return (
     <BookingContext.Provider value={{ 
       resources, utilities, bookings, studentRequests, currentUser: user, 
@@ -389,7 +409,7 @@ const createBooking = async (bookingData) => {
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
       createStudentRequest, updateStudentRequest, fulfillStudentRequest, 
-      fetchUserBookings,
+      fetchUserBookings, purgeBooking
     }}>
       {children}
     </BookingContext.Provider>

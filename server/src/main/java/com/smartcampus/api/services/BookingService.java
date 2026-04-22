@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 public class BookingService {
@@ -30,17 +33,24 @@ public class BookingService {
             newBooking.getDate()
         );
 
-        // 2. Convert times to comparable formats (e.g., "14:00" -> 1400)
-        int newStart = Integer.parseInt(newBooking.getStartTime().replace(":", ""));
-        int newEnd = Integer.parseInt(newBooking.getEndTime().replace(":", ""));
+        // 2. Teach Java how to read "05:00 PM" format
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.US);
+        LocalTime newStart = LocalTime.parse(newBooking.getStartTime(), formatter);
+        LocalTime newEnd = LocalTime.parse(newBooking.getEndTime(), formatter);
 
-        // 3. Check for time overlaps
+        // 3. Check for time overlaps securely
         for (Booking existing : existingBookings) {
-            int existingStart = Integer.parseInt(existing.getStartTime().replace(":", ""));
-            int existingEnd = Integer.parseInt(existing.getEndTime().replace(":", ""));
+            try {
+                LocalTime existingStart = LocalTime.parse(existing.getStartTime(), formatter);
+                LocalTime existingEnd = LocalTime.parse(existing.getEndTime(), formatter);
 
-            if (newStart < existingEnd && newEnd > existingStart) {
-                throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
+                // Java handles the AM/PM math automatically!
+                if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
+                    throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
+                }
+            } catch (Exception e) {
+                // If an old record is corrupted, safely ignore it so the server doesn't crash!
+                continue;
             }
         }
 

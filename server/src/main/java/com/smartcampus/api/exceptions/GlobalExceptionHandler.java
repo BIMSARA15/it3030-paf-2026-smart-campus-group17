@@ -11,15 +11,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Centralised exception → HTTP response mapping for the Module C endpoints.
- *
- * Returns a small, predictable JSON envelope so the frontend can surface
- * a clean error message without parsing free-form text.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // ==========================================
+    // TEAMMATE'S MODULE C (TICKETING) EXCEPTIONS
+    // ==========================================
     @ExceptionHandler(TicketNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(TicketNotFoundException ex) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), null);
@@ -28,13 +25,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             InvalidStatusTransitionException.class,
             ImageLimitExceededException.class,
-            IllegalArgumentException.class
+            IllegalArgumentException.class // 👈 This automatically covers our Auth/Admin errors too!
     })
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
     }
 
-    /** Field-level validation errors from @Valid request bodies. */
+    // ==========================================
+    // SHARED DTO VALIDATION (Used by everyone)
+    // ==========================================
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -43,6 +42,18 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Validation failed", fieldErrors);
     }
 
+    // ==========================================
+    // YOUR MODULE E (AUTH & SECURITY) EXCEPTIONS
+    // ==========================================
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, Object>> handleSecurityException(SecurityException ex) {
+        // Uses your teammate's envelope but with a 403 Forbidden status
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), null);
+    }
+
+    // ==========================================
+    // THE UNIFIED JSON RESPONSE BUILDER
+    // ==========================================
     private ResponseEntity<Map<String, Object>> build(HttpStatus status, String message, Object details) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now().toString());

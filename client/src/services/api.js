@@ -21,35 +21,29 @@ const api = axios.create({
 // NOTIFICATION API CALLS
 // ==========================================
 
-// Fetch notifications for the currently logged-in user
+// src/services/api.js (Keep your existing axios config at the top)
+
+// Notice we don't need to pass userId in the URL! 
+// The backend securely figures it out from the session cookie.
+// src/services/api.js
+
 export const getUserNotifications = async () => {
   try {
-    // The backend uses @AuthenticationPrincipal, so we just hit the base endpoint
+    // FIXED: Added /api to the URL
     const response = await api.get('/api/notifications');
     return response.data;
   } catch (error) {
-    console.error("Failed to fetch notifications:", error);
+    console.error('Failed to fetch notifications:', error);
     return [];
   }
 };
 
-// Mark a single notification as read
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    // Controller uses PATCH /api/notifications/{id}/read
+    // FIXED: Added /api to the URL
     await api.patch(`/api/notifications/${notificationId}/read`);
   } catch (error) {
-    console.error("Failed to mark notification as read:", error);
-  }
-};
-
-// Mark all notifications as read
-export const markAllNotificationsAsRead = async () => {
-  try {
-    // Controller uses PATCH /api/notifications/read-all
-    await api.patch('/api/notifications/read-all');
-  } catch (error) {
-    console.error("Failed to mark all notifications as read:", error);
+    console.error("Failed to mark notification as read", error);
   }
 };
 

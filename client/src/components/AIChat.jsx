@@ -119,19 +119,19 @@ const AIChat = () => {
                                 Hello {user?.name?.split(' ')[0] || ''}! Ask me to find or book a resource for you.
                             </div>
                         )}
-                        {messages.map((msg, index) => (
-                            <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`p-3 rounded-2xl max-w-[85%] text-sm ${
-                                    msg.sender === 'user' 
-                                        ? 'bg-[#17A38A] text-white rounded-br-sm shadow-sm' 
-                                        : msg.sender === 'system'
-                                        ? 'bg-red-50 border border-red-100 text-red-600'
-                                        : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
-                                }`}>
-                                    {msg.text}
-                                </div>
-                            </div>
-                        ))}
+                       {messages.map((msg, index) => (
+    <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+        <div className={`p-3 rounded-2xl max-w-[85%] text-sm whitespace-pre-wrap ${
+            msg.sender === 'user' 
+                ? 'bg-[#17A38A] text-white rounded-br-sm shadow-sm' 
+                : msg.sender === 'system'
+                ? 'bg-red-50 border border-red-100 text-red-600'
+                : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
+        }`}>
+            {msg.text}
+        </div>
+    </div>
+))}
                         {isLoading && (
                             <div className="flex justify-start">
                                 <div className="p-3 bg-white border border-gray-100 text-gray-500 rounded-2xl rounded-bl-sm shadow-sm animate-pulse flex gap-1">

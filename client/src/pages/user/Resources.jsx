@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin,
-  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package, ShieldAlert, Send, X,
+  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package, ShieldAlert, Send, X, SlidersHorizontal,
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import Sidebar from '../../components/Sidebar';
@@ -22,6 +22,22 @@ const TYPE_CONFIG = {
     label: 'Equipment', icon: <Wrench className="w-5 h-5" />,
     color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100',
   },
+};
+
+const DEFAULT_RESOURCE_IMAGES = {
+  lectureRoom: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Gfp-lecture-hall.jpg/960px-Gfp-lecture-hall.jpg',
+  lab: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+  meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+};
+
+const getResourceImage = (resource) => {
+  if (resource.image) return resource.image;
+
+  const originalType = (resource.resourceType || resource.type || '').toLowerCase();
+  if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
+  if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+
+  return DEFAULT_RESOURCE_IMAGES.lectureRoom;
 };
 
 const getAccessLabel = (access = '') => {
@@ -57,6 +73,9 @@ export default function Resources() {
   const [accessMessage, setAccessMessage] = useState('');
   const [requestingResource, setRequestingResource] = useState(null);
   const [requestSentPopup, setRequestSentPopup] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [blockFilter, setBlockFilter] = useState('All');
+  const [minCapacityFilter, setMinCapacityFilter] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -66,7 +85,17 @@ export default function Resources() {
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location.toLowerCase().includes(search.toLowerCase()) ||
       r.features.some(f => f.toLowerCase().includes(search.toLowerCase()));
-    return matchType && matchSearch;
+    const matchStatus = statusFilter === 'All' || r.status === statusFilter;
+    const matchBlock =
+      blockFilter === 'All' ||
+      r.block === blockFilter ||
+      r.block === `Block ${blockFilter}`;
+    const minCapacity = Number(minCapacityFilter);
+    const matchCapacity =
+      minCapacityFilter.trim() === '' ||
+      (!Number.isNaN(minCapacity) && Number(r.capacity) >= minCapacity);
+
+    return matchType && matchSearch && matchStatus && matchBlock && matchCapacity;
   });
 
   const filteredUtilities = utilities.filter((utility) => {
@@ -94,6 +123,9 @@ export default function Resources() {
     lab: resources.filter(r => r.type === 'lab').length,
     equipment: utilities.length,
   };
+
+  const statusOptions = ['All', 'Available', 'Not Available', 'Out Of Service'];
+  const blockOptions = ['All', 'A', 'B', 'C'];
 
   const hasExistingRequest = (resourceId) => studentRequests.some((request) => {
     const sameResource = request.resourceId === resourceId;
@@ -127,10 +159,9 @@ export default function Resources() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              {/* UPDATED: Search input focus ring */}
               <input
                 type="text"
                 placeholder={typeFilter === 'equipment' ? 'Search equipment, code, location...' : 'Search resources, features...'}
@@ -139,6 +170,7 @@ export default function Resources() {
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
               />
             </div>
+
             <div className="flex gap-2 flex-wrap">
               {['all', 'room', 'lab', 'equipment'].map(t => (
                 <button
@@ -161,6 +193,65 @@ export default function Resources() {
                   </span>
                 </button>
               ))}
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                  <SlidersHorizontal className="h-4 w-4 text-[#17A38A]" />
+                  Filter Resources
+                </div>
+                <p className="text-xs text-slate-400">
+                  Showing {typeFilter === 'equipment' ? filteredUtilities.length : filtered.length} item{(typeFilter === 'equipment' ? filteredUtilities.length : filtered.length) !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-slate-500">Status</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                    disabled={typeFilter === 'equipment'}
+                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option === 'All' ? 'All Statuses' : option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-slate-500">Block</span>
+                  <select
+                    value={blockFilter}
+                    onChange={(event) => setBlockFilter(event.target.value)}
+                    disabled={typeFilter === 'equipment'}
+                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {blockOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option === 'All' ? 'All Blocks' : `Block ${option}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-slate-500">Capacity</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={minCapacityFilter}
+                    onChange={(event) => setMinCapacityFilter(event.target.value)}
+                    disabled={typeFilter === 'equipment'}
+                    placeholder="Minimum"
+                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -357,7 +448,7 @@ export default function Resources() {
                 <div className="bg-white rounded-xl border border-gray-100 overflow-hidden sticky top-4">
                   <div className="h-36 bg-gradient-to-br from-slate-700 to-slate-900 relative overflow-hidden">
                     <img
-                      src={selectedResource.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800'}
+                      src={getResourceImage(selectedResource)}
                       alt={selectedResource.name}
                       className="w-full h-full object-cover opacity-60"
                     />
@@ -381,7 +472,7 @@ export default function Resources() {
                             <p className="text-xs text-amber-800 mt-1">
                               {hasExistingRequest(selectedResource.id)
                                 ? 'A request has already been sent for this resource. Please wait for the lecturer to review it.'
-                                : 'Students can send a request to a lecturer, and the lecturer can then place the booking from `Std Requests`.'}
+                                : 'Students can send a request to a lecturer, and the lecturer can then place the booking for the student.'}
                             </p>
                           </div>
                         </div>

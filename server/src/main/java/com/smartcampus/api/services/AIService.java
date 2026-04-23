@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.stereotype.Service;
 import java.util.Map;
+import com.smartcampus.api.models.User;
 import java.util.HashMap;
 import java.util.List;
 
@@ -16,13 +17,16 @@ public class AIService {
     private final String PYTHON_API_URL = "http://localhost:8000/chat";
 
     // 👈 FIX: Accept the List of history
-    public String askAI(String userId, List<Map<String, String>> history) {
+   // Change String userId to User user
+    public String askAI(User user, List<Map<String, String>> history) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // 👈 FIX: Use Map<String, Object> to allow the array
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("user_id", userId);
+        // Send the secure details to Python
+        requestBody.put("user_id", user.getId());
+        requestBody.put("user_name", user.getName() != null ? user.getName() : "Campus User");
+        requestBody.put("user_email", user.getEmail() != null ? user.getEmail() : "no-email@smartcampus.com");
         requestBody.put("history", history); 
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);

@@ -12,5 +12,8 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByEmail(String email);
     List<User> findByRole(String role);
     Optional<User> findByOauthId(String oauthId);
+
+    /** Technicians who are marked available for new ticket assignment. */
+    List<User> findByRoleAndAvailable(String role, boolean available);
     
 }

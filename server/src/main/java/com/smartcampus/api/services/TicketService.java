@@ -8,15 +8,11 @@ import com.smartcampus.api.exceptions.TicketNotFoundException;
 import com.smartcampus.api.models.Ticket;
 import com.smartcampus.api.models.TicketComment;
 import com.smartcampus.api.models.TicketStatus;
+import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.TicketRepository;
+import com.smartcampus.api.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-// --- ADDED FOR AUTO-ASSIGNMENT ---
-import com.smartcampus.api.models.User;
-import com.smartcampus.api.repositories.UserRepository;
-import java.util.stream.Collectors;
-// --- END ADDED CODE ---
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,11 +25,11 @@ import java.util.Set;
  * Business logic for the maintenance ticketing module.
  *
  * Responsibilities:
- * - validate the ticket status lifecycle (see ALLOWED_TRANSITIONS)
- * - cap embedded image URLs at MAX_IMAGES
- * - keep updatedAt fresh on any mutation
- * - append comments / system notes to the embedded list
- * - generate a sequential ticketCode (TKT-001, TKT-002, ...)
+ *   - validate the ticket status lifecycle (see ALLOWED_TRANSITIONS)
+ *   - cap embedded image URLs at MAX_IMAGES
+ *   - keep updatedAt fresh on any mutation
+ *   - append comments / system notes to the embedded list
+ *   - generate a sequential ticketCode (TKT-001, TKT-002, ...)
  */
 @Service
 public class TicketService {
@@ -57,10 +53,8 @@ public class TicketService {
     @Autowired
     private TicketRepository ticketRepository;
 
-    // --- ADDED FOR AUTO-ASSIGNMENT ---
     @Autowired
     private UserRepository userRepository;
-    // --- END ADDED CODE ---
 
     public Ticket createTicket(CreateTicketRequest req, String userId) {
         if (req.getTitle() == null || req.getTitle().isBlank()) {
@@ -92,37 +86,37 @@ public class TicketService {
         t.setUpdatedAt(now);
         t.setTicketCode(nextTicketCode());
 
-        // --- ADDED FOR AUTO-ASSIGNMENT ---
-        // 1. Fetch all available technicians
-        List<User> availableTechnicians = userRepository.findByRole("TECHNICIAN").stream()
-                .filter(User::isAvailable)
-                .collect(Collectors.toList());
+        List<TicketStatus> activeStatuses = List.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
+        List<User> availableTechnicians = userRepository.findByRoleAndAvailable("TECHNICIAN", true);
 
-        if (!availableTechnicians.isEmpty()) {
-            User leastLoadedTech = null;
-            long minLoad = Long.MAX_VALUE;
-
-            // We calculate workload based on OPEN and IN_PROGRESS tickets
-            List<TicketStatus> activeStatuses = List.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
-
-            // 2. Find the technician with the least active tickets
-            for (User tech : availableTechnicians) {
-                long currentLoad = ticketRepository.countByAssignedTechnicianIdAndStatusIn(tech.getId(), activeStatuses);
-                
-                if (currentLoad < minLoad) {
-                    minLoad = currentLoad;
-                    leastLoadedTech = tech;
-                }
-            }
-
-            // 3. Assign the ticket and leave a system trace comment
-            if (leastLoadedTech != null) {
-                t.setAssignedTechnicianId(leastLoadedTech.getId());
-                String systemMsg = "Ticket auto-assigned to available technician based on workload.";
-                t.getComments().add(new TicketComment("SYSTEM", "SYSTEM", systemMsg));
+        User chosen = null;
+        long lowestWorkload = Long.MAX_VALUE;
+        for (User tech : availableTechnicians) {
+            long workload = ticketRepository.countByAssignedTechnicianIdAndStatusIn(tech.getId(), activeStatuses);
+            if (workload < lowestWorkload) {
+                lowestWorkload = workload;
+                chosen = tech;
             }
         }
-        // --- END ADDED CODE ---
+
+        if (chosen != null) {
+            t.setAssignedTechnicianId(chosen.getId());
+            String techLabel = chosen.getName() != null && !chosen.getName().isBlank()
+                    ? chosen.getName()
+                    : chosen.getId();
+            t.getComments().add(new TicketComment(
+                    "SYSTEM",
+                    "SYSTEM",
+                    "Ticket auto-assigned to technician " + techLabel + " (id: " + chosen.getId()
+                            + ", active workload: " + lowestWorkload + ")."
+            ));
+        } else {
+            t.getComments().add(new TicketComment(
+                    "SYSTEM",
+                    "SYSTEM",
+                    "No available technician was found. Ticket was saved without assignment."
+            ));
+        }
 
         return ticketRepository.save(t);
     }

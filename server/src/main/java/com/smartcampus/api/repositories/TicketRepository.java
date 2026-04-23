@@ -4,6 +4,7 @@ import com.smartcampus.api.models.Ticket;
 import com.smartcampus.api.models.TicketStatus;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -26,8 +27,6 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
     /** Powers the "5 open maintenance tickets" KPI on the Technician dashboard. */
     long countByAssignedTechnicianIdAndStatus(String techId, TicketStatus status);
 
-    // --- ADDED FOR AUTO-ASSIGNMENT ---
-    // Counts how many tickets a technician has within a list of specific statuses
-    long countByAssignedTechnicianIdAndStatusIn(String techId, List<TicketStatus> statuses);
-    // --- END ADDED CODE ---
+    /** Active workload: tickets assigned to the technician in OPEN or IN_PROGRESS. */
+    long countByAssignedTechnicianIdAndStatusIn(String assignedTechnicianId, Collection<TicketStatus> statuses);
 }

@@ -84,14 +84,20 @@ def check_asset_availability(asset_type: str = "", capacity: int = 0, date: str 
         return f"Database found these available options:\n{results}\n\nTell the user the closest matches and ask if they want to book one."
     else:
         return f"No {asset_type}s with a capacity of at least {capacity} are available on {date}."
-def create_reservation(user_id: str, resource_id: str, date: str, start_time: str, end_time: str, attendees: int) -> str:
+def create_reservation(user_id: str, user_name: str, user_email: str, resource_id: str, date: str, start_time: str, end_time: str, attendees: int = 1) -> str:
     """Sends a POST request to Spring Boot to create the booking."""
-    print(f"[AI ACTION] Forwarding booking request to Spring Boot for {resource_id}...")
+    print(f"[AI ACTION] Booking {resource_id} for {user_name} ({user_email})...")
     
+    if len(start_time) == 4 and start_time[1] == ":": start_time = "0" + start_time
+    if len(end_time) == 4 and end_time[1] == ":": end_time = "0" + end_time
+
+    # 2. Add them to the Spring Boot Payload
     booking_payload = {
         "userId": user_id,
+        "userName": user_name,     # <-- Maps to Booking.java
+        "userEmail": user_email,   # <-- Maps to Booking.java
         "resourceId": resource_id,
-        "date": date,
+        "date": date.replace(".", "-"), 
         "startTime": start_time,
         "endTime": end_time,
         "attendees": attendees,

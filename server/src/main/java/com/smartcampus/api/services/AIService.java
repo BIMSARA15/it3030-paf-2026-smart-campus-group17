@@ -7,28 +7,27 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class AIService {
     
     private final RestTemplate restTemplate = new RestTemplate();
-    
-    // This points to your Python FastAPI server running on port 8000
     private final String PYTHON_API_URL = "http://localhost:8000/chat";
 
-    public String askAI(String userId, String userMessage) {
+    // 👈 FIX: Accept the List of history
+    public String askAI(String userId, List<Map<String, String>> history) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // Map the payload exactly as the Python Pydantic model expects
-        Map<String, String> requestBody = new HashMap<>();
+        // 👈 FIX: Use Map<String, Object> to allow the array
+        Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("user_id", userId);
-        requestBody.put("message", userMessage);
+        requestBody.put("history", history); 
 
-        HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
         try {
-            // Send the POST request to Python
             @SuppressWarnings("unchecked")
             Map<String, String> response = restTemplate.postForObject(PYTHON_API_URL, request, Map.class);
             
@@ -39,7 +38,7 @@ public class AIService {
             
         } catch (Exception e) {
             System.err.println("AI Connection Error: " + e.getMessage());
-            throw new RuntimeException("Could not connect to the Python AI Microservice. Is it running on port 8000?");
+            throw new RuntimeException("Could not connect to the Python AI Microservice.");
         }
     }
 }

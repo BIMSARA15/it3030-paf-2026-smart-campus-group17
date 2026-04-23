@@ -51,15 +51,14 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
         // --- ADD THESE DEBUG LOGS HERE ---
-        System.out.println("====== INCOMING BOOKING REQUEST ======");
-        System.out.println("Resource ID: " + booking.getResourceId());
-        System.out.println("User ID: " + booking.getUserId());
-        System.out.println("User Name: " + booking.getUserName());
-        System.out.println("Date: " + booking.getDate());
-        System.out.println("Attendees: " + booking.getAttendees());
-        System.out.println("======================================");
+        System.out.println("\n====== [JAVA DEBUG] INCOMING BOOKING ======");
+        System.out.println("Resource ID received: " + booking.getResourceId());
+        System.out.println("Resource Name received: " + booking.getResourceName());
+        System.out.println("Block received: " + booking.getBlock());
+        System.out.println("Level received: " + booking.getLevel());
+        System.out.println("===========================================\n");
         
-        // ... (Keep the rest of your mapping code the same) ...
+       
         // Map Microsoft Email to Real MongoDB ID
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();

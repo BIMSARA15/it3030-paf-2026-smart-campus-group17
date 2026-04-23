@@ -64,8 +64,8 @@ def check_asset_availability(asset_type: str = "", capacity: int = 0, date: str 
         return f"No {asset_type}s with a capacity of at least {capacity} are available on {date}."
 
 def create_reservation(user_id: str = "guest", resource_id: str = "", date: str = "", start_time: str = "", end_time: str = "", attendees: int = 1, purpose: str = "Automated Academic Booking Session", special_requests: str = "", user_name: str = "Campus User", user_email: str = "user@smartcampus.com") -> str:
-    print(f"[AI ACTION] Booking {resource_id} for {date} from {start_time} to {end_time}...")
-    print(f"[AI DATA] Auto-filled Attendees: {attendees} | Auto-filled Purpose: '{purpose}'")
+    print(f"\n--- [AI ACTION] Start Booking Process ---")
+    print(f"Target Resource ID from AI: '{resource_id}'")
     
     clean_date = date.replace(".", "-").replace("/", "-") 
     
@@ -85,38 +85,67 @@ def create_reservation(user_id: str = "guest", resource_id: str = "", date: str 
     clean_start = clean_time(start_time)
     clean_end = clean_time(end_time)
 
-    # --- NEW: FETCH THE REAL NAME, BLOCK, AND LEVEL FROM MONGODB ---
+    # --- BULLETPROOF RESOURCE LOOKUP ---
+    actual_name = "Unknown Resource"
+    actual_block = ""
+    actual_level = ""
+    real_db_id = resource_id # Default to what AI gave us just in case
+    
     try:
-        query = {"resourceCode": resource_id} if len(resource_id) < 20 else {"_id": ObjectId(resource_id)}
+        from bson.errors import InvalidId
+        obj_id = None
+        try:
+            obj_id = ObjectId(resource_id)
+        except InvalidId:
+            pass
+
+        query = {
+            "$or": [
+                {"resourceCode": resource_id},
+                {"_id": obj_id} if obj_id else {"_id": "never_match"},
+                {"_id": resource_id},
+                {"id": resource_id}
+            ]
+        }
+        
         resource_doc = resources_collection.find_one(query)
         
-        actual_name = resource_doc.get("resourceName", "Unknown Resource") if resource_doc else "Unknown Resource"
-        actual_block = resource_doc.get("block", "") if resource_doc else ""
-        actual_level = resource_doc.get("level", "") if resource_doc else ""
+        if resource_doc:
+            print(f"[DEBUG] Found Resource in MongoDB: {resource_doc.get('resourceName')}")
+            actual_name = resource_doc.get("resourceName", "Unknown Resource")
+            actual_block = resource_doc.get("block", "")
+            actual_level = resource_doc.get("level", "")
+            
+            # --- THE MAGIC FIX: Grab the 24-character MongoDB ID! ---
+            real_db_id = str(resource_doc.get("_id"))
+            print(f"[DEBUG] Swapped short code '{resource_id}' for real DB ID '{real_db_id}'")
+            # --------------------------------------------------------
+            
+        else:
+            print(f"[WARNING] Could not find resource '{resource_id}' in MongoDB!")
+            
     except Exception as e:
-        print(f"[WARNING] Failed to fetch resource details: {e}")
-        actual_name = "Unknown Resource"
-        actual_block = ""
-        actual_level = ""
-    # ---------------------------------------------------------------
+        print(f"[ERROR] Database lookup failed: {e}")
+    # -----------------------------------
 
-    # INJECT the AI's generated data AND the MongoDB data into the Spring Boot Payload
     booking_payload = {
         "userId": user_id,
         "userName": user_name,
         "userEmail": user_email,
-        "resourceId": resource_id,
-        "resourceName": actual_name,     # <-- Sent to Java!
-        "block": actual_block,           # <-- Sent to Java!
-        "level": actual_level,           # <-- Sent to Java!
+        "resourceId": real_db_id,    # <-- NOW SENDING THE REAL 24-CHAR ID!
+        "resourceName": actual_name, 
+        "block": actual_block,       
+        "level": actual_level,       
         "date": clean_date,
         "startTime": clean_start,
         "endTime": clean_end,
         "attendees": attendees,      
         "purpose": purpose,          
-        "specialRequests": special_requests, # <-- Fixed to camelCase
+        "specialRequests": special_requests, 
         "status": "PENDING"
     }
+    
+    print(f"[DEBUG] Payload sending to Java: {booking_payload}")
     
     try:
         response = requests.post(SPRING_BOOT_API_URL, json=booking_payload)
@@ -128,7 +157,6 @@ def create_reservation(user_id: str = "guest", resource_id: str = "", date: str 
             return f"Failed to book. Spring Boot returned error: {response.text}"
     except Exception as e:
         return f"Error contacting Java Backend: {str(e)}"
-
 available_functions = {
     'check_asset_availability': check_asset_availability,
     'create_reservation': create_reservation,

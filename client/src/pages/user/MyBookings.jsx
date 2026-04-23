@@ -40,8 +40,8 @@ function InfoCard({ icon, label, value, accent }) {
 }
 
 export default function MyBookings() {
-  // Pulled fetchUserBookings and bookings from Context
-  const { currentUser, bookings, getResourceById, cancelBooking, fetchUserBookings } = useBooking();
+  // Pulled fetchUserBookings, bookings, AND utilities from Context
+  const { currentUser, bookings, getResourceById, cancelBooking, fetchUserBookings, utilities } = useBooking();
   const navigate = useNavigate();
 
   // THEME: Determine if user is lecturer for styling purposes
@@ -95,11 +95,30 @@ export default function MyBookings() {
     loadData();
   }, [currentUser, fetchUserBookings, bookings]); 
 
+  // NEW: Helper function to find the item in either Resources OR Utilities
+  const getBookingItem = (id) => {
+    // 1. Try to find it in normal resources (Rooms/Labs)
+    let item = getResourceById(id);
+    if (item) return item;
+
+    // 2. If not found, try to find it in utilities (Equipments)
+    const util = utilities?.find(u => u.id === id);
+    if (util) {
+      return {
+        id: util.id,
+        name: util.utilityName,
+        type: 'equipment', // Tricks the UI into using the orange equipment styling
+        location: util.location,
+      };
+    }
+    return null;
+  };
+
   const filtered = myBookings.filter(b => {
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
-    const resource = getResourceById(b.resourceId);
+    const resource = getBookingItem(b.resourceId);
     const matchSearch = search === '' ||
-      resource?.name.toLowerCase().includes(search.toLowerCase()) ||
+      (resource?.name || '').toLowerCase().includes(search.toLowerCase()) ||
       b.purpose.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
@@ -121,11 +140,11 @@ export default function MyBookings() {
     hour: 'numeric', minute: '2-digit', hour12: true
   });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T');
 
   // Target the specific booking to open in the Modal
   const expandedBooking = expandedId ? myBookings.find(b => b.id === expandedId) : null;
-  const expandedResource = expandedBooking ? getResourceById(expandedBooking.resourceId) : null;
+  const expandedResource = expandedBooking ? getBookingItem(expandedBooking.resourceId) : null;
   
   // Progress Bar Logic Map
   const getSteps = (currentStatus) => {
@@ -234,7 +253,7 @@ export default function MyBookings() {
           ) : (
             <div className="space-y-3">
               {filtered.map(booking => {
-                const resource = getResourceById(booking.resourceId);
+                const resource = getBookingItem(booking.resourceId);
                 const isPast = booking.date < today;
                 const canCancel = booking.status === 'PENDING' || (booking.status === 'APPROVED' && !isPast);
 

@@ -207,11 +207,32 @@ export default function NewBooking() {
   // NEW: Pre-fill data if we are editing an existing booking
   useEffect(() => {
     // FIX: Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
-    if (isEditing && bookings.length > 0 && resources.length > 0 && !hasInitialized) {
+    if (isEditing && bookings.length > 0 && (resources.length > 0 || utilities.length > 0) && !hasInitialized) {
       const bookingToEdit = bookings.find(b => String(b.id) === String(id));
       
       if (bookingToEdit) {
-        const r = getResourceById(bookingToEdit.resourceId);
+        // 1. Try normal resource
+        let r = getResourceById(bookingToEdit.resourceId);
+        
+        // 2. Try utilities if not found
+        if (!r && utilities && utilities.length > 0) {
+          const u = utilities.find(util => util.id === bookingToEdit.resourceId);
+          if (u) {
+            r = {
+              id: u.id,
+              name: u.utilityName,
+              location: u.location,
+              type: 'equipment',
+              capacity: null,
+              quantity: u.quantity,
+              features: [],
+              access: 'anyone',
+              status: u.status,
+              description: u.description
+            };
+          }
+        }
+
         if (r) setSelectedResource(r);
         
         setDate(bookingToEdit.date || '');
@@ -227,12 +248,32 @@ export default function NewBooking() {
         setHasInitialized(true); // Lock it so it never overwrites again!
       }
     }
-  }, [id, isEditing, bookings, resources, getResourceById, hasInitialized]);
+  }, [id, isEditing, bookings, resources, utilities, getResourceById, hasInitialized]);
 
   useEffect(() => {
     const rid = searchParams.get('resource');
     if (rid) {
-      const r = getResourceById(rid);
+      // Try to find it as a standard resource (Room/Lab)
+      let r = getResourceById(rid);
+      
+      // NEW: If not found, try to find it in utilities (Equipments) and map it!
+      if (!r && utilities && utilities.length > 0) {
+        const u = utilities.find(util => util.id === rid);
+        if (u) {
+          r = {
+            id: u.id,
+            name: u.utilityName,
+            location: u.location,
+            type: 'equipment',
+            capacity: null, // Hides attendees field
+            features: [],
+            access: 'anyone',
+            status: u.status,
+            description: u.description
+          };
+        }
+      }
+
       const isLecturerOnly = (r?.access || '').toLowerCase() === 'lecturer';
       const isBlockedForStudent = (currentRole === 'STUDENT' || currentRole === 'USER') && isLecturerOnly;
 
@@ -249,8 +290,7 @@ export default function NewBooking() {
         setAccessNotice('');
       }
     }
-  }, [searchParams, resources, currentRole]);
-
+  }, [searchParams, resources, utilities, currentRole]); // <-- Added utilities to dependency array
   useEffect(() => {
     // Convert to 24h for mathematical comparison
     const start24 = formatTo24Hour(startTime);

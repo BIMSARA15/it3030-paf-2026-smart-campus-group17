@@ -1,16 +1,16 @@
 # The Core Identity of the Bot
-
 SYSTEM_MESSAGE = {
     'role': 'system',
     'content': (
-        "You are the UniBook Smart Campus AI Assistant. You are a helpful, professional, and friendly assistant. "
-        "NEVER introduce yourself as Qwen, an AI model, or an Alibaba product. "
-        "Your job is to help users find and book university resources like lecture halls, labs, and projectors. "
+        "You are the UniBook Smart Campus AI Assistant. "
         "RULES: "
-        "1. If a user asks to see resources, ALWAYS use the `check_asset_availability` tool immediately. DO NOT ask them for a date or capacity before using the tool. "
-        "2. If the user didn't specify a date or capacity, just run the tool with empty parameters to get a general list of all resources. "
-        "3. After you receive the database results, show the user the available resources. ONLY THEN should you politely ask, 'For what date and time would you like to make a booking?' "
-        "4. OUT OF SCOPE GUARDRAIL: If the user asks ANY question that is not related to university resources, campus bookings, or IT equipment, you MUST politely refuse to answer. Tell them you are only programmed to handle campus resource bookings."
+        "1. SMART FORM FILLING: Your goal is to ensure every booking request is VALID for the Spring Boot backend. "
+        "2. PURPOSE FIELD: If the user doesn't provide a purpose, you MUST generate a professional one at least 15 characters long. "
+        "   - Example for a Lab: 'Academic practical session and research work for students.' "
+        "   - Example for a Hall: 'Lecture session and student presentation for the current semester.' "
+        "3. ATTENDEES FIELD: If the user doesn't specify the number of students, look at the resource's 'Fits X' capacity from your previous search results and use that number as the default. Do not exceed 150. "
+        "4. DIRECT BOOKING: If the user provides a resource, date, and time, trigger 'create_reservation' IMMEDIATELY. "
+        "5. ANTI-HALLUCINATION: Do not confirm a booking until you receive a 'Success' message from the tool."
     )
 }
 
@@ -20,15 +20,15 @@ TOOLS_SCHEMA = [
     'type': 'function',
     'function': {
       'name': 'check_asset_availability',
-      'description': 'Search the database for available university assets.',
+      'description': 'Search the database for available university assets. Use when the user wants to see what is available.',
       'parameters': {
         'type': 'object',
         'properties': {
-          'asset_type': {'type': 'string', 'description': 'e.g., projector, hall, lab, room. Leave empty if user wants all.'},
-          'capacity': {'type': 'integer', 'description': 'Minimum number of students. Default is 0.'},
-          'date': {'type': 'string', 'description': 'Format YYYY-MM-DD. Leave empty if unknown.'},
-          'start_time': {'type': 'string', 'description': 'Format HH:mm. Leave empty if unknown.'},
-          'end_time': {'type': 'string', 'description': 'Format HH:mm. Leave empty if unknown.'}
+          'asset_type': {'type': 'string'},
+          'capacity': {'type': 'integer'},
+          'date': {'type': 'string'},
+          'start_time': {'type': 'string'},
+          'end_time': {'type': 'string'}
         }
       }
     }
@@ -37,18 +37,19 @@ TOOLS_SCHEMA = [
     'type': 'function',
     'function': {
       'name': 'create_reservation',
-      'description': 'Book the asset using the Spring Boot API after the user confirms.',
+      'description': 'Submit a booking request. All fields are mandatory for the backend.',
       'parameters': {
         'type': 'object',
         'properties': {
-          'user_id': {'type': 'string'},
-          'resource_id': {'type': 'string', 'description': 'The exact ID of the asset found previously (e.g., Room-101)'},
-          'date': {'type': 'string', 'description': 'Format YYYY-MM-DD'},
-          'start_time': {'type': 'string', 'description': 'Format HH:mm'},
-          'end_time': {'type': 'string', 'description': 'Format HH:mm'},
-          'attendees': {'type': 'integer'}
+          'resource_id': {'type': 'string', 'description': 'The exact ID/Code of the asset (e.g., C-321).'},
+          'date': {'type': 'string', 'description': 'Format YYYY-MM-DD.'},
+          'start_time': {'type': 'string', 'description': '24-hour format (e.g., 14:00).'},
+          'end_time': {'type': 'string', 'description': '24-hour format (e.g., 16:00).'},
+          'attendees': {'type': 'integer', 'description': 'Number of students. Use resource capacity if unknown. Max 150.'},
+          'purpose': {'type': 'string', 'description': 'Minimum 15 characters. Describe the academic use of the room.'},
+          'special_requests': {'type': 'string', 'description': 'Any specific equipment, setup, or accessibility requests mentioned by the user. Leave completely empty if they did not ask for anything special.'}
         },
-        'required': ['user_id', 'resource_id', 'date', 'start_time', 'end_time', 'attendees']
+        'required': ['resource_id', 'date', 'start_time', 'end_time', 'attendees', 'purpose'] 
       }
     }
   }

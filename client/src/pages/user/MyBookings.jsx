@@ -137,7 +137,7 @@ export default function MyBookings() {
         done: currentStatus === 'APPROVED' || currentStatus === 'REJECTED' || currentStatus === 'CANCELLED', 
         active: false 
       },
-      { label: "Confirmed", done: currentStatus === 'APPROVED', active: currentStatus === 'APPROVED' },
+      { label: "Approved", done: currentStatus === 'APPROVED', active: currentStatus === 'APPROVED' },
     ];
   };
 

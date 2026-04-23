@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarCheck, Clock, XCircle, Ban, CalendarPlus,
-  Building2, ArrowRight, TrendingUp, Users, ChevronRight,
+  Building2, ArrowRight, TrendingUp, Users, ChevronRight,Wrench
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -22,7 +22,7 @@ export default function StudentDashboard() {
   // Create a local state to hold the live dashboard bookings
   const [myBookings, setMyBookings] = useState([]);
 
-  // React to changes: fetch fresh data when the component loads or when 'bookings' updates
+  // React to changes: fetch fresh data when the component loads or when bookings updates
   useEffect(() => {
     const loadData = async () => {
       if (isAdmin) {
@@ -55,13 +55,13 @@ export default function StudentDashboard() {
 
   const today = new Date().toISOString().split('T')[0];
   
-  // FIX 2: Use spread operator [...] before sort() to prevent mutating the state array
+  // Use spread operator [...] before sort() to prevent mutating the state array
   const upcoming = [...myBookings]
     .filter(b => b.status === 'APPROVED' && b.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
     .slice(0, 5);
 
-  // FIX 3: Safe sorting for createdAt (in case older bookings don't have it)
+  // Safe sorting for createdAt (in case older bookings don't have it)
   const recent = [...myBookings]
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -70,7 +70,7 @@ export default function StudentDashboard() {
     })
     .slice(0, 6);
 
-  // Chart data – last 7 days bookings
+  // Chart data for last 7 days bookings
   const chartData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -175,7 +175,7 @@ export default function StudentDashboard() {
               <h3 className="text-gray-900 mb-4 font-medium">Quick Actions</h3>
               <div className="space-y-2">
                 
-                {/* --- UPDATED: Quick Action Make a Booking (Green Theme) --- */}
+                {/* --- Quick Action Make a Booking (Green Theme) --- */}
                 <button
                   onClick={() => navigate('/booking/new')}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-[#17A38A]/10 transition-colors group text-left border border-transparent hover:border-[#17A38A]/20"
@@ -203,7 +203,21 @@ export default function StudentDashboard() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                
+                {/* --- NEW: Raise a Ticket Action (Light Orange Theme) --- */}
+                  <button
+                    onClick={() => navigate('/maintenance')}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50/80 hover:bg-orange-500/10 transition-colors group text-left border border-transparent hover:border-orange-500/20"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <Wrench className="w-4 h-4 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-900 text-sm font-medium">Raise a Ticket</p>
+                      <p className="text-gray-500 text-xs">Report a maintenance issue</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+          
                 {isAdmin && (
                   <button
                     onClick={() => navigate('/bookings/all')}

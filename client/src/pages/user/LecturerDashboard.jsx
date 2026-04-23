@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarCheck, Clock, XCircle, Ban, CalendarPlus,
-  Building2, ArrowRight, TrendingUp, Users, ChevronRight,
+  Building2, ArrowRight, TrendingUp, Users, ChevronRight, Wrench 
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -211,7 +211,20 @@ export default function LecturerDashboard() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                
+                {/* RUST/ORANGE QUICK ACTION: RAISE A TICKET */}
+                <button
+                  onClick={() => navigate('/maintenance')}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#A74106]/5 hover:bg-[#A74106]/10 transition-colors group text-left border border-transparent hover:border-[#A74106]/20"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8A3505] to-[#C54E08] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
+                    <Wrench className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[#8A3505] text-sm font-medium">Raise a Ticket</p>
+                    <p className="text-[#A74106] text-xs">Report a maintenance issue</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#A74106] group-hover:translate-x-0.5 transition-transform" />
+                </button>
               </div>
             </div>
           </div>

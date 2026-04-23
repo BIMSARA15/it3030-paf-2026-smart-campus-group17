@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, CheckCircle, XCircle, Calendar, Clock,
   Users, MapPin, ChevronDown, Building2, FlaskConical, Wrench,
-  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info
+  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info, Loader2
 } from 'lucide-react';
 import { useBooking } from "../../context/BookingContext";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -20,13 +20,17 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
   const [note, setNote] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track loading state
 
-  const handleSubmit = () => {
+  // CHANGED: Made function async to wait for the backend
+  const handleSubmit = async () => {
     if (action === 'reject' && !reason.trim()) {
       setError('Please provide a rejection reason.');
       return;
     }
-    onConfirm(action === 'reject' ? reason : note || undefined);
+    setIsSubmitting(true); // START LOADING
+    await onConfirm(action === 'reject' ? reason : note || undefined);
+    // Modal will close automatically via onConfirm, so we don't need to set it back to false
   };
 
   return (
@@ -102,13 +106,22 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
           </button>
           <button
             onClick={handleSubmit}
-            className={`flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-colors ${
+            disabled={isSubmitting}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-medium transition-all ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed ' : ''
+            }${
               action === 'approve'
                 ? 'bg-emerald-600 hover:bg-emerald-700'
                 : 'bg-red-600 hover:bg-red-700'
             }`}
           >
-            {action === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+            {isSubmitting ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+            ) : action === 'approve' ? (
+              'Confirm Approval'
+            ) : (
+              'Confirm Rejection'
+            )}
           </button>
         </div>
       </div>

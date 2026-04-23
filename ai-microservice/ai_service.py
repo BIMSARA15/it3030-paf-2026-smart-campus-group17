@@ -12,30 +12,33 @@ MODEL = 'qwen2.5:7b'
 #MODEL = 'gemma3:4b'             
 
 # 👈 FIX: Python now expects the history array from Java
+# 1. Update the Request Model
 class ChatRequest(BaseModel):
     user_id: str
+    user_name: str     # <-- NEW
+    user_email: str    # <-- NEW
     history: list[dict] 
 
 @app.post("/chat")
 def chat_with_bot(request: ChatRequest):
-    # 1. Start with the core identity instructions
     messages = [SYSTEM_MESSAGE]
+    safe_history = request.history[-6:] 
     
-    # 2. Add the entire conversation history!
-    for msg in request.history:
+    for msg in safe_history:
         messages.append({'role': msg['role'], 'content': msg['content']})
     
-    # 3. Ask Ollama (It now has perfect memory)
     response = ollama.chat(model=MODEL, messages=messages, tools=TOOLS_SCHEMA)
     
-    # Execute tools if requested
     if response['message'].get('tool_calls'):
         for tool in response['message']['tool_calls']:
             function_name = tool['function']['name']
             arguments = tool['function']['arguments']
             
+            # 2. Silently inject ALL the user's details! The AI doesn't even know it's happening.
             if function_name == 'create_reservation':
                 arguments['user_id'] = request.user_id
+                arguments['user_name'] = request.user_name
+                arguments['user_email'] = request.user_email
 
             func_to_call = available_functions[function_name]
             function_result = func_to_call(**arguments)

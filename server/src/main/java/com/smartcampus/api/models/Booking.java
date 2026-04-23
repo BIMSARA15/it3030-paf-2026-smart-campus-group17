@@ -11,6 +11,9 @@ public class Booking {
     private String id;
     
     private String resourceId;
+    private String resourceName;
+     private String block;
+    private String level;
     private String userId;
     private String userName;
     private String userEmail;
@@ -44,6 +47,12 @@ public class Booking {
 
     public String getResourceId() { return resourceId; }
     public void setResourceId(String resourceId) { this.resourceId = resourceId; }
+    public String getResourceName() { return resourceName; }
+    public void setResourceName(String resourceName) { this.resourceName = resourceName; }
+    public String getBlock() { return block; }
+    public void setBlock(String block) { this.block = block; }
+    public String getLevel() { return level; }
+    public void setLevel(String level) { this.level = level; }
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }

@@ -5,11 +5,12 @@ const TYPE_OPTIONS = ['Lecture Room', 'Lab', 'Meeting Room'];
 const FEATURE_OPTIONS = ['Air Conditioning', 'Audio System', 'Projector'];
 const ACCESS_OPTIONS = ['Lecturer', 'Student', 'Anyone'];
 const STATUS_OPTIONS = ['Available', 'Out Of Service'];
+const BLOCK_OPTIONS = ['A', 'B', 'C'];
 
 const INITIAL_FORM = {
   resourceCode: '',
   resourceName: '',
-  block: '',
+  block: BLOCK_OPTIONS[0],
   level: '',
   capacity: '',
   type: TYPE_OPTIONS[0],
@@ -206,13 +207,17 @@ export default function AddResourceModal({ isOpen, onClose, onSave, saving, init
 
                   <div className="sm:col-span-2">
                       <label className="mb-1.5 block text-sm font-medium text-slate-700">Block</label>
-                      <input
-                        type="text"
+                      <select
                         value={form.block}
                         onChange={(event) => updateField('block', event.target.value)}
                         className={inputClass}
-                        placeholder="A"
-                    />
+                      >
+                        {BLOCK_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            Block {option}
+                          </option>
+                        ))}
+                      </select>
                   </div>
 
                   <div className="sm:col-span-1">

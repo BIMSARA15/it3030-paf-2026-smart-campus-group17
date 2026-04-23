@@ -21,12 +21,11 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") 
 public class BookingController {
 
-    // --- ALL INJECTIONS KEPT (Yours + Teammate's) ---
     @Autowired
     private BookingService bookingService;
 
     @Autowired
-    private BookingRepository bookingRepository; // Kept so your frontend API doesn't break
+    private BookingRepository bookingRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -36,13 +35,13 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getAllBookings());
     }
 
-    // 1. YOUR endpoint for fetching bookings by ID
+    // Endpoint for fetching bookings by ID
     @GetMapping("/user/{userId}")
     public List<Booking> getUserBookings(@PathVariable String userId) {
         return bookingRepository.findByUserId(userId);
     }
 
-    // 2. TEAMMATE'S endpoint for searching by email
+    // Endpoint for searching by email 
     @GetMapping("/search") 
     public ResponseEntity<List<Booking>> getUserBookingsByEmail(@RequestParam String email) {
         return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
@@ -52,7 +51,7 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
         
-        // --- ULTIMATE FIX: Map Microsoft Email to Real MongoDB ID ---
+        // Map Microsoft Email to Real MongoDB ID
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
             String realUserId = null;
@@ -82,7 +81,6 @@ public class BookingController {
             }
         }
         
-        // --- SAFETY NET: Re-add these lines in case the Service forgets them! ---
         if (booking.getStatus() == null) {
             booking.setStatus("PENDING");
         }
@@ -101,10 +99,10 @@ public class BookingController {
         }
     }
 
-    // 4. MERGED Update booking status
+    // MERGED Update booking status
     @PutMapping("/{id}/status")
     public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
-        // --- TEAMMATE'S FIX: Use Service for updating (Service handles notifications now!) ---
+        
         Optional<Booking> updatedBookingOpt = bookingService.updateBookingStatus(id, updateData);
         
         if (updatedBookingOpt.isPresent()) {

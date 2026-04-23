@@ -5,7 +5,6 @@ import {
   Users, MapPin, ChevronDown, Building2, FlaskConical, Wrench,
   Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info
 } from 'lucide-react';
-// Change these two lines
 import { useBooking } from "../../context/BookingContext";
 import { StatusBadge } from "../../components/StatusBadge";
 import Sidebar from "../../components/Sidebar"; 
@@ -118,7 +117,7 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 }
 
 export default function AllBookings() {
-  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings, purgeBooking } = useBooking();
+  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings, purgeBooking, utilities } = useBooking();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -143,8 +142,25 @@ export default function AllBookings() {
     }
   }, []);
 
+  // Helper function to find the item in either Resources OR Utilities
+  const getBookingItem = (id) => {
+    let item = getResourceById(id);
+    if (item) return item;
+
+    const util = utilities?.find(u => u.id === id);
+    if (util) {
+      return {
+        id: util.id,
+        name: util.utilityName,
+        type: 'equipment',
+        location: util.location,
+      };
+    }
+    return null;
+  };
+
   const filtered = bookings.filter(b => {
-    const resource = getResourceById(b.resourceId);
+    const resource = getBookingItem(b.resourceId);
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
     const matchType = typeFilter === 'ALL' || resource?.type === typeFilter;
     const matchSearch = search === '' ||
@@ -213,7 +229,7 @@ export default function AllBookings() {
   const activeFilterCount = [statusFilter !== 'ALL', typeFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length;
 
   const modalBooking = modal ? bookings.find(b => b.id === modal.bookingId) : null;
-  const modalResource = modalBooking ? getResourceById(modalBooking.resourceId) : null;
+  const modalResource = modalBooking ? getBookingItem(modalBooking.resourceId) : null;
 
   return (
     // WRAPPED IN LAYOUT
@@ -499,7 +515,7 @@ export default function AllBookings() {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {filtered.map(booking => {
-                        const resource = getResourceById(booking.resourceId);
+                        const resource = getBookingItem(booking.resourceId);
                         const isExpanded = expandedId === booking.id;
 
                         return (

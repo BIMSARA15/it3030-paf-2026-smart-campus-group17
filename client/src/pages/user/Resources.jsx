@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin,
-  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package, ShieldAlert, Send, X,
+  Users, CalendarPlus, ChevronRight, CheckCircle, Tag, Package, ShieldAlert, Send, X, SlidersHorizontal,
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import Sidebar from '../../components/Sidebar';
@@ -24,6 +24,22 @@ const TYPE_CONFIG = {
   },
 };
 
+const DEFAULT_RESOURCE_IMAGES = {
+  lectureRoom: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Gfp-lecture-hall.jpg/960px-Gfp-lecture-hall.jpg',
+  lab: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+  meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+};
+
+const getResourceImage = (resource) => {
+  if (resource.image) return resource.image;
+
+  const originalType = (resource.resourceType || resource.type || '').toLowerCase();
+  if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
+  if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+
+  return DEFAULT_RESOURCE_IMAGES.lectureRoom;
+};
+
 const getAccessLabel = (access = '') => {
   const normalized = access.toLowerCase();
   if (normalized === 'lecturer') return 'Lecturer Only';
@@ -34,6 +50,10 @@ const getAccessLabel = (access = '') => {
 export default function Resources() {
   const {
     resources,
+    utilities,
+    utilitiesLoading,
+    utilitiesError,
+    fetchUtilities,
     bookings,
     studentRequests,
     currentUser,
@@ -53,6 +73,9 @@ export default function Resources() {
   const [accessMessage, setAccessMessage] = useState('');
   const [requestingResource, setRequestingResource] = useState(null);
   const [requestSentPopup, setRequestSentPopup] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [blockFilter, setBlockFilter] = useState('All');
+  const [minCapacityFilter, setMinCapacityFilter] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -62,7 +85,27 @@ export default function Resources() {
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location.toLowerCase().includes(search.toLowerCase()) ||
       r.features.some(f => f.toLowerCase().includes(search.toLowerCase()));
-    return matchType && matchSearch;
+    const matchStatus = statusFilter === 'All' || r.status === statusFilter;
+    const matchBlock =
+      blockFilter === 'All' ||
+      r.block === blockFilter ||
+      r.block === `Block ${blockFilter}`;
+    const minCapacity = Number(minCapacityFilter);
+    const matchCapacity =
+      minCapacityFilter.trim() === '' ||
+      (!Number.isNaN(minCapacity) && Number(r.capacity) >= minCapacity);
+
+    return matchType && matchSearch && matchStatus && matchBlock && matchCapacity;
+  });
+
+  const filteredUtilities = utilities.filter((utility) => {
+    const query = search.trim().toLowerCase();
+    return query === '' ||
+      utility.utilityName.toLowerCase().includes(query) ||
+      utility.utilityCode.toLowerCase().includes(query) ||
+      utility.category.toLowerCase().includes(query) ||
+      utility.location.toLowerCase().includes(query) ||
+      utility.description.toLowerCase().includes(query);
   });
 
   const getResourceStats = (resourceId) => {
@@ -78,8 +121,11 @@ export default function Resources() {
     all: resources.length,
     room: resources.filter(r => r.type === 'room').length,
     lab: resources.filter(r => r.type === 'lab').length,
-    equipment: resources.filter(r => r.type === 'equipment').length,
+    equipment: utilities.length,
   };
+
+  const statusOptions = ['All', 'Available', 'Not Available', 'Out Of Service'];
+  const blockOptions = ['All', 'A', 'B', 'C'];
 
   const hasExistingRequest = (resourceId) => studentRequests.some((request) => {
     const sameResource = request.resourceId === resourceId;
@@ -113,23 +159,27 @@ export default function Resources() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              {/* UPDATED: Search input focus ring */}
               <input
                 type="text"
-                placeholder="Search resources, features..."
+                placeholder={typeFilter === 'equipment' ? 'Search equipment, code, location...' : 'Search resources, features...'}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
               />
             </div>
+
             <div className="flex gap-2 flex-wrap">
               {['all', 'room', 'lab', 'equipment'].map(t => (
                 <button
                   key={t}
-                  onClick={() => setTypeFilter(t)}
+                  onClick={() => {
+                    setTypeFilter(t);
+                    setSelectedId(null);
+                    setAccessMessage('');
+                  }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all ${
                     typeFilter === t
                       ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Green gradient for active filter
@@ -144,12 +194,147 @@ export default function Resources() {
                 </button>
               ))}
             </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                  <SlidersHorizontal className="h-4 w-4 text-[#17A38A]" />
+                  Filter Resources
+                </div>
+                <p className="text-xs text-slate-400">
+                  Showing {typeFilter === 'equipment' ? filteredUtilities.length : filtered.length} item{(typeFilter === 'equipment' ? filteredUtilities.length : filtered.length) !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-slate-500">Status</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                    disabled={typeFilter === 'equipment'}
+                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option === 'All' ? 'All Statuses' : option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-slate-500">Block</span>
+                  <select
+                    value={blockFilter}
+                    onChange={(event) => setBlockFilter(event.target.value)}
+                    disabled={typeFilter === 'equipment'}
+                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {blockOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option === 'All' ? 'All Blocks' : `Block ${option}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-slate-500">Capacity</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={minCapacityFilter}
+                    onChange={(event) => setMinCapacityFilter(event.target.value)}
+                    disabled={typeFilter === 'equipment'}
+                    placeholder="Minimum"
+                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Resource grid */}
             <div className={`${selectedResource ? 'lg:col-span-2' : 'lg:col-span-3'} grid grid-cols-1 sm:grid-cols-2 ${selectedResource ? '' : 'xl:grid-cols-3'} gap-3 content-start`}>
-              {filtered.map(resource => {
+              {typeFilter === 'equipment' ? (
+                utilitiesLoading ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
+                    <Package className="w-10 h-10 text-orange-300 mx-auto mb-3 animate-pulse" />
+                    <p className="text-gray-500">Loading equipment...</p>
+                  </div>
+                ) : utilitiesError && utilities.length === 0 ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-red-100">
+                    <ShieldAlert className="w-10 h-10 text-red-300 mx-auto mb-3" />
+                    <p className="text-gray-700 font-medium">Unable to load equipment</p>
+                    <p className="text-gray-500 text-sm mt-1">Please make sure the backend is running and try again.</p>
+                    <button
+                      type="button"
+                      onClick={fetchUtilities}
+                      className="mt-4 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 text-sm font-medium hover:bg-orange-100 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : filteredUtilities.length === 0 ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
+                    <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      {utilities.length === 0 ? 'No equipment has been added by admin yet' : 'No equipment matches your search'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredUtilities.map((utility) => (
+                    <div
+                      key={utility.id}
+                      className="rounded-xl border-2 border-gray-100 bg-white p-5 transition-all hover:border-orange-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
+                          {utility.category}
+                        </span>
+                      </div>
+
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                        {utility.utilityCode}
+                      </span>
+
+                      <h4 className="font-medium mb-1 text-gray-900">
+                        {utility.utilityName}
+                      </h4>
+
+                      <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-2">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {utility.location}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                        <Package className="w-3.5 h-3.5" />
+                        Quantity: {utility.quantity}
+                      </div>
+
+                      {utility.description && (
+                        <p className="text-gray-500 text-sm line-clamp-2 mb-3">
+                          {utility.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+                          {utility.status}
+                        </span>
+                        <span className="text-emerald-600 flex items-center gap-1 text-xs">
+                          <CheckCircle className="w-3 h-3" /> Admin Added
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : filtered.map(resource => {
                 const cfg = TYPE_CONFIG[resource.type];
                 const stats = getResourceStats(resource.id);
                 const isSelected = selectedId === resource.id;
@@ -249,7 +434,7 @@ export default function Resources() {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {typeFilter !== 'equipment' && filtered.length === 0 && (
                 <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
                   <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No resources match your search</p>
@@ -258,12 +443,12 @@ export default function Resources() {
             </div>
 
             {/* Resource detail panel */}
-            {selectedResource && (
+            {typeFilter !== 'equipment' && selectedResource && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border border-gray-100 overflow-hidden sticky top-4">
                   <div className="h-36 bg-gradient-to-br from-slate-700 to-slate-900 relative overflow-hidden">
                     <img
-                      src={selectedResource.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800'}
+                      src={getResourceImage(selectedResource)}
                       alt={selectedResource.name}
                       className="w-full h-full object-cover opacity-60"
                     />
@@ -287,7 +472,7 @@ export default function Resources() {
                             <p className="text-xs text-amber-800 mt-1">
                               {hasExistingRequest(selectedResource.id)
                                 ? 'A request has already been sent for this resource. Please wait for the lecturer to review it.'
-                                : 'Students can send a request to a lecturer, and the lecturer can then place the booking from `Std Requests`.'}
+                                : 'Students can send a request to a lecturer, and the lecturer can then place the booking for the student.'}
                             </p>
                           </div>
                         </div>

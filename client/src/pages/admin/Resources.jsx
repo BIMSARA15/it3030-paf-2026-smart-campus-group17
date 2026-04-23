@@ -7,6 +7,7 @@ import AddResourceModal from '../../components/admin/AddResourceModal';
 import { useBooking } from '../../context/BookingContext';
 
 const API_BASE_URL = 'http://localhost:8080';
+const BLOCK_OPTIONS = ['A', 'B', 'C'];
 
 const getCanonicalType = (resource) => {
   const rawType = (resource.resourceType || resource.type || '').toString().trim().toLowerCase();
@@ -35,6 +36,8 @@ export default function Resources() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [accessFilter, setAccessFilter] = useState('All');
+  const [blockFilter, setBlockFilter] = useState('All');
+  const [minCapacityFilter, setMinCapacityFilter] = useState('');
 
   const filteredResources = resources.filter((resource) => {
     const query = search.trim().toLowerCase();
@@ -50,13 +53,22 @@ export default function Resources() {
     const matchesStatus = statusFilter === 'All' || resource.status === statusFilter;
     const matchesType = typeFilter === 'All' || getCanonicalType(resource) === typeFilter;
     const matchesAccess = accessFilter === 'All' || resource.access === accessFilter;
+    const matchesBlock =
+      blockFilter === 'All' ||
+      resource.block === blockFilter ||
+      resource.block === `Block ${blockFilter}`;
+    const minCapacity = Number(minCapacityFilter);
+    const matchesCapacity =
+      minCapacityFilter.trim() === '' ||
+      (!Number.isNaN(minCapacity) && Number(resource.capacity) >= minCapacity);
 
-    return matchesSearch && matchesStatus && matchesType && matchesAccess;
+    return matchesSearch && matchesStatus && matchesType && matchesAccess && matchesBlock && matchesCapacity;
   });
 
   const statusOptions = ['All', 'Available', 'Not Available', 'Out Of Service'];
   const typeOptions = ['All', 'Lecture Room', 'Lab', 'Meeting Room'];
   const accessOptions = ['All', 'Lecturer', 'Student', 'Anyone'];
+  const blockOptions = ['All', ...BLOCK_OPTIONS];
 
   const handleSaveResource = async (resourceData) => {
     try {
@@ -198,65 +210,109 @@ export default function Resources() {
               </div>
             ) : (
               <div className="space-y-5">
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Search by name, code, block, level, or feature..."
-                        className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
-                      />
+                <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="w-full lg:max-w-3xl">
+                      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Search Resources
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={search}
+                          onChange={(event) => setSearch(event.target.value)}
+                          placeholder="Search by name, code, block, level, or feature..."
+                          className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm text-gray-700 shadow-sm outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Filters
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3 lg:w-auto">
-                      <select
-                        value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value)}
-                        className="rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
-                      >
-                        {statusOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option === 'All' ? 'All Statuses' : option}
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        value={typeFilter}
-                        onChange={(event) => setTypeFilter(event.target.value)}
-                        className="rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
-                      >
-                        {typeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option === 'All' ? 'All Types' : option}
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        value={accessFilter}
-                        onChange={(event) => setAccessFilter(event.target.value)}
-                        className="rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10"
-                      >
-                        {accessOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option === 'All' ? 'All Access' : option}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+                      Showing <span className="font-semibold text-[#1E3A8A]">{filteredResources.length}</span> of{' '}
+                      <span className="font-semibold text-slate-700">{resources.length}</span> resources
                     </div>
                   </div>
 
-                  <div className="mt-3 text-xs text-slate-500">
-                    Showing {filteredResources.length} of {resources.length} resources
+                  <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+                      <SlidersHorizontal className="h-4 w-4 text-[#2563EB]" />
+                      Filter Resources
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs font-medium text-slate-500">Status</span>
+                        <select
+                          value={statusFilter}
+                          onChange={(event) => setStatusFilter(event.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-[#2563EB]/10"
+                        >
+                          {statusOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option === 'All' ? 'All Statuses' : option}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs font-medium text-slate-500">Type</span>
+                        <select
+                          value={typeFilter}
+                          onChange={(event) => setTypeFilter(event.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-[#2563EB]/10"
+                        >
+                          {typeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option === 'All' ? 'All Types' : option}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs font-medium text-slate-500">Access</span>
+                        <select
+                          value={accessFilter}
+                          onChange={(event) => setAccessFilter(event.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-[#2563EB]/10"
+                        >
+                          {accessOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option === 'All' ? 'All Access' : option}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs font-medium text-slate-500">Block</span>
+                        <select
+                          value={blockFilter}
+                          onChange={(event) => setBlockFilter(event.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-[#2563EB]/10"
+                        >
+                          {blockOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option === 'All' ? 'All Blocks' : `Block ${option}`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs font-medium text-slate-500">Capacity</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={minCapacityFilter}
+                          onChange={(event) => setMinCapacityFilter(event.target.value)}
+                          placeholder="Minimum"
+                          className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-[#2563EB]/10"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
 

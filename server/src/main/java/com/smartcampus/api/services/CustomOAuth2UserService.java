@@ -54,6 +54,9 @@ public class CustomOAuth2UserService extends OidcUserService { // 👈 UPGRADED 
 
         // 3. Extract the data directly from the Graph API response
         String email = oauthUser.getAttribute("email");
+        if (email == null) {
+            email = oauthUser.getAttribute("preferred_username");
+        }
         String firstName = oauthUser.getAttribute("given_name");
         String lastName = oauthUser.getAttribute("family_name");
         

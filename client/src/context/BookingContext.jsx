@@ -139,7 +139,7 @@ export const BookingProvider = ({ children }) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache' // Prevents using stale cached data
         },
-        credentials: 'include', // CRITICAL: Allows Spring Security to verify the session
+        credentials: 'include', // Allows Spring Security to verify the session
       });
 
       if (!response.ok) {
@@ -167,6 +167,32 @@ export const BookingProvider = ({ children }) => {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  // Fetch bookings using the Email Query Parameter
+  const fetchUserBookings = async (email) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/bookings/search?email=${email}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user bookings: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+      
+    } catch (error) {
+      console.error('Error fetching user bookings:', error);
+      return [];
+    }
+  };
+
   
   const getResourceById = (id) => resources.find(r => r.id === id);
   const getUtilityById = (id) => utilities.find(u => u.id === id);
@@ -201,7 +227,8 @@ const createBooking = async (bookingData) => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save booking to database');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to save booking to database');
       }
 
       // 2. Get the saved booking back from Spring Boot (now with a real MongoDB ID)
@@ -214,7 +241,7 @@ const createBooking = async (bookingData) => {
       
     } catch (error) {
       console.error("Error creating booking:", error);
-      return { success: false, message: 'Failed to connect to the server.' };
+      return { success: false, message: error.message || 'Failed to connect to the server.' };
     }
   };
 
@@ -356,13 +383,34 @@ const createBooking = async (bookingData) => {
     }
   };
 
+  // Hard Delete a booking (Admin Only)
+  const purgeBooking = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}`, {
+        method: 'DELETE', // Uses your new REST endpoint!
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      // Remove the booking from the React state so it disappears from the screen
+      setBookings(prevBookings => prevBookings.filter(b => b.id !== id));
+      
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+    }
+  };
+
   return (
     <BookingContext.Provider value={{ 
       resources, utilities, bookings, studentRequests, currentUser: user, 
       createBooking, checkConflict, getResourceById, cancelBooking,
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
-      createStudentRequest, updateStudentRequest, fulfillStudentRequest,
+      createStudentRequest, updateStudentRequest, fulfillStudentRequest, 
+      fetchUserBookings, purgeBooking
     }}>
       {children}
     </BookingContext.Provider>

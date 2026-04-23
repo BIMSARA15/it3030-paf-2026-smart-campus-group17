@@ -17,4 +17,34 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// ==========================================
+// NOTIFICATION API CALLS
+// ==========================================
+
+// src/services/api.js (Keep your existing axios config at the top)
+
+// Notice we don't need to pass userId in the URL! 
+// The backend securely figures it out from the session cookie.
+// src/services/api.js
+
+export const getUserNotifications = async () => {
+  try {
+    // FIXED: Added /api to the URL
+    const response = await api.get('/api/notifications');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+    return [];
+  }
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    // FIXED: Added /api to the URL
+    await api.patch(`/api/notifications/${notificationId}/read`);
+  } catch (error) {
+    console.error("Failed to mark notification as read", error);
+  }
+};
+
 export default api;

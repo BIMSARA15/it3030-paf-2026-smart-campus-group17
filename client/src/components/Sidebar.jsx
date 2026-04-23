@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
         { name: 'All Bookings', path: '/admin/bookings', icon: BookOpen },
         { name: 'Resources', path: '/admin/resources', icon: Building2 },
-        { name: 'Utilities', path: '/admin/utilities', icon: Wrench },
+        { name: 'Equipment', path: '/admin/utilities', icon: Wrench },
         { name: 'Technicians', path: '/admin/technicians',icon: Wrench },
       ]
     : isTechnician

@@ -30,6 +30,9 @@ public class Booking {
     private String adminNote;
     private String reviewedBy;
     private String cancellationReason;
+
+    private boolean checkedIn = false; //QR Innovation
+    private boolean reminderSent = false; // For ReminderService to track if we've sent a reminder email
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -98,5 +101,12 @@ public class Booking {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public boolean isCheckedIn() { return checkedIn; }
+    public void setCheckedIn(boolean checkedIn) { this.checkedIn = checkedIn; } //QR Innovation
+    
+    public boolean isReminderSent() { return reminderSent; }
+    public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
+    
 
 }

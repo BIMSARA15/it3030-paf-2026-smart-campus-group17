@@ -44,7 +44,7 @@ public class AIController {
         return userId;
     }
 
-    @PostMapping("/chat")
+  @PostMapping("/chat")
     public ResponseEntity<?> chatWithAI(@RequestBody Map<String, Object> payload, Authentication authentication) {
         String userId = extractUserIdSafe(authentication);
         if (userId == null || userId.equals("anonymousUser")) {
@@ -52,7 +52,15 @@ public class AIController {
                 .body(Map.of("error", "You must be logged in to use the AI Assistant."));
         }
 
-        // 👈 FIX: Extract 'history' list instead of a single message
+        // --- NEW: Fetch the full user details from the database! ---
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "User account not found."));
+        }
+        User currentUser = userOpt.get();
+        // -----------------------------------------------------------
+
         @SuppressWarnings("unchecked")
         List<Map<String, String>> history = (List<Map<String, String>>) payload.get("history");
 
@@ -61,8 +69,8 @@ public class AIController {
         }
 
         try {
-            // Forward the history to the Service
-            String aiReply = aiService.askAI(userId, history);
+            // Pass the FULL USER OBJECT instead of just the ID
+            String aiReply = aiService.askAI(currentUser, history);
             return ResponseEntity.ok(Map.of("reply", aiReply));
         } catch (Exception e) {
             e.printStackTrace(); 

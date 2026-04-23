@@ -48,6 +48,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
         { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
         { name: 'Resources', path: '/resources', icon: Building2 },
+        { name: 'Maintenance', path: '/maintenance', icon: Wrench },
       ];
 
   const handleLogout = () => {

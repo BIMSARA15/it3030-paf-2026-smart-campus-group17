@@ -25,4 +25,9 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
 
     /** Powers the "5 open maintenance tickets" KPI on the Technician dashboard. */
     long countByAssignedTechnicianIdAndStatus(String techId, TicketStatus status);
+
+    // --- ADDED FOR AUTO-ASSIGNMENT ---
+    // Counts how many tickets a technician has within a list of specific statuses
+    long countByAssignedTechnicianIdAndStatusIn(String techId, List<TicketStatus> statuses);
+    // --- END ADDED CODE ---
 }

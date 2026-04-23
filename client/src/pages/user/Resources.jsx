@@ -34,6 +34,10 @@ const getAccessLabel = (access = '') => {
 export default function Resources() {
   const {
     resources,
+    utilities,
+    utilitiesLoading,
+    utilitiesError,
+    fetchUtilities,
     bookings,
     studentRequests,
     currentUser,
@@ -65,6 +69,16 @@ export default function Resources() {
     return matchType && matchSearch;
   });
 
+  const filteredUtilities = utilities.filter((utility) => {
+    const query = search.trim().toLowerCase();
+    return query === '' ||
+      utility.utilityName.toLowerCase().includes(query) ||
+      utility.utilityCode.toLowerCase().includes(query) ||
+      utility.category.toLowerCase().includes(query) ||
+      utility.location.toLowerCase().includes(query) ||
+      utility.description.toLowerCase().includes(query);
+  });
+
   const getResourceStats = (resourceId) => {
     const rb = bookings.filter(b => b.resourceId === resourceId);
     const upcoming = rb.filter(b => b.status === 'APPROVED' && b.date >= today).length;
@@ -78,7 +92,7 @@ export default function Resources() {
     all: resources.length,
     room: resources.filter(r => r.type === 'room').length,
     lab: resources.filter(r => r.type === 'lab').length,
-    equipment: resources.filter(r => r.type === 'equipment').length,
+    equipment: utilities.length,
   };
 
   const hasExistingRequest = (resourceId) => studentRequests.some((request) => {
@@ -119,7 +133,7 @@ export default function Resources() {
               {/* UPDATED: Search input focus ring */}
               <input
                 type="text"
-                placeholder="Search resources, features..."
+                placeholder={typeFilter === 'equipment' ? 'Search equipment, code, location...' : 'Search resources, features...'}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
@@ -129,7 +143,11 @@ export default function Resources() {
               {['all', 'room', 'lab', 'equipment'].map(t => (
                 <button
                   key={t}
-                  onClick={() => setTypeFilter(t)}
+                  onClick={() => {
+                    setTypeFilter(t);
+                    setSelectedId(null);
+                    setAccessMessage('');
+                  }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all ${
                     typeFilter === t
                       ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Green gradient for active filter
@@ -149,7 +167,83 @@ export default function Resources() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Resource grid */}
             <div className={`${selectedResource ? 'lg:col-span-2' : 'lg:col-span-3'} grid grid-cols-1 sm:grid-cols-2 ${selectedResource ? '' : 'xl:grid-cols-3'} gap-3 content-start`}>
-              {filtered.map(resource => {
+              {typeFilter === 'equipment' ? (
+                utilitiesLoading ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
+                    <Package className="w-10 h-10 text-orange-300 mx-auto mb-3 animate-pulse" />
+                    <p className="text-gray-500">Loading equipment...</p>
+                  </div>
+                ) : utilitiesError && utilities.length === 0 ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-red-100">
+                    <ShieldAlert className="w-10 h-10 text-red-300 mx-auto mb-3" />
+                    <p className="text-gray-700 font-medium">Unable to load equipment</p>
+                    <p className="text-gray-500 text-sm mt-1">Please make sure the backend is running and try again.</p>
+                    <button
+                      type="button"
+                      onClick={fetchUtilities}
+                      className="mt-4 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 text-sm font-medium hover:bg-orange-100 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : filteredUtilities.length === 0 ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
+                    <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      {utilities.length === 0 ? 'No equipment has been added by admin yet' : 'No equipment matches your search'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredUtilities.map((utility) => (
+                    <div
+                      key={utility.id}
+                      className="rounded-xl border-2 border-gray-100 bg-white p-5 transition-all hover:border-orange-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
+                          {utility.category}
+                        </span>
+                      </div>
+
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                        {utility.utilityCode}
+                      </span>
+
+                      <h4 className="font-medium mb-1 text-gray-900">
+                        {utility.utilityName}
+                      </h4>
+
+                      <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-2">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {utility.location}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                        <Package className="w-3.5 h-3.5" />
+                        Quantity: {utility.quantity}
+                      </div>
+
+                      {utility.description && (
+                        <p className="text-gray-500 text-sm line-clamp-2 mb-3">
+                          {utility.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+                          {utility.status}
+                        </span>
+                        <span className="text-emerald-600 flex items-center gap-1 text-xs">
+                          <CheckCircle className="w-3 h-3" /> Admin Added
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : filtered.map(resource => {
                 const cfg = TYPE_CONFIG[resource.type];
                 const stats = getResourceStats(resource.id);
                 const isSelected = selectedId === resource.id;
@@ -249,7 +343,7 @@ export default function Resources() {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {typeFilter !== 'equipment' && filtered.length === 0 && (
                 <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
                   <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No resources match your search</p>
@@ -258,7 +352,7 @@ export default function Resources() {
             </div>
 
             {/* Resource detail panel */}
-            {selectedResource && (
+            {typeFilter !== 'equipment' && selectedResource && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border border-gray-100 overflow-hidden sticky top-4">
                   <div className="h-36 bg-gradient-to-br from-slate-700 to-slate-900 relative overflow-hidden">

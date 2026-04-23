@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarCheck, Clock, XCircle, Ban, CalendarPlus,
@@ -12,14 +12,30 @@ import Header from '../../components/Header';
 import AIChat from '../../components/AIChat';
 
 export default function LecturerDashboard() {
-  const { currentUser, bookings, resources, studentRequests, getResourceById } = useBooking();
+  const { currentUser, bookings, resources, studentRequests, getResourceById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Match bookings by email instead of ID to ensure test bookings show up
-  const testUserEmail = currentUser?.email || 'it23345478@my.sliit.lk';
-  const myBookings = bookings.filter(b => b.userEmail === testUserEmail);
+  // Create a local state to hold the live dashboard bookings
+  const [myBookings, setMyBookings] = useState([]);
+
+  // React to changes: fetch fresh data when the component loads or when 'bookings' updates
+  useEffect(() => {
+    const loadData = async () => {
+      const emailToSearch = currentUser?.email || 'it23345478@my.sliit.lk'; 
+      const userSpecificBookings = await fetchUserBookings(emailToSearch);
+      
+      // Sort them so the newest updates appear correctly
+      const sorted = userSpecificBookings.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setMyBookings(sorted);
+    };
+
+    loadData();
+  }, [currentUser, fetchUserBookings, bookings]);
 
   const stats = {
     total: myBookings.length,

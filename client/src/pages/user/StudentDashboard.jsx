@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarCheck, Clock, XCircle, CalendarPlus,
@@ -12,7 +12,7 @@ import Header from '../../components/Header'; // Import header
 import AIChat from '../../components/AIChat';
 
 export default function StudentDashboard() {
-  const { currentUser, bookings, resources, getResourceById } = useBooking();
+  const { currentUser, bookings, resources, getResourceById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   // Add Sidebar State
@@ -20,10 +20,32 @@ export default function StudentDashboard() {
 
   const isAdmin = currentUser?.role === 'admin';
   
-  // FIX 1: Match the fallback ID used in NewBooking.jsx so test bookings show up
-  const currentUserId = currentUser?.id || 'IT23345478';
-  const myBookings = isAdmin ? bookings : bookings.filter(b => b.userId === currentUserId);
+  // Create a local state to hold the live dashboard bookings
+  const [myBookings, setMyBookings] = useState([]);
 
+  // React to changes: fetch fresh data when the component loads or when 'bookings' updates
+  useEffect(() => {
+    const loadData = async () => {
+      if (isAdmin) {
+        // Admins see all bookings directly from the synced context
+        setMyBookings(bookings);
+      } else {
+        // Students fetch their live specific bookings using their email
+        const emailToSearch = currentUser?.email || 'it23345478@my.sliit.lk'; 
+        const userSpecificBookings = await fetchUserBookings(emailToSearch);
+        
+        // Sort them so the newest updates appear correctly
+        const sorted = userSpecificBookings.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        
+        setMyBookings(sorted);
+      }
+    };
+
+    loadData();
+  }, [currentUser, fetchUserBookings, bookings, isAdmin]);
+  
   const stats = {
     total: myBookings.length,
     pending: myBookings.filter(b => b.status === 'PENDING').length,

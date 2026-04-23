@@ -9,6 +9,7 @@ import TechnicianLayout from './components/layout/TechnicianLayout';
 import TechnicianDashboard from './pages/staff/TechnicianDashboard';
 import TechnicianMaintenance from './pages/staff/TechnicianMaintenance';
 import StaffPlaceholder from './pages/staff/StaffPlaceholder';
+import Maintenance from './pages/user/Maintenance';
 
 // ------------------------------------------------------------------------
 // TEAM INSTRUCTIONS:
@@ -20,15 +21,14 @@ import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
 import AdminUtilities from './pages/admin/Utilities';
 import AdminTechnicians from './pages/admin/AdminTechnicians';
-//import StaffDashboard from './pages/staff/StaffDashboard';
+import VerifyBooking from './pages/admin/VerifyBooking';
+
 import LecturerDashboard from './pages/user/LecturerDashboard';
 import StudentDashboard from './pages/user/StudentDashboard';
 import NewBooking from './pages/user/NewBooking';
 import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
 import StudentRequests from './pages/user/StudentRequests';
-
-import VerifyBooking from './pages/admin/VerifyBooking'; //QR Innovation: Booking Verification Page for Admins
 
 function App() {
   const { user, loading } = useAuth();
@@ -213,6 +213,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN', 'TECHNICIAN']}>
                 <Resources />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/maintenance" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
+                <Maintenance />
               </ProtectedRoute>
             }
           />

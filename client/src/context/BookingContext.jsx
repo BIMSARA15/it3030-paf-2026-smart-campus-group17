@@ -289,6 +289,42 @@ const createBooking = async (bookingData) => {
     return response;
   };
 
+  const updateBooking = async (id, updatedData) => {
+    try {
+      // Use standard fetch instead of the undefined 'api' variable
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Needed for Spring Security
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update booking in database');
+      }
+
+      // Get the updated booking back from Spring Boot
+      const updatedBooking = await response.json();
+
+      // Update the local state so the UI changes immediately
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          String(booking.id) === String(id) ? updatedBooking : booking
+        )
+      );
+
+      return { success: true, message: 'Booking updated successfully!', booking: updatedBooking };
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Failed to update booking. Please try again.' 
+      };
+    }
+  };
+
   const cancelBooking = async (id, reason) => { // <-- Added 'reason' here!
     try {
       const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
@@ -405,7 +441,7 @@ const createBooking = async (bookingData) => {
   return (
     <BookingContext.Provider value={{ 
       resources, utilities, bookings, studentRequests, currentUser: user, 
-      createBooking, checkConflict, getResourceById, cancelBooking,
+      createBooking, checkConflict, getResourceById, updateBooking, cancelBooking,
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
       createStudentRequest, updateStudentRequest, fulfillStudentRequest, 

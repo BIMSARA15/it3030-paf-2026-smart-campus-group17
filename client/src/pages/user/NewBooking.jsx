@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
@@ -124,6 +124,7 @@ export default function NewBooking() {
     bookings,
     currentUser,
     createBooking,
+    updateBooking,
     getResourceById,
     getUtilitiesForResource,
     fetchResources,
@@ -132,6 +133,8 @@ export default function NewBooking() {
   } = useBooking();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { id } = useParams(); // <-- get the ID from the URL
+  const isEditing = !!id; // <-- Boolean flag to check if we are in edit mode
   const currentRole = (currentUser?.role || '').toUpperCase();
 
   const isLecturer = currentRole === 'LECTURER'; 
@@ -190,10 +193,36 @@ export default function NewBooking() {
   const [accessNotice, setAccessNotice] = useState('');
   
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false); 
 
   useEffect(() => {
     fetchResources();
   }, []);
+
+  // NEW: Pre-fill data if we are editing an existing booking
+  useEffect(() => {
+    // FIX: Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
+    if (isEditing && bookings.length > 0 && resources.length > 0 && !hasInitialized) {
+      const bookingToEdit = bookings.find(b => String(b.id) === String(id));
+      
+      if (bookingToEdit) {
+        const r = getResourceById(bookingToEdit.resourceId);
+        if (r) setSelectedResource(r);
+        
+        setDate(bookingToEdit.date || '');
+        setStartTime(bookingToEdit.startTime || '');
+        setEndTime(bookingToEdit.endTime || '');
+        setPurpose(bookingToEdit.purpose || '');
+        setAttendees(bookingToEdit.attendees ? bookingToEdit.attendees.toString() : '');
+        setLecturer(bookingToEdit.lecturer || '');
+        setSpecialRequests(bookingToEdit.specialRequests || '');
+        setRequestedUtilityIds(bookingToEdit.requestedUtilityIds || []);
+        
+        setStep(2); // Automatically skip to the form step
+        setHasInitialized(true); // Lock it so it never overwrites again!
+      }
+    }
+  }, [id, isEditing, bookings, resources, getResourceById, hasInitialized]);
 
   useEffect(() => {
     const rid = searchParams.get('resource');
@@ -224,6 +253,9 @@ export default function NewBooking() {
 
     if (selectedResource && date && start24 && end24 && start24 < end24) {
       const overlappingBooking = bookings.find(b => {
+        // NEW: If we are editing, ignore the booking we are currently editing!
+        if (isEditing && b.id === id) return false;
+
         if (b.resourceId !== selectedResource.id || b.date !== date) return false;
         if (b.status !== 'APPROVED' && b.status !== 'PENDING') return false;
         
@@ -240,7 +272,7 @@ export default function NewBooking() {
     } else {
       setConflict(null);
     }
-  }, [selectedResource, date, startTime, endTime, bookings]);
+  }, [selectedResource, date, startTime, endTime, bookings, isEditing, id]);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -304,7 +336,7 @@ export default function NewBooking() {
     if (conflict) return;
     setSubmitting(true);
     
-    const res = await createBooking({
+    const payload = {
       resourceId: selectedResource.id,
       userId: currentUser?.id || 'IT23345478',
       userName: currentUser?.name || 'Chathurya',
@@ -315,10 +347,15 @@ export default function NewBooking() {
       endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
-      lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(), // If the requester is a lecturer, we can auto-fill the lecturer in charge as themselves
+      lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(),
       specialRequests: specialRequests.trim(),
       requestedUtilityIds,
-    });
+    };
+
+    // NEW: Choose between updateBooking and createBooking
+    const res = isEditing && updateBooking 
+      ? await updateBooking(id, payload) 
+      : await createBooking(payload);
 
     setResult(res);
     setSubmitting(false);
@@ -362,9 +399,13 @@ export default function NewBooking() {
                 <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 mt-2">
                   <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
-                <h2 className="text-gray-900 text-xl font-semibold mb-2">Booking Submitted!</h2>
-                <p className="text-gray-500 text-sm mb-6">{result?.message}</p>
-
+                <h2 className="text-gray-900 text-xl font-semibold mb-2">
+                  {isEditing ? 'Booking Updated!' : 'Booking Submitted!'}
+                </h2>
+                <p className="text-gray-500 text-sm mb-6">
+                  {isEditing ? 'Booking Details Updated Successfully.' : result?.message}
+                </p>
+                
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-6 text-left">
                   <div className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -404,7 +445,9 @@ export default function NewBooking() {
           )}
 
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900">New Booking Request</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {isEditing ? 'Edit Booking Request' : 'New Booking Request'}
+            </h1>
             <p className="text-gray-500 text-sm mt-1">Reserve a Lecture Hall, Lab, or Equipment</p>
           </div>
 
@@ -755,11 +798,11 @@ export default function NewBooking() {
                       }`}
                     >
                       {submitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                        <><Loader2 className="w-4 h-4 animate-spin" /> {isEditing ? 'Updating...' : 'Submitting...'}</>
                       ) : step === 3 ? (
-                        <>Submitted Successfully <CheckCircle className="w-4 h-4" /></>
+                        <>{isEditing ? 'Updated Successfully' : 'Submitted Successfully'} <CheckCircle className="w-4 h-4" /></>
                       ) : (
-                        <>Submit Booking Request <ChevronRight className="w-4 h-4" /></>
+                        <>{isEditing ? 'Update Booking Request' : 'Submit Booking Request'} <ChevronRight className="w-4 h-4" /></>
                       )}
                     </button>
                   </div>

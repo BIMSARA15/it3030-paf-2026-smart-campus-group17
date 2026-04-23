@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   CalendarPlus, Building2, FlaskConical, Wrench, MapPin,
   Calendar, Clock, Users, ChevronDown, XCircle, Info,
-  Search, AlertCircle, CheckCircle, Eye
+  Search, AlertCircle, CheckCircle, Eye, Pencil
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -94,8 +94,9 @@ export default function MyBookings() {
     weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
   });
 
-  const formatCreated = (iso) => new Date(iso).toLocaleDateString('en', {
+  const formatCreated = (iso) => new Date(iso).toLocaleString('en', {
     month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true
   });
 
   const today = new Date().toISOString().split('T')[0];
@@ -222,18 +223,46 @@ export default function MyBookings() {
                           </div>
 
                           {/* Right side: Status, Button, and Submitted text grouped together */}
-                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-3">
-                              <div className="scale-90 origin-right">
-                                <StatusBadge status={booking.status} />
-                              </div>
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation(); 
-                                  setExpandedId(isExpanded ? null : booking.id);
-                                }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+<div className="flex flex-col items-end gap-2 flex-shrink-0">
+  <div className="flex items-center gap-3">
+    <div className="scale-90 origin-right">
+      <StatusBadge status={booking.status} />
+    </div>
+    
+    {/* NEW: Edit Button - Only shows if status is PENDING */}
+    {booking.status === 'PENDING' && (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/booking/edit/${booking.id}`); 
+        }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-blue-200 text-blue-600 bg-white hover:bg-blue-50 shadow-sm"
+      >
+        <Pencil className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Edit</span>
+      </button>
+    )}
+
+    {/* Cancel Button */}
+    {canCancel && (
+      <button
+        onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancellingId(booking.id); // Only triggers the popup now
+                                      }}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-red-200 text-red-600 bg-white hover:bg-red-50 shadow-sm"
+                                    >
+                                    <XCircle className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Cancel Booking</span>
+                                  </button>
+                                )}
+                                
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation(); 
+                                    setExpandedId(isExpanded ? null : booking.id);
+                                  }}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                                   isExpanded 
                                     ? (isLecturer 
                                         ? 'bg-[#8A3505]/10 border-[#8A3505]/30 text-[#8A3505]' 
@@ -283,32 +312,50 @@ export default function MyBookings() {
                         <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                           
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-50">
-                            <div>
-                              <p className="text-gray-400 text-xs mb-1.5">Booking ID</p>
-                              {/* 5-character ID slice matches Admin view */}
-                              <p className="text-gray-700 text-sm font-mono">ID-{booking.id.slice(-5).toUpperCase()}</p>
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1.5">Booking ID</p>
+                                <p className="text-gray-700 text-sm font-mono">ID-{booking.id.slice(-5).toUpperCase()}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1.5">Submitted On</p>
+                                <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
+                              </div>
+                              
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1.5">Booking Date</p>
+                                <p className="text-gray-700 text-sm">{formatDate(booking.date)}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1.5">Booking Time</p>
+                                <p className="text-gray-700 text-sm">{booking.startTime} – {booking.endTime}</p>
+                              </div>
+                              
+                              <div>
+                                {booking.attendees && (
+                                  <>
+                                    <p className="text-gray-400 text-xs mb-1.5">Attendees</p>
+                                    <p className="text-gray-700 text-sm">{booking.attendees}</p>
+                                  </>
+                                )}
+                              </div>
+                              <div>
+                                {resource?.location && (
+                                  <>
+                                    <p className="text-gray-400 text-xs mb-1.5">Location</p>
+                                    <p className="text-gray-700 text-sm">{resource.location}</p>
+                                  </>
+                                )}
+                              </div>
+                              
+                              <div>
+                                {booking.specialRequests && (
+                                  <>
+                                    <p className="text-gray-400 text-xs mb-1.5">Special Requests</p>
+                                    <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-gray-400 text-xs mb-1.5">Submitted On</p>
-                              <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
-                            </div>
-                            <div>
-                              {booking.lecturer && (
-                                <>
-                                  <p className="text-gray-400 text-xs mb-1.5">Lecturer in Charge</p>
-                                  <p className="text-gray-700 text-sm">{booking.lecturer}</p>
-                                </>
-                              )}
-                            </div>
-                            <div>
-                              {booking.specialRequests && (
-                                <>
-                                  <p className="text-gray-400 text-xs mb-1.5">Special Requests</p>
-                                  <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
-                                </>
-                              )}
-                            </div>
-                          </div>
 
                           {booking.status === 'PENDING' && (
                             <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl">
@@ -366,59 +413,6 @@ export default function MyBookings() {
                             </div>
                           )}
 
-                          {canCancel && (
-                            <div className="mt-5 pt-5 border-t border-gray-100">
-                              {cancellingId === booking.id ? (
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                                  <p className="text-red-800 text-sm font-medium mb-3">Are you sure you want to cancel this booking?</p>
-                                  
-                                  <div className="mb-4">
-                                    <label className="block text-red-800 text-xs mb-1.5">
-                                      Reason for cancellation <span className="text-red-500">*</span>
-                                    </label>
-                                    <textarea
-                                      rows={2}
-                                      placeholder="Please tell us why you are cancelling..."
-                                      value={cancelReason}
-                                      onChange={(e) => {
-                                        setCancelReason(e.target.value);
-                                        if (cancelError) setCancelError('');
-                                      }}
-                                      className={`w-full px-3 py-2 text-sm rounded-lg border outline-none resize-none transition-colors ${
-                                        cancelError 
-                                          ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:bg-white' 
-                                          : 'border-red-200 bg-white focus:border-red-400'
-                                      }`}
-                                    />
-                                    {cancelError && <p className="text-red-600 text-xs mt-1.5">{cancelError}</p>}
-                                  </div>
-
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleCancelSubmit(booking.id)}
-                                      className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                                    >
-                                      <XCircle className="w-4 h-4" /> Confirm Cancellation
-                                    </button>
-                                    <button
-                                      onClick={resetCancelState}
-                                      className="px-4 py-2 border border-red-200 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors bg-white"
-                                    >
-                                      Keep Booking
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={e => { e.stopPropagation(); setCancellingId(booking.id); }}
-                                  className="flex items-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm hover:bg-red-50 transition-colors bg-white"
-                                >
-                                  <XCircle className="w-4 h-4" /> Cancel Booking
-                                </button>
-                              )}
-                            </div>
-                          )}
-
                           {/* QR CODE CHECK-IN SECTION WITH CORRECTED SVG IMPORT */}
                           {booking.status === 'APPROVED' && (
                             <div className={`mt-4 p-5 border rounded-xl flex flex-col sm:flex-row items-center gap-6 transition-colors ${
@@ -467,6 +461,63 @@ export default function MyBookings() {
           )}
         </div>
       </div>
+      {/* Cancellation Popup Modal */}
+      {cancellingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-6">
+              
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2.5 bg-red-100 rounded-full text-red-600">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Cancel Booking</h3>
+              </div>
+              
+              <p className="text-gray-600 text-sm mb-5">
+                Are you sure you want to cancel this booking? This action cannot be undone.
+              </p>
+              
+              <div className="mb-6">
+                <label className="block text-gray-700 text-sm font-medium mb-1.5">
+                  Reason for cancellation <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Please tell us why you are cancelling..."
+                  value={cancelReason}
+                  onChange={(e) => {
+                    setCancelReason(e.target.value);
+                    if (cancelError) setCancelError('');
+                  }}
+                  className={`w-full px-4 py-3 text-sm rounded-xl border outline-none resize-none transition-all ${
+                    cancelError 
+                      ? 'border-red-400 bg-red-50/30 focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10' 
+                      : 'border-gray-200 bg-gray-50 focus:border-red-400 focus:bg-white focus:ring-4 focus:ring-red-500/10'
+                  }`}
+                />
+                {cancelError && <p className="text-red-500 text-xs mt-1.5 font-medium">{cancelError}</p>}
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+                <button
+                  onClick={resetCancelState}
+                  className="px-4 py-2.5 text-gray-600 font-medium text-sm hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  onClick={() => handleCancelSubmit(cancellingId)}
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors shadow-sm shadow-red-600/20"
+                >
+                  <XCircle className="w-4 h-4" /> Confirm Cancellation
+                </button>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

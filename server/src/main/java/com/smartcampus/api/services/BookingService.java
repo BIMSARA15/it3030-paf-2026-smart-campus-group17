@@ -43,14 +43,13 @@ public class BookingService {
             newBooking.getDate()
         );
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.US);
-        LocalTime newStart = LocalTime.parse(newBooking.getStartTime(), formatter);
-        LocalTime newEnd = LocalTime.parse(newBooking.getEndTime(), formatter);
+        LocalTime newStart = parseBookingTime(newBooking.getStartTime());
+        LocalTime newEnd = parseBookingTime(newBooking.getEndTime());
 
         for (Booking existing : existingBookings) {
             try {
-                LocalTime existingStart = LocalTime.parse(existing.getStartTime(), formatter);
-                LocalTime existingEnd = LocalTime.parse(existing.getEndTime(), formatter);
+                LocalTime existingStart = parseBookingTime(existing.getStartTime());
+                LocalTime existingEnd = parseBookingTime(existing.getEndTime());
 
                 if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
                     throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
@@ -108,6 +107,19 @@ public class BookingService {
         }
 
         return savedBooking;
+    }
+
+    private LocalTime parseBookingTime(String time) {
+        if (time == null || time.trim().isEmpty()) {
+            throw new IllegalArgumentException("Booking time is required.");
+        }
+
+        String normalized = time.trim().toUpperCase(Locale.US);
+        if (normalized.contains("AM") || normalized.contains("PM")) {
+            return LocalTime.parse(normalized, DateTimeFormatter.ofPattern("h:mm a", Locale.US));
+        }
+
+        return LocalTime.parse(normalized, DateTimeFormatter.ofPattern("HH:mm", Locale.US));
     }
 
     public Optional<Booking> updateBookingStatus(String id, Booking updateData) {

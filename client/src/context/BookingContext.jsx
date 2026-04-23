@@ -227,7 +227,8 @@ const createBooking = async (bookingData) => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save booking to database');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to save booking to database');
       }
 
       // 2. Get the saved booking back from Spring Boot (now with a real MongoDB ID)
@@ -240,7 +241,7 @@ const createBooking = async (bookingData) => {
       
     } catch (error) {
       console.error("Error creating booking:", error);
-      return { success: false, message: 'Failed to connect to the server.' };
+      return { success: false, message: error.message || 'Failed to connect to the server.' };
     }
   };
 

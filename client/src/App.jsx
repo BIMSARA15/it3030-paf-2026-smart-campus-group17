@@ -198,6 +198,16 @@ function App() {
             } 
           />
 
+          {/* Edit Booking Route */}
+          <Route 
+            path="/booking/edit/:id" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
+                <NewBooking />
+              </ProtectedRoute>
+            } 
+          />
+
           <Route 
             path="/resources" 
             element={

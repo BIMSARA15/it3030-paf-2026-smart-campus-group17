@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
@@ -121,9 +121,14 @@ const CustomTimePicker = ({ value, onChange, disabled, error, theme }) => {
 export default function NewBooking() {
   const {
     resources,
+    utilities,           
+    utilitiesLoading,    
+    utilitiesError,      
+    fetchUtilities,
     bookings,
     currentUser,
     createBooking,
+    updateBooking,
     getResourceById,
     getUtilitiesForResource,
     fetchResources,
@@ -132,6 +137,8 @@ export default function NewBooking() {
   } = useBooking();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { id } = useParams(); // <-- get the ID from the URL
+  const isEditing = !!id; // <-- Boolean flag to check if we are in edit mode
   const currentRole = (currentUser?.role || '').toUpperCase();
 
   const isLecturer = currentRole === 'LECTURER'; 
@@ -190,15 +197,83 @@ export default function NewBooking() {
   const [accessNotice, setAccessNotice] = useState('');
   
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false); 
 
   useEffect(() => {
     fetchResources();
+    fetchUtilities();
   }, []);
+
+  // NEW: Pre-fill data if we are editing an existing booking
+  useEffect(() => {
+    // FIX: Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
+    if (isEditing && bookings.length > 0 && (resources.length > 0 || utilities.length > 0) && !hasInitialized) {
+      const bookingToEdit = bookings.find(b => String(b.id) === String(id));
+      
+      if (bookingToEdit) {
+        // 1. Try normal resource
+        let r = getResourceById(bookingToEdit.resourceId);
+        
+        // 2. Try utilities if not found
+        if (!r && utilities && utilities.length > 0) {
+          const u = utilities.find(util => util.id === bookingToEdit.resourceId);
+          if (u) {
+            r = {
+              id: u.id,
+              name: u.utilityName,
+              location: u.location,
+              type: 'equipment',
+              capacity: null,
+              quantity: u.quantity,
+              features: [],
+              access: 'anyone',
+              status: u.status,
+              description: u.description
+            };
+          }
+        }
+
+        if (r) setSelectedResource(r);
+        
+        setDate(bookingToEdit.date || '');
+        setStartTime(bookingToEdit.startTime || '');
+        setEndTime(bookingToEdit.endTime || '');
+        setPurpose(bookingToEdit.purpose || '');
+        setAttendees(bookingToEdit.attendees ? bookingToEdit.attendees.toString() : '');
+        setLecturer(bookingToEdit.lecturer || '');
+        setSpecialRequests(bookingToEdit.specialRequests || '');
+        setRequestedUtilityIds(bookingToEdit.requestedUtilityIds || []);
+        
+        setStep(2); // Automatically skip to the form step
+        setHasInitialized(true); // Lock it so it never overwrites again!
+      }
+    }
+  }, [id, isEditing, bookings, resources, utilities, getResourceById, hasInitialized]);
 
   useEffect(() => {
     const rid = searchParams.get('resource');
     if (rid) {
-      const r = getResourceById(rid);
+      // Try to find it as a standard resource (Room/Lab)
+      let r = getResourceById(rid);
+      
+      // NEW: If not found, try to find it in utilities (Equipments) and map it!
+      if (!r && utilities && utilities.length > 0) {
+        const u = utilities.find(util => util.id === rid);
+        if (u) {
+          r = {
+            id: u.id,
+            name: u.utilityName,
+            location: u.location,
+            type: 'equipment',
+            capacity: null, // Hides attendees field
+            features: [],
+            access: 'anyone',
+            status: u.status,
+            description: u.description
+          };
+        }
+      }
+
       const isLecturerOnly = (r?.access || '').toLowerCase() === 'lecturer';
       const isBlockedForStudent = (currentRole === 'STUDENT' || currentRole === 'USER') && isLecturerOnly;
 
@@ -215,8 +290,7 @@ export default function NewBooking() {
         setAccessNotice('');
       }
     }
-  }, [searchParams, resources, currentRole]);
-
+  }, [searchParams, resources, utilities, currentRole]); // <-- Added utilities to dependency array
   useEffect(() => {
     // Convert to 24h for mathematical comparison
     const start24 = formatTo24Hour(startTime);
@@ -224,6 +298,9 @@ export default function NewBooking() {
 
     if (selectedResource && date && start24 && end24 && start24 < end24) {
       const overlappingBooking = bookings.find(b => {
+        // NEW: If we are editing, ignore the booking we are currently editing!
+        if (isEditing && b.id === id) return false;
+
         if (b.resourceId !== selectedResource.id || b.date !== date) return false;
         if (b.status !== 'APPROVED' && b.status !== 'PENDING') return false;
         
@@ -240,22 +317,44 @@ export default function NewBooking() {
     } else {
       setConflict(null);
     }
-  }, [selectedResource, date, startTime, endTime, bookings]);
+  }, [selectedResource, date, startTime, endTime, bookings, isEditing, id]);
 
   const today = new Date().toISOString().split('T')[0];
 
   const filtered = resources.filter(r => {
     const access = (r.access || '').toLowerCase();
     const status = (r.status || '').toLowerCase();
+    const rType = (r.type || '').toLowerCase(); // Normalizes "room", "lab"
+
     const matchesAccess =
       currentRole === 'ADMIN' || currentRole === 'LECTURER'
         ? true
-        : access === 'student' || access === 'anyone';
+        : access === 'student' || access === 'anyone' || access === 'all';
+    
     const matchesStatus = status !== 'out of service';
-    const matchType = typeFilter === 'all' || r.type === typeFilter;
-    const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.location.toLowerCase().includes(search.toLowerCase());
+    
+    // FIX: Use strict equals (===) instead of includes() so "Lecture Hall" doesn't trigger "all"
+    const matchType = 
+      typeFilter === 'all' || 
+      rType === typeFilter.toLowerCase() || 
+      (typeFilter === 'Lecture Hall' && rType === 'room') ||
+      (typeFilter === 'room' && rType === 'room') ||
+      (typeFilter === 'lab' && rType === 'lab');
+    
+    const matchSearch = (r.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (r.location || '').toLowerCase().includes(search.toLowerCase());
+      
     return matchesAccess && matchesStatus && matchType && matchSearch;
+  });
+
+  // Filter logic specifically for the Equipments (Utilities)
+  const filteredUtilities = utilities.filter((utility) => {
+    const query = search.trim().toLowerCase();
+    return query === '' ||
+      (utility.utilityName || '').toLowerCase().includes(query) ||
+      (utility.utilityCode || '').toLowerCase().includes(query) ||
+      (utility.category || '').toLowerCase().includes(query) ||
+      (utility.location || '').toLowerCase().includes(query);
   });
 
   const validate = () => {
@@ -304,7 +403,7 @@ export default function NewBooking() {
     if (conflict) return;
     setSubmitting(true);
     
-    const res = await createBooking({
+    const payload = {
       resourceId: selectedResource.id,
       userId: currentUser?.id || 'IT23345478',
       userName: currentUser?.name || 'Chathurya',
@@ -315,10 +414,15 @@ export default function NewBooking() {
       endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
-      lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(), // If the requester is a lecturer, we can auto-fill the lecturer in charge as themselves
+      lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(),
       specialRequests: specialRequests.trim(),
       requestedUtilityIds,
-    });
+    };
+
+    // NEW: Choose between updateBooking and createBooking
+    const res = isEditing && updateBooking 
+      ? await updateBooking(id, payload) 
+      : await createBooking(payload);
 
     setResult(res);
     setSubmitting(false);
@@ -362,9 +466,13 @@ export default function NewBooking() {
                 <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 mt-2">
                   <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
-                <h2 className="text-gray-900 text-xl font-semibold mb-2">Booking Submitted!</h2>
-                <p className="text-gray-500 text-sm mb-6">{result?.message}</p>
-
+                <h2 className="text-gray-900 text-xl font-semibold mb-2">
+                  {isEditing ? 'Booking Updated!' : 'Booking Submitted!'}
+                </h2>
+                <p className="text-gray-500 text-sm mb-6">
+                  {isEditing ? 'Booking Details Updated Successfully.' : result?.message}
+                </p>
+                
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-6 text-left">
                   <div className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -404,7 +512,9 @@ export default function NewBooking() {
           )}
 
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900">New Booking Request</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {isEditing ? 'Edit Booking Request' : 'New Booking Request'}
+            </h1>
             <p className="text-gray-500 text-sm mt-1">Reserve a Lecture Hall, Lab, or Equipment</p>
           </div>
 
@@ -469,55 +579,108 @@ export default function NewBooking() {
               </div>
 
               <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {resourcesLoading ? (
+                {resourcesLoading || utilitiesLoading ? (
                   <div className="col-span-full flex items-center justify-center gap-2 py-12 text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <p className="text-sm">Loading resources...</p>
+                    <p className="text-sm">Loading data...</p>
                   </div>
-                ) : resourcesError ? (
+                ) : resourcesError || utilitiesError ? (
                   <div className="col-span-full text-center py-12 text-red-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Unable to load resources right now</p>
+                    <p className="text-sm">Unable to load data right now</p>
                   </div>
-                ) : filtered.map(resource => (
-                    <button
-                      key={resource.id}
-                      onClick={() => { setSelectedResource(resource); setStep(2); }}
-                      className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[resource.type]}`}>
-                          {TYPE_ICONS[resource.type]}
+                ) : (
+                  <>
+                    {/* --- RENDER ROOMS AND LABS (RESOURCES) --- */}
+                    {typeFilter !== 'equipment' && filtered.map(resource => (
+                      <button
+                        key={`res-${resource.id}`}
+                        onClick={() => { setSelectedResource(resource); setStep(2); }}
+                        className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                            {TYPE_ICONS[(resource.type || '').toLowerCase()] || <Wrench className="w-4 h-4" />}
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                            {resource.type}
+                          </span>
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[resource.type]}`}>
-                          {resource.type}
-                        </span>
-                      </div>
-                      <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
-                      <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                        <MapPin className="w-3 h-3" />
-                        {resource.location}
-                      </div>
-                      {resource.capacity && (
-                        <div className="flex items-center gap-1 text-gray-400 text-xs">
-                          <Users className="w-3 h-3" />
-                          Capacity: {resource.capacity} persons
+                        <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
+                        <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
+                          <MapPin className="w-3 h-3" />
+                          {resource.location}
                         </div>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {resource.features.slice(0, 3).map(f => (
-                          <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
-                        ))}
-                        {resource.features.length > 3 && (
-                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                        {resource.capacity && (
+                          <div className="flex items-center gap-1 text-gray-400 text-xs">
+                            <Users className="w-3 h-3" />
+                            Capacity: {resource.capacity} persons
+                          </div>
                         )}
-                      </div>
-                    </button>
-                  ))}
-                {!resourcesLoading && !resourcesError && filtered.length === 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {resource.features.slice(0, 3).map(f => (
+                            <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
+                          ))}
+                          {resource.features.length > 3 && (
+                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+
+                    {/* --- RENDER EQUIPMENTS (UTILITIES) --- */}
+                    {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => (
+                      <button
+                        key={`util-${utility.id}`}
+                        onClick={() => { 
+                          setSelectedResource({
+                            id: utility.id,
+                            name: utility.utilityName,
+                            location: utility.location,
+                            type: 'equipment',
+                            capacity: null, 
+                            features: [],
+                            access: 'anyone',
+                            status: utility.status,
+                            description: utility.description
+                          }); 
+                          setStep(2); 
+                        }}
+                        className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS['equipment']}`}>
+                            {TYPE_ICONS['equipment']}
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS['equipment']}`}>
+                            {utility.category || 'Equipment'}
+                          </span>
+                        </div>
+                        <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{utility.utilityName}</h4>
+                        <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
+                          <MapPin className="w-3 h-3" />
+                          {utility.location}
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-400 text-xs">
+                          <Package className="w-3 h-3" />
+                          Quantity: {utility.quantity}
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">{utility.utilityCode}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+
+                {/* No Data Fallback Messages */}
+                {!resourcesLoading && !utilitiesLoading && 
+                 (typeFilter === 'equipment' ? filteredUtilities.length === 0 : 
+                 typeFilter === 'all' ? filtered.length === 0 && filteredUtilities.length === 0 : 
+                 filtered.length === 0) && (
                   <div className="col-span-full text-center py-12 text-gray-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No resources match your search</p>
+                    <p className="text-sm">No items match your search</p>
                   </div>
                 )}
               </div>
@@ -536,10 +699,23 @@ export default function NewBooking() {
                       <h3 className="text-gray-900">{selectedResource.name}</h3>
                       <p className="text-gray-400 text-xs">{selectedResource.location}</p>
                     </div>
-                    {step === 2 && (
+                    
+                    {/* Top Right Corner Action Button */}
+                    {isEditing ? (
+                      <button
+                        onClick={() => navigate('/bookings/my')}
+                        className={`ml-auto text-[13px] font-medium hover:opacity-75 transition-opacity flex items-center gap-1 ${
+                          isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
+                        }`}
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" /> Back to My Bookings
+                      </button>
+                    ) : step === 2 && (
                       <button
                         onClick={() => setStep(1)}
-                        className={`ml-auto text-xs hover:underline flex items-center gap-1 ${theme.textLink}`}
+                        className={`ml-auto text-[13px] font-medium hover:opacity-75 transition-opacity flex items-center gap-1 ${
+                          isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
+                        }`}
                       >
                         <ChevronLeft className="w-3.5 h-3.5" /> Back to Change the Resource
                       </button>
@@ -594,7 +770,7 @@ export default function NewBooking() {
                       </div>
                     </div>
 
-                    {conflict && step !== 3 && (
+                    {conflict && !submitting && step !== 3 && ( 
                       <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
                         <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                         <div>
@@ -608,7 +784,7 @@ export default function NewBooking() {
                       </div>
                     )}
 
-                    {!conflict && date && startTime && endTime && startTime < endTime && step !== 3 && (
+                    {!conflict && !submitting && date && startTime && endTime && startTime < endTime && step !== 3 && ( 
                       <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
                         <CheckCircle className="w-4 h-4 text-emerald-600" />
                         <p className="text-emerald-700 text-sm">Time slot is available</p>
@@ -755,11 +931,11 @@ export default function NewBooking() {
                       }`}
                     >
                       {submitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                        <><Loader2 className="w-4 h-4 animate-spin" /> {isEditing ? 'Updating...' : 'Submitting...'}</>
                       ) : step === 3 ? (
-                        <>Submitted Successfully <CheckCircle className="w-4 h-4" /></>
+                        <>{isEditing ? 'Updated Successfully' : 'Submitted Successfully'} <CheckCircle className="w-4 h-4" /></>
                       ) : (
-                        <>Submit Booking Request <ChevronRight className="w-4 h-4" /></>
+                        <>{isEditing ? 'Update Booking Request' : 'Submit Booking Request'} <ChevronRight className="w-4 h-4" /></>
                       )}
                     </button>
                   </div>

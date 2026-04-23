@@ -1,42 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { MessageSquare, X, Bot, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext'; // <-- Import to get the current user
 
 axios.defaults.withCredentials = true;
 
 const AIChat = () => {
+    const { user } = useAuth(); // <-- Get the logged-in user
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // 1. Initialize state from sessionStorage (if it exists)
+    // 1. Create a UNIQUE key for this exact user (fallback to 'guest' if loading)
+    const userId = user?.id || user?.email || 'guest';
+    const storageKey = `smart_campus_ai_chat_${userId}`;
+
+    // 2. Initialize state from localStorage (Permanent Storage)
     const [messages, setMessages] = useState(() => {
-        const savedChat = sessionStorage.getItem('smart_campus_ai_chat');
+        const savedChat = localStorage.getItem(storageKey);
         return savedChat ? JSON.parse(savedChat) : [];
     });
 
-    // 2. Save to sessionStorage every time messages change
+    // 3. MAGIC SWITCH: If a different user logs in, instantly load THEIR history
     useEffect(() => {
-        sessionStorage.setItem('smart_campus_ai_chat', JSON.stringify(messages));
-    }, [messages]);
+        const savedChat = localStorage.getItem(storageKey);
+        setMessages(savedChat ? JSON.parse(savedChat) : []);
+    }, [storageKey]);
 
-    // 3. Clear Chat Function
+    // 4. Save to localStorage every time messages change
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem(storageKey, JSON.stringify(messages));
+        } else {
+            localStorage.removeItem(storageKey); // Clean up if they cleared it
+        }
+    }, [messages, storageKey]);
+
+    // 5. Clear Chat Function (Only clears for the currently logged-in user)
     const clearChat = () => {
         setMessages([]);
-        sessionStorage.removeItem('smart_campus_ai_chat');
+        localStorage.removeItem(storageKey);
     };
 
     const sendMessage = async () => {
         if (!input.trim()) return;
 
         const userMsg = { sender: 'user', text: input };
-        setMessages(prev => [...prev, userMsg]);
+        const newMessages = [...messages, userMsg];
+        setMessages(newMessages);
         setInput('');
         setIsLoading(true);
 
         try {
+            // Send the history exactly like we set up previously
+            const chatHistory = newMessages
+                .filter(msg => msg.sender !== 'system') 
+                .map(msg => ({
+                    role: msg.sender === 'user' ? 'user' : 'assistant',
+                    content: msg.text
+                }));
+
             const response = await axios.post('http://localhost:8080/api/ai/chat', {
-                message: userMsg.text
+                history: chatHistory
             });
 
             const aiMsg = { sender: 'ai', text: response.data.reply };
@@ -66,7 +91,7 @@ const AIChat = () => {
                             <span>Smart Campus AI</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            {/* Clear Chat Button (Only shows if there are messages) */}
+                            {/* Clear Chat Button */}
                             {messages.length > 0 && (
                                 <button 
                                     onClick={clearChat} 
@@ -91,7 +116,7 @@ const AIChat = () => {
                         {messages.length === 0 && (
                             <div className="text-center text-gray-400 mt-10 text-sm flex flex-col items-center">
                                 <Bot className="w-10 h-10 mb-2 opacity-50" />
-                                Hello! Ask me to find or book a resource for you.
+                                Hello {user?.name?.split(' ')[0] || ''}! Ask me to find or book a resource for you.
                             </div>
                         )}
                         {messages.map((msg, index) => (

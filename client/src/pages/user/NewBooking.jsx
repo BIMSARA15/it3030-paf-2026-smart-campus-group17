@@ -770,7 +770,7 @@ export default function NewBooking() {
                       </div>
                     </div>
 
-                    {conflict && step !== 3 && (
+                    {conflict && !submitting && step !== 3 && ( 
                       <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
                         <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                         <div>
@@ -784,7 +784,7 @@ export default function NewBooking() {
                       </div>
                     )}
 
-                    {!conflict && date && startTime && endTime && startTime < endTime && step !== 3 && (
+                    {!conflict && !submitting && date && startTime && endTime && startTime < endTime && step !== 3 && ( 
                       <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
                         <CheckCircle className="w-4 h-4 text-emerald-600" />
                         <p className="text-emerald-700 text-sm">Time slot is available</p>

@@ -63,6 +63,9 @@ export default function MyBookings() {
     borderAccent: isLecturer ? 'border-[#8A3505]' : 'border-[#0F6657]',
     bgAccent: isLecturer ? 'bg-[#8A3505]' : 'bg-[#0F6657]',
     lightBg: isLecturer ? 'bg-[#8A3505]/10' : 'bg-[#0F6657]/10',
+    progressLine: isLecturer 
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08]' 
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A]',
   };
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -479,11 +482,11 @@ export default function MyBookings() {
                       
                       {/* Status Node */}
                       <div className="flex flex-col items-center relative w-12">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 text-xs transition-colors z-10 ${
-                            step.done && step.label !== 'Rejected' && step.label !== 'Cancelled' ? `${theme.bgAccent} ${theme.borderAccent} text-white shadow-sm` :
-                            step.label === 'Rejected' || step.label === 'Cancelled' ? "bg-red-500 border-red-500 text-white shadow-sm shadow-red-200" :
-                            step.active ? "bg-amber-400 border-amber-400 text-white shadow-sm shadow-amber-200" :
-                            "bg-white border-gray-200 text-gray-300"
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-colors z-10 ${
+                            step.done && step.label !== 'Rejected' && step.label !== 'Cancelled' ? `${theme.activeFilter} border border-transparent` :
+                            step.label === 'Rejected' || step.label === 'Cancelled' ? "bg-red-500 border-2 border-red-500 text-white shadow-sm shadow-red-200" :
+                            step.active ? "bg-amber-400 border-2 border-amber-400 text-white shadow-sm shadow-amber-200" :
+                            "bg-white border-2 border-gray-200 text-gray-300"
                         }`}>
                           {step.done || step.active ? <CheckCircle className="w-4 h-4" /> : <div className="w-2 h-2 rounded-full bg-gray-200" />}
                         </div>
@@ -501,7 +504,7 @@ export default function MyBookings() {
                           {/* Theme Colored Fill */}
                           <div className={`absolute left-0 top-0 bottom-0 rounded-full transition-all duration-500 ${
                             step.done && step.label !== 'Rejected' && step.label !== 'Cancelled' 
-                              ? theme.bgAccent 
+                              ? theme.progressLine 
                               : 'bg-transparent'
                           }`} style={{ width: step.done ? '100%' : '0%' }} />
                         </div>
@@ -575,8 +578,8 @@ export default function MyBookings() {
                       <h4 className="font-semibold text-gray-900 mb-1">Check-in QR Code</h4>
                       <p className="text-sm text-gray-500 mb-3">Show this code to the admin or facility manager upon arrival.</p>
                       {expandedBooking.checkedIn ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-medium border border-emerald-200">
-                          <CheckCircle className="w-4 h-4 text-emerald-600" /> Checked In Successfully
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${theme.lightBg} ${theme.textAccent} rounded-lg text-sm font-medium border border-black/5`}>
+                          <CheckCircle className={`w-4 h-4 ${theme.textAccent}`} /> Checked In Successfully
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium border border-gray-200">

@@ -115,7 +115,27 @@ export default function Resources() {
     return { upcoming, total };
   };
 
-  const selectedResource = selectedId ? resources.find(r => r.id === selectedId) : null;
+  const selectedResource = selectedId ? (
+    resources.find(r => r.id === selectedId) || 
+    (() => {
+      const u = utilities.find(u => u.id === selectedId);
+      if (!u) return null;
+      return {
+        id: u.id,
+        name: u.utilityName,
+        location: u.location,
+        type: 'equipment',
+        capacity: null, 
+        quantity: u.quantity,
+        features: [],
+        access: 'anyone',
+        status: u.status,
+        description: u.description,
+        category: u.category,
+        utilityCode: u.utilityCode
+      };
+    })()
+  ) : null;
 
   const counts = {
     all: resources.length,
@@ -285,10 +305,20 @@ export default function Resources() {
                     </p>
                   </div>
                 ) : (
-                  filteredUtilities.map((utility) => (
-                    <div
+                  filteredUtilities.map((utility) => {
+                    const isSelected = selectedId === utility.id;
+                    return (
+                    <button
                       key={utility.id}
-                      className="rounded-xl border-2 border-gray-100 bg-white p-5 transition-all hover:border-orange-200 hover:shadow-md"
+                      onClick={() => {
+                        setSelectedId(isSelected ? null : utility.id);
+                        setAccessMessage('');
+                      }}
+                      className={`text-left w-full rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
+                        isSelected 
+                          ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5'
+                          : 'bg-white border-gray-100 hover:border-[#17A38A]/30'
+                      }`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
@@ -331,8 +361,9 @@ export default function Resources() {
                           <CheckCircle className="w-3 h-3" /> Admin Added
                         </span>
                       </div>
-                    </div>
-                  ))
+                    </button>
+                    );
+                  })
                 )
               ) : filtered.map(resource => {
                 const cfg = TYPE_CONFIG[resource.type];
@@ -443,7 +474,7 @@ export default function Resources() {
             </div>
 
             {/* Resource detail panel */}
-            {typeFilter !== 'equipment' && selectedResource && (
+            {selectedResource && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border border-gray-100 overflow-hidden sticky top-4">
                   <div className="h-36 bg-gradient-to-br from-slate-700 to-slate-900 relative overflow-hidden">
@@ -485,35 +516,44 @@ export default function Resources() {
                       {selectedResource.location}
                     </div>
 
-                    {/* Capacity */}
+                    {/* Capacity / Quantity */}
                     {selectedResource.capacity && (
                       <div className="flex items-center gap-2 text-gray-600 text-sm mb-3">
                         <Users className="w-4 h-4 text-gray-400" />
                         Capacity: {selectedResource.capacity} persons
                       </div>
                     )}
+                    {selectedResource.quantity && (
+                      <div className="flex items-center gap-2 text-gray-600 text-sm mb-3">
+                        <Package className="w-4 h-4 text-gray-400" />
+                        Quantity: {selectedResource.quantity} available
+                      </div>
+                    )}
 
                     {/* Description with fallback */}
                     <p className="text-gray-500 text-sm mb-4">
-                      {selectedResource.description || 'No detailed description available for this resource.'}
+                      {selectedResource.description || 'No detailed description available for this item.'}
                     </p>
 
-                    {/* Features */}
-                    <div className="mb-4">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Tag className="w-3.5 h-3.5 text-gray-400" />
-                        <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Features & Amenities</p>
+                    {/* Features (Hide for Equipments) */}
+                    {selectedResource.type !== 'equipment' && (
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Tag className="w-3.5 h-3.5 text-gray-400" />
+                          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Features & Amenities</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedResource.features.map(f => (
+                            <span key={f} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-50 border border-gray-100 text-gray-600 rounded-lg">
+                              <CheckCircle className="w-3 h-3 text-emerald-500" /> {f}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedResource.features.map(f => (
-                          <span key={f} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-50 border border-gray-100 text-gray-600 rounded-lg">
-                            <CheckCircle className="w-3 h-3 text-emerald-500" /> {f}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                    )}
 
-                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
+                    {/* Available Utilities (Hide for Equipments) */}
+                    {selectedResource.type !== 'equipment' && getUtilitiesForResource(selectedResource.id).length > 0 && (
                       <div className="mb-4">
                         <div className="flex items-center gap-1.5 mb-2">
                           <Package className="w-3.5 h-3.5 text-gray-400" />

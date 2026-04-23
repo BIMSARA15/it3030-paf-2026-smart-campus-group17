@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, CheckCircle, XCircle, Calendar, Clock,
   Users, MapPin, ChevronDown, Building2, FlaskConical, Wrench,
-  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info
+  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info, Loader2
 } from 'lucide-react';
-// Change these two lines
 import { useBooking } from "../../context/BookingContext";
 import { StatusBadge } from "../../components/StatusBadge";
 import Sidebar from "../../components/Sidebar"; 
@@ -21,13 +20,17 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
   const [note, setNote] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track loading state
 
-  const handleSubmit = () => {
+  // CHANGED: Made function async to wait for the backend
+  const handleSubmit = async () => {
     if (action === 'reject' && !reason.trim()) {
       setError('Please provide a rejection reason.');
       return;
     }
-    onConfirm(action === 'reject' ? reason : note || undefined);
+    setIsSubmitting(true); // START LOADING
+    await onConfirm(action === 'reject' ? reason : note || undefined);
+    // Modal will close automatically via onConfirm, so we don't need to set it back to false
   };
 
   return (
@@ -103,13 +106,22 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
           </button>
           <button
             onClick={handleSubmit}
-            className={`flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-colors ${
+            disabled={isSubmitting}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-medium transition-all ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed ' : ''
+            }${
               action === 'approve'
                 ? 'bg-emerald-600 hover:bg-emerald-700'
                 : 'bg-red-600 hover:bg-red-700'
             }`}
           >
-            {action === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+            {isSubmitting ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+            ) : action === 'approve' ? (
+              'Confirm Approval'
+            ) : (
+              'Confirm Rejection'
+            )}
           </button>
         </div>
       </div>
@@ -118,7 +130,7 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 }
 
 export default function AllBookings() {
-  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings, purgeBooking } = useBooking();
+  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings, purgeBooking, utilities } = useBooking();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -143,8 +155,25 @@ export default function AllBookings() {
     }
   }, []);
 
+  // Helper function to find the item in either Resources OR Utilities
+  const getBookingItem = (id) => {
+    let item = getResourceById(id);
+    if (item) return item;
+
+    const util = utilities?.find(u => u.id === id);
+    if (util) {
+      return {
+        id: util.id,
+        name: util.utilityName,
+        type: 'equipment',
+        location: util.location,
+      };
+    }
+    return null;
+  };
+
   const filtered = bookings.filter(b => {
-    const resource = getResourceById(b.resourceId);
+    const resource = getBookingItem(b.resourceId);
     const matchStatus = statusFilter === 'ALL' || b.status === statusFilter;
     const matchType = typeFilter === 'ALL' || resource?.type === typeFilter;
     const matchSearch = search === '' ||
@@ -180,7 +209,7 @@ export default function AllBookings() {
           type: 'success',
           title: 'Booking Approved!',
           bookingId: formattedId,
-          // NEW: Updated to include the ID in the text
+          // Updated to include the ID in the text
           message: `The Booking Request ${formattedId} has been Successfully Approved.` 
         });
       } else if (reason) {
@@ -189,7 +218,7 @@ export default function AllBookings() {
           type: 'success', 
           title: 'Booking Rejected',
           bookingId: formattedId,
-          // NEW: Updated to include the ID in the text
+          // Updated to include the ID in the text
           message: `The Booking Request ${formattedId} has been Successfully Rejected.` 
         });
       }
@@ -213,7 +242,7 @@ export default function AllBookings() {
   const activeFilterCount = [statusFilter !== 'ALL', typeFilter !== 'ALL', dateFrom, dateTo].filter(Boolean).length;
 
   const modalBooking = modal ? bookings.find(b => b.id === modal.bookingId) : null;
-  const modalResource = modalBooking ? getResourceById(modalBooking.resourceId) : null;
+  const modalResource = modalBooking ? getBookingItem(modalBooking.resourceId) : null;
 
   return (
     // WRAPPED IN LAYOUT
@@ -237,7 +266,7 @@ export default function AllBookings() {
                 />
             )}
 
-            {/* NEW: Result Popup Modal */}
+            {/* Result Popup Modal */}
             {resultModal && (
               <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setResultModal(null)}></div>
@@ -319,16 +348,16 @@ export default function AllBookings() {
                     </button>
                     <button
                       onClick={async () => {
-                        // 1. Save the ID temporarily before we clear the state
+                        // Save the ID temporarily before we clear the state
                         const idToDelete = deleteModalId; 
                         
-                        // 2. Close the warning modal instantly
+                        // Close the warning modal instantly
                         setDeleteModalId(null); 
                         
-                        // 3. Wait for the database to finish deleting
+                        // Wait for the database to finish deleting
                         await purgeBooking(idToDelete);
                         
-                        // 4. Trigger your existing success modal!
+                        // Trigger your existing success modal!
                         setResultModal({
                           type: 'success',
                           title: 'Record Deleted',
@@ -347,8 +376,8 @@ export default function AllBookings() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div>
-                <h1 className="text-gray-900">All Bookings</h1>
-                <p className="text-gray-500 text-sm mt-0.5">{filtered.length} of {bookings.length} bookings shown</p>
+                <h1 className="text-gray-900 text-2xl font-semibold">All Bookings</h1>
+                <p className="text-gray-500 text-sm mt-0.5">Manage and oversee all campus resource requests.</p>
                 </div>
                 <div className="sm:ml-auto flex gap-2">
                 {counts.PENDING > 0 && (
@@ -427,6 +456,9 @@ export default function AllBookings() {
                 ))}
                 </div>
 
+                {/* Record count moved here */}
+                <p className="text-gray-500 text-xs font-medium pl-1">Showing {filtered.length} of {bookings.length} bookings</p>
+
                 {/* Advanced filters */}
                 {showFilters && (
                 <div className="pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -496,7 +528,7 @@ export default function AllBookings() {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {filtered.map(booking => {
-                        const resource = getResourceById(booking.resourceId);
+                        const resource = getBookingItem(booking.resourceId);
                         const isExpanded = expandedId === booking.id;
 
                         return (
@@ -706,9 +738,6 @@ export default function AllBookings() {
                         })}
                     </tbody>
                     </table>
-                </div>
-                <div className="px-4 py-3 border-t border-gray-50 flex items-center justify-between">
-                    <p className="text-gray-400 text-xs">Showing {filtered.length} of {bookings.length} bookings</p>
                 </div>
                 </div>
             )}

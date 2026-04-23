@@ -1,149 +1,311 @@
-import { Link } from "react-router-dom";
-// eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion";
-import { BookMarked, Check } from "lucide-react";
-import { portals } from "../../config/portals.js";
+import { useRef, useEffect } from "react";
+import {
+  BookMarked,
+  Settings,
+  Wrench,
+  GraduationCap,
+  BookOpen,
+  ShieldCheck,
+  Sparkles,
+  Lock,
+} from "lucide-react";
 
-const CAMPUS_IMAGE =
-  "https://images.unsplash.com/photo-1664273891579-22f28332f3c4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB1bml2ZXJzaXR5JTIwY2FtcHVzJTIwYnVpbGRpbmclMjBhcmNoaXRlY3R1cmV8ZW58MXx8fHwxNzc1MDM4MDExfDA&ixlib=rb-4.1.0&q=80&w=1080";
+const BG_IMAGE =
+  "https://images.unsplash.com/photo-1763924121646-994d46165f54?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwY2FtcHVzJTIwYWVyaWFsJTIwYXJjaGl0ZWN0dXJlJTIwbmlnaHQlMjBsaWdodHN8ZW58MXx8fHwxNzc2ODQ2NjE4fDA&ixlib=rb-4.1.0&q=80&w=1080";
 
-export default function LeftPanel({ selectedPortal }) {
-  const gradient = selectedPortal?.leftGradient ?? "linear-gradient(150deg, #060D1F 0%, #0F2557 45%, #1E40AF 100%)";
-  const badgeBg = selectedPortal?.badgeBg ?? "rgba(59,130,246,0.15)";
-  const badgeText = selectedPortal?.badgeText ?? "#93C5FD";
+const PORTALS = [
+  { icon: Settings,      label: "Administrator", sub: "Full system control",   color: "#3B82F6", glow: "#1E40AF" },
+  { icon: Wrench,        label: "Technician",    sub: "Asset & maintenance",   color: "#94A3B8", glow: "#334155" },
+  { icon: GraduationCap, label: "Student",       sub: "Book campus resources", color: "#34D399", glow: "#059669" },
+  { icon: BookOpen,      label: "Lecturer",      sub: "Faculty & scheduling",  color: "#FBBF24", glow: "#B45309" },
+];
 
-  const features = selectedPortal?.features ?? [
-    "Role-based access for all campus users",
-    "Real-time asset availability & scheduling",
-    "Instant booking confirmations & alerts",
-    "Secure university-grade authentication",
-  ];
+const ORB_CONFIGS = [
+  { color: "#1E40AF", w: 560, h: 560, top: "-140px", left: "-140px",   dur: 9000,  delay: 0    },
+  { color: "#065F46", w: 480, h: 480, top: "-80px",  right: "-100px",  dur: 11000, delay: 2000 },
+  { color: "#1E293B", w: 440, h: 440, bottom: "-120px", left: "-60px", dur: 10000, delay: 1000 },
+  { color: "#92400E", w: 400, h: 400, bottom: "-80px",  right: "-80px",dur: 13000, delay: 3000 },
+  { color: "#312E81", w: 320, h: 320, top: "35%",  left: "30%",        dur: 8000,  delay: 1500 },
+];
+
+function useFloatAnimation(ref, amplitude, duration, delay) {
+  useEffect(() => {
+    if (!ref.current) return;
+    let start = null;
+    let rafId;
+
+    const tick = (ts) => {
+      if (!start) start = ts - delay;
+      const elapsed = ts - start;
+      const t = (elapsed % duration) / duration;
+      const y = -Math.abs(Math.sin(t * Math.PI)) * amplitude;
+      if (ref.current) ref.current.style.transform = `translateY(${y}px)`;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [ref, amplitude, duration, delay]);
+}
+
+function useOrbAnimation(ref, dur, delay) {
+  useEffect(() => {
+    if (!ref.current) return;
+    let start = null;
+    let rafId;
+
+    const tick = (ts) => {
+      if (!start) start = ts - delay;
+      const elapsed = ts - start;
+      const t = (elapsed % dur) / dur;
+      const scale = 1 + 0.18 * Math.sin(t * 2 * Math.PI);
+      const opacity = 0.45 + 0.25 * Math.sin(t * 2 * Math.PI);
+      if (ref.current) {
+        ref.current.style.transform = `scale(${scale})`;
+        ref.current.style.opacity = opacity;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [ref, dur, delay]);
+}
+
+function Orb({ config }) {
+  const ref = useRef(null);
+  useOrbAnimation(ref, config.dur, config.delay);
+
+  const posStyle = {};
+  if (config.top    !== undefined) posStyle.top    = config.top;
+  if (config.bottom !== undefined) posStyle.bottom = config.bottom;
+  if (config.left   !== undefined) posStyle.left   = config.left;
+  if (config.right  !== undefined) posStyle.right  = config.right;
 
   return (
-    <motion.div
-      key={selectedPortal?.id ?? "default"}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="hidden lg:flex lg:w-[46%] xl:w-[42%] flex-col justify-between relative overflow-hidden"
-      style={{ background: gradient }}
+    <div
+      ref={ref}
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        width: config.w,
+        height: config.h,
+        background: `radial-gradient(circle, ${config.color}CC 0%, ${config.color}00 70%)`,
+        filter: "blur(1px)",
+        opacity: 0.45,
+        ...posStyle,
+      }}
+    />
+  );
+}
+
+function PortalCard({ portal, index }) {
+  const ref = useRef(null);
+  useFloatAnimation(ref, index % 2 === 0 ? 8 : 5, 4000 + index * 600, index * 500);
+
+  return (
+    <div
+      ref={ref}
+      className="flex items-center gap-3 rounded-2xl px-4 py-3"
+      style={{
+        background: "rgba(255,255,255,0.07)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+      }}
     >
-      {/* Radial glow */}
       <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(ellipse at 20% 40%, rgba(255,255,255,0.06) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(255,255,255,0.04) 0%, transparent 50%)",
-        }}
-      />
-      {/* Grid dots */}
+        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+        style={{ background: `${portal.glow}60`, border: `1px solid ${portal.color}50` }}
+      >
+        <portal.icon className="w-4 h-4" style={{ color: portal.color }} />
+      </div>
+      <div>
+        <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "rgba(255,255,255,0.92)", lineHeight: 1.2 }}>
+          {portal.label}
+        </p>
+        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)", marginTop: "2px" }}>
+          {portal.sub}
+        </p>
+      </div>
       <div
-        className="absolute inset-0 opacity-[0.05]"
-        style={{
-          backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-          backgroundSize: "36px 36px",
-        }}
+        className="ml-auto w-2 h-2 rounded-full shrink-0"
+        style={{ background: portal.color, boxShadow: `0 0 8px ${portal.color}` }}
       />
-      {/* Campus image overlay */}
+    </div>
+  );
+}
+
+export default function LeftPanel() {
+  return (
+    <div
+      className="hidden lg:flex lg:w-[58%] xl:w-[55%] relative overflow-hidden flex-col"
+      style={{ background: "#060C1A" }}
+    >
+      {/* Campus photo underlay */}
       <div className="absolute inset-0">
         <img
-          src={CAMPUS_IMAGE}
-          alt="University"
+          src={BG_IMAGE}
+          alt=""
           className="w-full h-full object-cover"
-          style={{ opacity: 0.07 }}
+          style={{ opacity: 0.12, mixBlendMode: "luminosity" }}
         />
       </div>
 
-      {/* Logo */}
-      <div className="relative z-10 p-10">
-        <Link to="/" className="flex items-center gap-2.5">
+      {/* Grid dot texture */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
+          backgroundSize: "38px 38px",
+        }}
+      />
+
+      {/* Animated glowing orbs */}
+      <div className="absolute inset-0 overflow-hidden">
+        {ORB_CONFIGS.map((cfg, i) => (
+          <Orb key={i} config={cfg} />
+        ))}
+      </div>
+
+      {/* Top gradient overlay */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg, rgba(6,12,26,0.5) 0%, transparent 40%, rgba(6,12,26,0.6) 100%)" }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col h-full p-12 xl:p-14">
+
+        {/* Logo */}
+        <div
+          className="flex items-center gap-3"
+          style={{ animation: "fadeSlideDown 0.6s ease both" }}
+        >
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)" }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, #1D4ED8, #6366F1)",
+              boxShadow: "0 4px 16px rgba(99,102,241,0.5)",
+            }}
           >
             <BookMarked className="w-5 h-5 text-white" />
           </div>
-          <span style={{ fontWeight: 750, color: "white", fontSize: "1.25rem", letterSpacing: "-0.01em" }}>
-            UniBook
-          </span>
-        </Link>
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 px-10 pb-12">
-        {/* Portal badge */}
-        {selectedPortal && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
-            style={{ background: badgeBg, border: `1px solid ${badgeText}30` }}
-          >
-            <span style={{ fontSize: "1rem" }}>{selectedPortal.emoji}</span>
-            <span style={{ fontSize: "0.75rem", color: badgeText, fontWeight: 500 }}>
-              {selectedPortal.fullLabel} Portal
+          <div>
+            <span style={{ fontSize: "1.375rem", fontWeight: 800, color: "white", letterSpacing: "-0.02em" }}>
+              UniBook
             </span>
-          </motion.div>
-        )}
+            <span
+              className="ml-2 px-2 py-0.5 rounded-md text-white"
+              style={{
+                fontSize: "0.625rem",
+                fontWeight: 700,
+                background: "rgba(99,102,241,0.35)",
+                border: "1px solid rgba(165,180,252,0.3)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              ENTERPRISE
+            </span>
+          </div>
+        </div>
 
-        <h2
-          className="text-white mb-4"
-          style={{ fontSize: "1.875rem", fontWeight: 750, lineHeight: 1.2, letterSpacing: "-0.02em" }}
+        {/* Hero text */}
+        <div
+          className="flex-1 flex flex-col justify-center py-10"
+          style={{ animation: "fadeSlideUp 0.75s 0.15s ease both" }}
         >
-          {selectedPortal
-            ? `${selectedPortal.fullLabel} Access`
-            : "Manage University Assets with Ease"}
-        </h2>
-        <p
-          className="mb-10"
-          style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9375rem", lineHeight: 1.7, maxWidth: "340px" }}
-        >
-          {selectedPortal?.isPrivileged
-            ? "Privileged portal — restricted to authorized personnel only. Contact your system administrator for access."
-            : "A unified booking platform for labs, equipment, and rooms — accessible to every member of your campus."}
-        </p>
+          {/* Eyebrow */}
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-7 self-start"
+            style={{
+              background: "rgba(255,255,255,0.07)",
+              border: "1px solid rgba(255,255,255,0.12)",
+            }}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+            <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)", fontWeight: 500, letterSpacing: "0.04em" }}>
+              University Asset Booking System
+            </span>
+          </div>
 
-        <ul className="space-y-3.5 mb-12">
-          {features.map((item) => (
-            <li key={item} className="flex items-center gap-3">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                }}
-              >
-                <Check className="w-3 h-3 text-white" />
-              </div>
-              <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.875rem" }}>{item}</span>
-            </li>
-          ))}
-        </ul>
+          <h1
+            style={{
+              fontSize: "clamp(2rem,3.5vw,2.75rem)",
+              fontWeight: 800,
+              color: "white",
+              lineHeight: 1.1,
+              letterSpacing: "-0.025em",
+            }}
+          >
+            One Portal.<br />
+            <span
+              style={{
+                background: "linear-gradient(90deg, #60A5FA 0%, #34D399 40%, #FBBF24 80%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Every Campus Role.
+            </span>
+          </h1>
 
-        {/* Role icons row */}
-        <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
-            {portals.map((p) => (
-              <div
-                key={p.id}
-                className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
-                style={{
-                  background: p.id === selectedPortal?.id ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)",
-                  borderColor: "rgba(0,0,0,0.4)",
-                  transform: p.id === selectedPortal?.id ? "scale(1.15)" : "scale(1)",
-                  zIndex: p.id === selectedPortal?.id ? 10 : 1,
-                  transition: "all 0.2s",
-                }}
-              >
-                <p.icon className="w-3.5 h-3.5 text-white" />
-              </div>
+          <p
+            className="mt-5 mb-10"
+            style={{ color: "rgba(255,255,255,0.5)", fontSize: "1rem", lineHeight: 1.7, maxWidth: "380px" }}
+          >
+            Admins, technicians, students, and lecturers — all accessing the right
+            tools through a single secure enterprise login.
+          </p>
+
+          {/* Portal role cards 2×2 */}
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            {PORTALS.map((portal, i) => (
+              <PortalCard key={portal.label} portal={portal} index={i} />
             ))}
           </div>
-          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.8125rem" }}>
-            4 role levels · RBAC enabled
-          </p>
+        </div>
+
+        {/* Bottom security badges */}
+        <div
+          className="flex items-center gap-3"
+          style={{ animation: "fadeIn 0.6s 0.5s ease both" }}
+        >
+          <div
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.55)" }}>
+              Secured by{" "}
+              <span style={{ color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>Microsoft Azure AD</span>
+            </span>
+          </div>
+          <div
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <Lock className="w-3.5 h-3.5 text-blue-400" />
+            <span style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.55)" }}>SSO Enabled</span>
+          </div>
         </div>
       </div>
-    </motion.div>
+
+      <style>{`
+        @keyframes fadeSlideDown {
+          from { opacity: 0; transform: translateY(-12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 }

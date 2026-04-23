@@ -94,7 +94,7 @@ public class BookingService {
             );
         }
 
-       // --- AUTOMATED HTML EMAILS ---
+       // --- -AUTOMATED HTML EMAILSs ---
         try {
             // Send the beautiful PENDING email to the user
             emailService.sendBookingHtmlEmail(

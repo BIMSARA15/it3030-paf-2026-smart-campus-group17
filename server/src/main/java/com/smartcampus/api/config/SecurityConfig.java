@@ -36,6 +36,8 @@ public class SecurityConfig {
                .requestMatchers("/", "/error", "/api/auth/dev-login/**", "/api/auth/user").permitAll()
                .requestMatchers(HttpMethod.GET, "/api/resources").permitAll()
                .requestMatchers(HttpMethod.GET, "/api/utilities").permitAll()
+               .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
+               .requestMatchers("/api/ai/**").authenticated()
                .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2

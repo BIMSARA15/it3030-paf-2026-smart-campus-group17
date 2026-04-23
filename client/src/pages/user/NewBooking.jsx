@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
@@ -9,6 +10,7 @@ import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+//import AIChat from '../components/AIChat';
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -190,7 +192,7 @@ export default function NewBooking() {
   const [specialRequests, setSpecialRequests] = useState('');
   const [requestedUtilityIds, setRequestedUtilityIds] = useState([]);
 
-  const [conflict, setConflict] = useState(null);
+  //const [conflict, setConflict] = useState(null);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -291,14 +293,13 @@ export default function NewBooking() {
       }
     }
   }, [searchParams, resources, utilities, currentRole]); // <-- Added utilities to dependency array
-  useEffect(() => {
-    // Convert to 24h for mathematical comparison
+ // NEW: Calculate conflict on the fly instead of using state and useEffect
+  const conflict = useMemo(() => {
     const start24 = formatTo24Hour(startTime);
     const end24 = formatTo24Hour(endTime);
 
     if (selectedResource && date && start24 && end24 && start24 < end24) {
       const overlappingBooking = bookings.find(b => {
-        // NEW: If we are editing, ignore the booking we are currently editing!
         if (isEditing && b.id === id) return false;
 
         if (b.resourceId !== selectedResource.id || b.date !== date) return false;
@@ -313,10 +314,9 @@ export default function NewBooking() {
           (start24 <= bStart && end24 >= bEnd)
         );
       });
-      setConflict(overlappingBooking || null);
-    } else {
-      setConflict(null);
+      return overlappingBooking || null;
     }
+    return null;
   }, [selectedResource, date, startTime, endTime, bookings, isEditing, id]);
 
   const today = new Date().toISOString().split('T')[0];
@@ -1031,6 +1031,7 @@ export default function NewBooking() {
           )}
         </div>
       </div>
+     
     </div>
   );
 }

@@ -140,7 +140,7 @@ export default function Utilities() {
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] text-white hover:from-[#172554] hover:to-[#1D4ED8] shadow-[0_4px_12px_rgba(37,99,235,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
-              Add Utility
+              Add Equipment
             </button>
           </div>
 

@@ -99,4 +99,28 @@ public class BookingService {
         }
         return false;
     }
+    
+    // Update booking details
+    public Booking updateBookingDetails(String id, Booking updatedData) throws Exception {
+        Optional<Booking> existingBookingOpt = bookingRepository.findById(id);
+
+        if (existingBookingOpt.isPresent()) {
+            Booking existingBooking = existingBookingOpt.get();
+
+            // Update the fields
+            existingBooking.setDate(updatedData.getDate());
+            existingBooking.setStartTime(updatedData.getStartTime());
+            existingBooking.setEndTime(updatedData.getEndTime());
+            existingBooking.setPurpose(updatedData.getPurpose());
+            existingBooking.setAttendees(updatedData.getAttendees());
+            existingBooking.setLecturer(updatedData.getLecturer());
+            existingBooking.setSpecialRequests(updatedData.getSpecialRequests());
+            existingBooking.setRequestedUtilityIds(updatedData.getRequestedUtilityIds());
+            
+            existingBooking.setUpdatedAt(LocalDateTime.now());
+
+            return bookingRepository.save(existingBooking);
+        }
+        throw new Exception("Booking not found");
+    }
 }

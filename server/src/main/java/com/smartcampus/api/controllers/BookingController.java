@@ -180,4 +180,15 @@ public class BookingController {
         }
         return ResponseEntity.notFound().build(); 
     }
+
+    // 7. Update an existing booking's details
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateBookingDetails(@PathVariable String id, @RequestBody Booking bookingDetails) {
+        try {
+            Booking updatedBooking = bookingService.updateBookingDetails(id, bookingDetails);
+            return ResponseEntity.ok(updatedBooking);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
 }

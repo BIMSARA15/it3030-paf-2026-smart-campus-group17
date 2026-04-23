@@ -579,10 +579,23 @@ export default function NewBooking() {
                       <h3 className="text-gray-900">{selectedResource.name}</h3>
                       <p className="text-gray-400 text-xs">{selectedResource.location}</p>
                     </div>
-                    {step === 2 && (
+                    
+                    {/* Top Right Corner Action Button */}
+                    {isEditing ? (
+                      <button
+                        onClick={() => navigate('/bookings/my')}
+                        className={`ml-auto text-[13px] font-medium hover:opacity-75 transition-opacity flex items-center gap-1 ${
+                          isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
+                        }`}
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" /> Back to My Bookings
+                      </button>
+                    ) : step === 2 && (
                       <button
                         onClick={() => setStep(1)}
-                        className={`ml-auto text-xs hover:underline flex items-center gap-1 ${theme.textLink}`}
+                        className={`ml-auto text-[13px] font-medium hover:opacity-75 transition-opacity flex items-center gap-1 ${
+                          isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
+                        }`}
                       >
                         <ChevronLeft className="w-3.5 h-3.5" /> Back to Change the Resource
                       </button>

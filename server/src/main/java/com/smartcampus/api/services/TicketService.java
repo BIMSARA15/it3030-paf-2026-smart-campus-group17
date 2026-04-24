@@ -8,7 +8,9 @@ import com.smartcampus.api.exceptions.TicketNotFoundException;
 import com.smartcampus.api.models.Ticket;
 import com.smartcampus.api.models.TicketComment;
 import com.smartcampus.api.models.TicketStatus;
+import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.TicketRepository;
+import com.smartcampus.api.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -51,6 +53,9 @@ public class TicketService {
     @Autowired
     private TicketRepository ticketRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     public Ticket createTicket(CreateTicketRequest req, String userId) {
         if (req.getTitle() == null || req.getTitle().isBlank()) {
             throw new IllegalArgumentException("Title is required");
@@ -80,6 +85,38 @@ public class TicketService {
         t.setCreatedAt(now);
         t.setUpdatedAt(now);
         t.setTicketCode(nextTicketCode());
+
+        List<TicketStatus> activeStatuses = List.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
+        List<User> availableTechnicians = userRepository.findByRoleAndAvailable("TECHNICIAN", true);
+
+        User chosen = null;
+        long lowestWorkload = Long.MAX_VALUE;
+        for (User tech : availableTechnicians) {
+            long workload = ticketRepository.countByAssignedTechnicianIdAndStatusIn(tech.getId(), activeStatuses);
+            if (workload < lowestWorkload) {
+                lowestWorkload = workload;
+                chosen = tech;
+            }
+        }
+
+        if (chosen != null) {
+            t.setAssignedTechnicianId(chosen.getId());
+            String techLabel = chosen.getName() != null && !chosen.getName().isBlank()
+                    ? chosen.getName()
+                    : chosen.getId();
+            t.getComments().add(new TicketComment(
+                    "SYSTEM",
+                    "SYSTEM",
+                    "Ticket auto-assigned to technician " + techLabel + " (id: " + chosen.getId()
+                            + ", active workload: " + lowestWorkload + ")."
+            ));
+        } else {
+            t.getComments().add(new TicketComment(
+                    "SYSTEM",
+                    "SYSTEM",
+                    "No available technician was found. Ticket was saved without assignment."
+            ));
+        }
 
         return ticketRepository.save(t);
     }

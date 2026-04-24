@@ -65,7 +65,29 @@ export default function Resources() {
   const navigate = useNavigate();
   const currentRole = (currentUser?.role || '').toUpperCase();
   const isStudentView = currentRole === 'STUDENT' || currentRole === 'USER';
-  
+  const isLecturer = currentRole === 'LECTURER';
+
+  // THEME OBJECT FOR CONSISTENT STYLING BASED ON ROLE
+  const theme = {
+    gradientBtn: isLecturer 
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106] shadow-[0_4px_12px_rgba(167,65,6,0.3)]' 
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)]',
+    activeFilter: isLecturer
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] text-white shadow-md border-t border-white/20'
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20',
+    textLink: isLecturer ? 'text-[#C54E08]' : 'text-[#17A38A]',
+    textHover: isLecturer ? 'group-hover:text-[#8A3505]' : 'group-hover:text-[#0F6657]',
+    cardHover: isLecturer 
+      ? 'hover:border-[#C54E08]/30'
+      : 'hover:border-[#17A38A]/30',
+    cardSelected: isLecturer
+      ? 'border-[#C54E08] shadow-[0_8px_24px_rgba(167,65,6,0.12)] bg-[#C54E08]/5'
+      : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5',
+    focusRing: isLecturer
+      ? 'focus:border-[#C54E08] focus:ring-[#C54E08]/10'
+      : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10'
+  };
+
   // 2. Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -189,7 +211,7 @@ export default function Resources() {
                 placeholder={typeFilter === 'equipment' ? 'Search equipment, code, location...' : 'Search resources, features...'}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all ${theme.focusRing}"
               />
             </div>
 
@@ -204,7 +226,7 @@ export default function Resources() {
                   }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all ${
                     typeFilter === t
-                      ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Green gradient for active filter
+                      ? theme.activeFilter
                       : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -220,7 +242,7 @@ export default function Resources() {
             <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <SlidersHorizontal className="h-4 w-4 text-[#17A38A]" />
+                  <SlidersHorizontal className={`h-4 w-4 ${theme.textLink}`} />
                   Filter Resources
                 </div>
                 <p className="text-xs text-slate-400">
@@ -235,7 +257,7 @@ export default function Resources() {
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
                     disabled={typeFilter === 'equipment'}
-                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${theme.focusRing}`}
                   >
                     {statusOptions.map((option) => (
                       <option key={option} value={option}>
@@ -251,7 +273,7 @@ export default function Resources() {
                     value={blockFilter}
                     onChange={(event) => setBlockFilter(event.target.value)}
                     disabled={typeFilter === 'equipment'}
-                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${theme.focusRing}`}
                   >
                     {blockOptions.map((option) => (
                       <option key={option} value={option}>
@@ -270,7 +292,7 @@ export default function Resources() {
                     onChange={(event) => setMinCapacityFilter(event.target.value)}
                     disabled={typeFilter === 'equipment'}
                     placeholder="Minimum"
-                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${theme.focusRing}`}
                   />
                 </label>
               </div>
@@ -325,8 +347,8 @@ export default function Resources() {
                         isOutOfStock
                           ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
                           : isSelected 
-                            ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5 hover:shadow-md cursor-pointer'
-                            : 'bg-white border-gray-100 hover:border-[#17A38A]/30 hover:shadow-md cursor-pointer'
+                            ? theme.cardSelected
+                            : `bg-white border-gray-100 ${theme.cardHover}`
                       }`}
                     >
                       {/* NEW: Render Out of Stock Badge */}
@@ -405,17 +427,17 @@ export default function Resources() {
                       setAccessMessage('');
                     }}
                     // NEW: Added relative positioning and disabled styling
-                    className={`rounded-xl border-2 p-5 relative transition-all ${
+                    className={`rounded-xl border-2 p-5 relative transition-all cursor-pointer hover:shadow-md ${
                       isOutOfService
                         ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
                         : isSelected 
                           ? isBlockedForStudent
-                            ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80 cursor-pointer hover:shadow-md'
-                            : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5 cursor-pointer hover:shadow-md'
+                            ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80'
+                            : theme.cardSelected
                           : isBlockedForStudent
-                            ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300 cursor-pointer hover:shadow-md'
-                            : 'bg-white border-gray-100 hover:border-[#17A38A]/30 cursor-pointer hover:shadow-md'
-                    }`}
+                            ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300'
+                            : `bg-white border-gray-100 ${theme.cardHover}`
+                    }`} 
                   >
                     {/* NEW: Render Out of Service Badge */}
                     {isOutOfService && (
@@ -453,7 +475,7 @@ export default function Resources() {
                         ? 'text-gray-500' 
                         : isBlockedForStudent
                           ? 'text-amber-900'
-                          : `text-gray-900 ${isSelected ? 'text-[#0F6657]' : ''}`
+                          : `text-gray-900 ${isSelected ? theme.textLink : theme.textHover}`
                     }`}>
                       {resource.name}
                     </h4>
@@ -673,12 +695,12 @@ export default function Resources() {
                         navigate(`/booking/new?resource=${selectedResource.id}`);
                       }}
                       disabled={isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium border-t active:scale-[0.98] ${
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium border-t active:scale-[0.98] border-white/20 ${
                         isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
                           ? 'bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed shadow-none'
                           : isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer'
-                          ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.28)] border-white/20'
-                          : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-white/20'
+                          ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.28)]'
+                          : `${theme.gradientBtn} text-white`
                       }`}
                     >
                       {isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
@@ -728,7 +750,7 @@ export default function Resources() {
             <button
               type="button"
               onClick={() => setRequestSentPopup(false)}
-              className="mt-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] px-5 py-2.5 text-sm font-medium text-white shadow-[0_4px_12px_rgba(23,163,138,0.3)] transition-all hover:from-[#0c5246] hover:to-[#128a74]"
+              className={`mt-6 inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-all ${theme.gradientBtn}`}
             >
               OK
             </button>

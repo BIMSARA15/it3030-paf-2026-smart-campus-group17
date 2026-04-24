@@ -191,7 +191,6 @@ export default function NewBooking() {
   const [requestedQuantity, setRequestedQuantity] = useState('');
   const [lecturer, setLecturer] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
-  const [requestedUtilityIds, setRequestedUtilityIds] = useState([]);
 
   //const [conflict, setConflict] = useState(null);
   const [errors, setErrors] = useState({});
@@ -246,7 +245,6 @@ export default function NewBooking() {
         setRequestedQuantity(bookingToEdit.quantity ? bookingToEdit.quantity.toString() : '');
         setLecturer(bookingToEdit.lecturer || '');
         setSpecialRequests(bookingToEdit.specialRequests || '');
-        setRequestedUtilityIds(bookingToEdit.requestedUtilityIds || []);
         
         setStep(2); // Automatically skip to the form step
         setHasInitialized(true); // Lock it so it never overwrites again!
@@ -398,14 +396,6 @@ export default function NewBooking() {
     return Object.keys(e).length === 0;
   };
 
-  const toggleRequestedUtility = (utilityId) => {
-    setRequestedUtilityIds((current) =>
-      current.includes(utilityId)
-        ? current.filter((item) => item !== utilityId)
-        : [...current, utilityId]
-    );
-  };
-
   const handleSubmit = async () => {
     if (!validate() || !selectedResource) return;
     if ((selectedResource.status || '').toLowerCase() === 'out of service') return;
@@ -430,7 +420,7 @@ export default function NewBooking() {
       quantity: requestedQuantity && selectedResource.type === 'equipment' ? parseInt(requestedQuantity) : undefined,
       lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(),
       specialRequests: specialRequests.trim(),
-      requestedUtilityIds,
+      //requestedUtilityIds,
     };
 
     // NEW: Choose between updateBooking and createBooking
@@ -507,7 +497,8 @@ export default function NewBooking() {
                       setSelectedResource(null);
                       setDate(''); setStartTime(''); setEndTime('');
                       setPurpose(''); setAttendees(''); setLecturer('');
-                      setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
+                      setSpecialRequests('');
+                      setResult(null);
                     }}
                     className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
                   >
@@ -929,44 +920,6 @@ export default function NewBooking() {
                       />
                     </div>
 
-                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
-                      <div>
-                        <label className="block text-gray-700 text-sm mb-1.5">
-                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
-                          Requested Utilities
-                        </label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {getUtilitiesForResource(selectedResource.id).map((utility) => {
-                            const checked = requestedUtilityIds.includes(utility.id);
-
-                            return (
-                              <label
-                                key={utility.id}
-                                className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-sm transition-all ${
-                                  checked
-                                    ? 'border-[#17A38A]/30 bg-[#17A38A]/5 text-[#0F6657]'
-                                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-[#17A38A]/20 hover:bg-white'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleRequestedUtility(utility.id)}
-                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#17A38A] focus:ring-[#17A38A]/30"
-                                />
-                                <span>
-                                  <span className="block font-medium">{utility.utilityName}</span>
-                                  <span className="block text-xs text-gray-400">
-                                    {utility.utilityCode} · {utility.category}
-                                  </span>
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
                   </div>
                 </div>
 
@@ -1046,24 +999,6 @@ export default function NewBooking() {
                       ))}
                     </div>
                   </div>
-
-                  {requestedUtilityIds.length > 0 && (
-                    <div className="border-t border-gray-50 pt-3 mt-3">
-                      <p className="text-gray-400 text-xs mb-2">Requested Utilities</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {requestedUtilityIds.map((utilityId) => {
-                          const utility = getUtilitiesForResource(selectedResource.id).find((item) => item.id === utilityId);
-                          if (!utility) return null;
-
-                          return (
-                            <span key={utilityId} className="text-xs px-2 py-0.5 bg-blue-50 text-[#2563EB] rounded-lg border border-blue-100">
-                              {utility.utilityName}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-100 p-5">

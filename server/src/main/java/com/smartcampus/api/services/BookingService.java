@@ -252,8 +252,6 @@ public class BookingService {
             existingBooking.setAttendees(updatedData.getAttendees());
             existingBooking.setLecturer(updatedData.getLecturer());
             existingBooking.setSpecialRequests(updatedData.getSpecialRequests());
-            existingBooking.setRequestedUtilityIds(updatedData.getRequestedUtilityIds());
-            
             existingBooking.setUpdatedAt(LocalDateTime.now());
 
             return bookingRepository.save(existingBooking);

@@ -12,7 +12,7 @@ import Header from '../../components/Header';
 import AIChat from '../../components/AIChat';
 
 export default function LecturerDashboard() {
-  const { currentUser, bookings, resources, studentRequests, getResourceById, fetchUserBookings } = useBooking();
+  const { currentUser, bookings, resources, studentRequests, getResourceById, getUtilityById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -89,6 +89,21 @@ export default function LecturerDashboard() {
     { label: 'Approved', value: stats.approved, icon: CalendarCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
     { label: 'Student Requests', value: stats.studentRequests, icon: Users, color: 'text-[#A74106]', bg: 'bg-orange-50', border: 'border-orange-100' },
   ];
+
+  const getBookingItem = (id) => {
+    const resource = getResourceById(id);
+    if (resource) return resource;
+
+    const utility = getUtilityById(id);
+    if (utility) {
+      return {
+        ...utility,
+        name: utility.utilityName || utility.name || 'Unknown Equipment',
+        type: 'equipment'
+      };
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -244,7 +259,7 @@ export default function LecturerDashboard() {
               </div>
               <div className="divide-y divide-gray-50">
                 {upcoming.map(booking => {
-                  const resource = getResourceById(booking.resourceId);
+                  const resource = getBookingItem(booking.resourceId);
                   return (
                     <div key={booking.id} className="flex items-center gap-4 px-5 py-3.5">
                       <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -289,7 +304,7 @@ export default function LecturerDashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {recent.map(booking => {
-                    const resource = getResourceById(booking.resourceId);
+                    const resource = getBookingItem(booking.resourceId);
                     return (
                       <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3">

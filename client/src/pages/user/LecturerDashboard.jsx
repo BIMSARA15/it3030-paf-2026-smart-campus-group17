@@ -9,6 +9,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, } from 'recharts';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import AIChat from '../../components/AIChat';
 
 export default function LecturerDashboard() {
   const { currentUser, bookings, resources, studentRequests, getResourceById, fetchUserBookings } = useBooking();
@@ -314,6 +315,8 @@ export default function LecturerDashboard() {
           </div>
         </div>
       </div>
+      {/* --- ADD THE AI CHAT WIDGET HERE --- */}
+      <AIChat />
     </div>
   );
 }

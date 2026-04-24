@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, MapPin, User, Calendar, Wrench, Image as ImageIcon } from "lucide-react";
 import TicketStatusBadge from "./TicketStatusBadge";
 import TicketPriorityBadge from "./TicketPriorityBadge";
@@ -38,10 +38,19 @@ export default function StatusUpdateModal({ ticket, onClose, onChanged, onError 
   // after each action without waiting for the parent's refetch.
   const [current, setCurrent] = useState(ticket);
 
-  const choices = NEXT[current.status] || [];
-  const [status, setStatus] = useState(choices[0] || current.status);
+  const initialChoices = NEXT[ticket.status] || [];
+  const [status, setStatus] = useState(initialChoices[0] || ticket.status);
   const [note, setNote] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
+
+  useEffect(() => {
+    setCurrent(ticket);
+    const nextChoices = NEXT[ticket.status] || [];
+    setStatus(nextChoices[0] || ticket.status);
+    setNote("");
+  }, [ticket?.id]);
+
+  const choices = NEXT[current.status] || [];
 
   const submitStatus = async (e) => {
     e.preventDefault();

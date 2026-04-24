@@ -9,6 +9,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Sidebar from '../../components/Sidebar'; // Import Sidebar
 import Header from '../../components/Header'; // Import header
+import ReportIssueModal from '../../components/tickets/ReportIssueModal';
 
 export default function StudentDashboard() {
   const { currentUser, bookings, resources, getResourceById, fetchUserBookings } = useBooking();
@@ -16,6 +17,7 @@ export default function StudentDashboard() {
 
   // Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showRaiseTicket, setShowRaiseTicket] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   
@@ -205,7 +207,8 @@ export default function StudentDashboard() {
                 </button>
                 {/* --- NEW: Raise a Ticket Action (Light Orange Theme) --- */}
                   <button
-                    onClick={() => navigate('/maintenance')}
+                    type="button"
+                    onClick={() => setShowRaiseTicket(true)}
                     className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50/80 hover:bg-orange-500/10 transition-colors group text-left border border-transparent hover:border-orange-500/20"
                   >
                     <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
@@ -363,6 +366,13 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {showRaiseTicket && (
+        <ReportIssueModal
+          onClose={() => setShowRaiseTicket(false)}
+          onCreated={() => setShowRaiseTicket(false)}
+        />
+      )}
     </div>
   );
 }

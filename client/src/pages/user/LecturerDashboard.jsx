@@ -9,12 +9,14 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, } from 'recharts';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import ReportIssueModal from '../../components/tickets/ReportIssueModal';
 
 export default function LecturerDashboard() {
   const { currentUser, bookings, resources, studentRequests, getResourceById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showRaiseTicket, setShowRaiseTicket] = useState(false);
 
   // Create a local state to hold the live dashboard bookings
   const [myBookings, setMyBookings] = useState([]);
@@ -213,7 +215,8 @@ export default function LecturerDashboard() {
                 </button>
                 {/* RUST/ORANGE QUICK ACTION: RAISE A TICKET */}
                 <button
-                  onClick={() => navigate('/maintenance')}
+                  type="button"
+                  onClick={() => setShowRaiseTicket(true)}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#A74106]/5 hover:bg-[#A74106]/10 transition-colors group text-left border border-transparent hover:border-[#A74106]/20"
                 >
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8A3505] to-[#C54E08] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
@@ -314,6 +317,13 @@ export default function LecturerDashboard() {
           </div>
         </div>
       </div>
+
+      {showRaiseTicket && (
+        <ReportIssueModal
+          onClose={() => setShowRaiseTicket(false)}
+          onCreated={() => setShowRaiseTicket(false)}
+        />
+      )}
     </div>
   );
 }

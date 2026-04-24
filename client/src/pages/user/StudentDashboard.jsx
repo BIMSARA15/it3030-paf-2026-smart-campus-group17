@@ -12,7 +12,7 @@ import Header from '../../components/Header'; // Import header
 import AIChat from '../../components/AIChat';
 
 export default function StudentDashboard() {
-  const { currentUser, bookings, resources, getResourceById, fetchUserBookings } = useBooking();
+  const { currentUser, bookings, resources, getResourceById, getUtilityById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   // Add Sidebar State
@@ -98,6 +98,21 @@ export default function StudentDashboard() {
     { label: 'Approved', value: stats.approved, icon: CalendarCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
     { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
   ];
+
+  const getBookingItem = (id) => {
+    const resource = getResourceById(id);
+    if (resource) return resource;
+
+    const utility = getUtilityById(id);
+    if (utility) {
+      return {
+        ...utility,
+        name: utility.utilityName || utility.name || 'Unknown Equipment',
+        type: 'equipment'
+      };
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -209,20 +224,20 @@ export default function StudentDashboard() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                {/* --- NEW: Raise a Ticket Action (Light Orange Theme) --- */}
-                  <button
-                    onClick={() => navigate('/maintenance')}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50/80 hover:bg-orange-500/10 transition-colors group text-left border border-transparent hover:border-orange-500/20"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                      <Wrench className="w-4 h-4 text-orange-500" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-gray-900 text-sm font-medium">Raise a Ticket</p>
-                      <p className="text-gray-500 text-xs">Report a maintenance issue</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
+                {/* --- Quick Action: Raise a Ticket (Green Theme) --- */}
+                <button
+                  onClick={() => navigate('/maintenance')}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-[#17A38A]/10 transition-colors group text-left border border-transparent hover:border-[#17A38A]/20"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0F6657] to-[#17A38A] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
+                    <Wrench className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[#0F6657] text-sm font-medium">Raise a Ticket</p>
+                    <p className="text-[#17A38A] text-xs">Report a maintenance issue</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#17A38A] group-hover:translate-x-0.5 transition-transform" />
+                </button>
           
                 {isAdmin && (
                   <button
@@ -284,7 +299,7 @@ export default function StudentDashboard() {
               </div>
               <div className="divide-y divide-gray-50">
                 {upcoming.map(booking => {
-                  const resource = getResourceById(booking.resourceId);
+                  const resource = getBookingItem(booking.resourceId);
                   return (
                     <div key={booking.id} className="flex items-center gap-4 px-5 py-3.5">
                       <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -330,7 +345,7 @@ export default function StudentDashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {recent.map(booking => {
-                    const resource = getResourceById(booking.resourceId);
+                    const resource = getBookingItem(booking.resourceId);
                     return (
                       <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3">

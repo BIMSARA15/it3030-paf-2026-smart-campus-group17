@@ -25,9 +25,10 @@ const TYPE_CONFIG = {
 };
 
 const DEFAULT_RESOURCE_IMAGES = {
-  lectureRoom: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Gfp-lecture-hall.jpg/960px-Gfp-lecture-hall.jpg',
-  lab: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+  lectureRoom: 'https://i.pinimg.com/736x/f8/98/46/f89846b24148276c9000e38c51c82ce5.jpg',
+  lab: 'https://i.pinimg.com/736x/39/ee/cb/39eecbeca86920e153e277780f20feed.jpg',
   meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+  equipment: 'https://i.pinimg.com/736x/64/e7/8f/64e78f4c21c54ff2b9765fa14b62267b.jpg',
 };
 
 const getResourceImage = (resource) => {
@@ -36,6 +37,7 @@ const getResourceImage = (resource) => {
   const originalType = (resource.resourceType || resource.type || '').toLowerCase();
   if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
   if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+  if (originalType.includes('equipment') || originalType.includes('utility')) return DEFAULT_RESOURCE_IMAGES.equipment;
 
   return DEFAULT_RESOURCE_IMAGES.lectureRoom;
 };
@@ -63,7 +65,29 @@ export default function Resources() {
   const navigate = useNavigate();
   const currentRole = (currentUser?.role || '').toUpperCase();
   const isStudentView = currentRole === 'STUDENT' || currentRole === 'USER';
-  
+  const isLecturer = currentRole === 'LECTURER';
+
+  // THEME OBJECT FOR CONSISTENT STYLING BASED ON ROLE
+  const theme = {
+    gradientBtn: isLecturer 
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106] shadow-[0_4px_12px_rgba(167,65,6,0.3)]' 
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)]',
+    activeFilter: isLecturer
+      ? 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] text-white shadow-md border-t border-white/20'
+      : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20',
+    textLink: isLecturer ? 'text-[#C54E08]' : 'text-[#17A38A]',
+    textHover: isLecturer ? 'group-hover:text-[#8A3505]' : 'group-hover:text-[#0F6657]',
+    cardHover: isLecturer 
+      ? 'hover:border-[#C54E08]/30'
+      : 'hover:border-[#17A38A]/30',
+    cardSelected: isLecturer
+      ? 'border-[#C54E08] shadow-[0_8px_24px_rgba(167,65,6,0.12)] bg-[#C54E08]/5'
+      : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5',
+    focusRing: isLecturer
+      ? 'focus:border-[#C54E08] focus:ring-[#C54E08]/10'
+      : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10'
+  };
+
   // 2. Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -187,7 +211,7 @@ export default function Resources() {
                 placeholder={typeFilter === 'equipment' ? 'Search equipment, code, location...' : 'Search resources, features...'}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#17A38A] focus:ring-2 focus:ring-[#17A38A]/10 transition-all ${theme.focusRing}"
               />
             </div>
 
@@ -202,7 +226,7 @@ export default function Resources() {
                   }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all ${
                     typeFilter === t
-                      ? 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white shadow-md border-t border-white/20' // UPDATED: Green gradient for active filter
+                      ? theme.activeFilter
                       : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -218,7 +242,7 @@ export default function Resources() {
             <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  <SlidersHorizontal className="h-4 w-4 text-[#17A38A]" />
+                  <SlidersHorizontal className={`h-4 w-4 ${theme.textLink}`} />
                   Filter Resources
                 </div>
                 <p className="text-xs text-slate-400">
@@ -233,7 +257,7 @@ export default function Resources() {
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
                     disabled={typeFilter === 'equipment'}
-                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${theme.focusRing}`}
                   >
                     {statusOptions.map((option) => (
                       <option key={option} value={option}>
@@ -249,7 +273,7 @@ export default function Resources() {
                     value={blockFilter}
                     onChange={(event) => setBlockFilter(event.target.value)}
                     disabled={typeFilter === 'equipment'}
-                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${theme.focusRing}`}
                   >
                     {blockOptions.map((option) => (
                       <option key={option} value={option}>
@@ -268,7 +292,7 @@ export default function Resources() {
                     onChange={(event) => setMinCapacityFilter(event.target.value)}
                     disabled={typeFilter === 'equipment'}
                     placeholder="Minimum"
-                    className="w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:border-[#17A38A] focus:bg-white focus:ring-2 focus:ring-[#17A38A]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={`w-full rounded-xl border border-gray-200 bg-slate-50 px-3.5 py-2.5 text-sm text-gray-700 outline-none transition-all focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${theme.focusRing}`}
                   />
                 </label>
               </div>
@@ -307,26 +331,43 @@ export default function Resources() {
                 ) : (
                   filteredUtilities.map((utility) => {
                     const isSelected = selectedId === utility.id;
+                    const isOutOfStock = utility.quantity <= 0; // NEW: Check stock level
+
                     return (
                     <button
                       key={utility.id}
+                      disabled={isOutOfStock} // NEW: Disable button if 0
                       onClick={() => {
+                        if (isOutOfStock) return; // NEW: Prevent selection
                         setSelectedId(isSelected ? null : utility.id);
                         setAccessMessage('');
                       }}
-                      className={`text-left w-full rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-                        isSelected 
-                          ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5'
-                          : 'bg-white border-gray-100 hover:border-[#17A38A]/30'
+                      // NEW: Apply relative positioning and grayscale logic
+                      className={`text-left w-full rounded-xl border-2 p-5 relative transition-all ${
+                        isOutOfStock
+                          ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
+                          : isSelected 
+                            ? theme.cardSelected
+                            : `bg-white border-gray-100 ${theme.cardHover}`
                       }`}
                     >
+                      {/* NEW: Render Out of Stock Badge */}
+                      {isOutOfStock && (
+                        <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                          Out of Stock
+                        </div>
+                      )}
+
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
                           <Package className="w-5 h-5" />
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
-                          {utility.category}
-                        </span>
+                        {/* Hide normal category badge if out of stock to avoid overlap */}
+                        {!isOutOfStock && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
+                            {utility.category}
+                          </span>
+                        )}
                       </div>
 
                       <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
@@ -342,7 +383,8 @@ export default function Resources() {
                         {utility.location}
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                      {/* UPDATED: Make quantity text red if out of stock */}
+                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
                         <Package className="w-3.5 h-3.5" />
                         Quantity: {utility.quantity}
                       </div>
@@ -372,49 +414,68 @@ export default function Resources() {
                 const isLecturerOnly = (resource.access || '').toLowerCase() === 'lecturer';
                 const isBlockedForStudent = isStudentView && isLecturerOnly;
                 const requestAlreadySent = isBlockedForStudent && hasExistingRequest(resource.id);
+                
+                // NEW: Determine if the resource is out of service
+                const isOutOfService = (resource.status || '').toLowerCase() === 'out of service';
 
                 return (
                   <div
                     key={resource.id}
                     onClick={() => {
+                      if (isOutOfService) return; // NEW: Prevent clicking if out of service
                       setSelectedId(isSelected ? null : resource.id);
                       setAccessMessage('');
                     }}
-                    className={`rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-                      isSelected 
-                        ? isBlockedForStudent
-                          ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80'
-                          : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5'
-                        : isBlockedForStudent
-                          ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300'
-                          : 'bg-white border-gray-100 hover:border-[#17A38A]/30'
-                    }`}
+                    // NEW: Added relative positioning and disabled styling
+                    className={`rounded-xl border-2 p-5 relative transition-all cursor-pointer hover:shadow-md ${
+                      isOutOfService
+                        ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
+                        : isSelected 
+                          ? isBlockedForStudent
+                            ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80'
+                            : theme.cardSelected
+                          : isBlockedForStudent
+                            ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300'
+                            : `bg-white border-gray-100 ${theme.cardHover}`
+                    }`} 
                   >
+                    {/* NEW: Render Out of Service Badge */}
+                    {isOutOfService && (
+                      <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                        Out of Service
+                      </div>
+                    )}
+
                     {/* Top row */}
                     <div className="flex items-start justify-between mb-3">
                       <div className={`w-10 h-10 rounded-xl ${cfg.bg} ${cfg.border} border flex items-center justify-center ${cfg.color}`}>
                         {cfg.icon}
                       </div>
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className={`text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color} capitalize`}>
-                          {cfg.label}
-                        </span>
-                        <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
-                          isBlockedForStudent
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {getAccessLabel(resource.access)}
-                        </span>
-                      </div>
+                      
+                      {/* Hide standard badges if Out of Service to prevent overlap */}
+                      {!isOutOfService && (
+                        <div className="flex flex-col items-end gap-1.5">
+                          <span className={`text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color} capitalize`}>
+                            {cfg.label}
+                          </span>
+                          <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                            isBlockedForStudent
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {getAccessLabel(resource.access)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Name */}
-                    {/* UPDATED: Title text color when selected */}
                     <h4 className={`font-medium mb-1 transition-colors ${
-                      isBlockedForStudent
-                        ? 'text-amber-900'
-                        : `text-gray-900 ${isSelected ? 'text-[#0F6657]' : ''}`
+                      isOutOfService 
+                        ? 'text-gray-500' 
+                        : isBlockedForStudent
+                          ? 'text-amber-900'
+                          : `text-gray-900 ${isSelected ? theme.textLink : theme.textHover}`
                     }`}>
                       {resource.name}
                     </h4>
@@ -427,7 +488,7 @@ export default function Resources() {
 
                     {/* Capacity */}
                     {resource.capacity && (
-                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfService ? 'text-gray-400' : 'text-gray-500'}`}>
                         <Users className="w-3.5 h-3.5" />
                         Capacity: {resource.capacity} persons
                       </div>
@@ -436,19 +497,22 @@ export default function Resources() {
                     {/* Features */}
                     <div className="flex flex-wrap gap-1 mb-3">
                       {resource.features.slice(0, 3).map(f => (
-                        <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
+                        <span key={f} className={`text-xs px-1.5 py-0.5 rounded-md ${isOutOfService ? 'bg-gray-200 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{f}</span>
                       ))}
                       {resource.features.length > 3 && (
-                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-md ${isOutOfService ? 'bg-gray-200 text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
                           +{resource.features.length - 3} more
                         </span>
                       )}
                     </div>
 
                     {/* Stats row */}
-                    <div className={`flex items-center justify-between pt-3 ${isBlockedForStudent ? 'border-t border-amber-100' : 'border-t border-gray-50'}`}>
-                      <div className="text-xs text-gray-400">
-                        {isBlockedForStudent
+                    <div className={`flex items-center justify-between pt-3 ${isBlockedForStudent && !isOutOfService ? 'border-t border-amber-100' : 'border-t border-gray-50'}`}>
+                      <div className="text-xs font-medium">
+                        {/* UPDATED: Added Out of Service display to the footer */}
+                        {isOutOfService
+                          ? <span className="text-red-500 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Currently Unavailable</span>
+                          : isBlockedForStudent
                           ? requestAlreadySent
                             ? <span className="text-amber-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Request already sent</span>
                             : <span className="text-amber-700 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Lecturer access required</span>
@@ -457,9 +521,13 @@ export default function Resources() {
                           : <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Available</span>
                         }
                       </div>
-                      <div className={`flex items-center gap-1 text-xs font-medium ${isBlockedForStudent ? 'text-amber-700' : 'text-[#17A38A]'}`}>
-                        View <ChevronRight className="w-3 h-3" />
-                      </div>
+                      
+                      {/* Hide the 'View' button entirely if out of service */}
+                      {!isOutOfService && (
+                        <div className={`flex items-center gap-1 text-xs font-medium ${isBlockedForStudent ? 'text-amber-700' : 'text-[#17A38A]'}`}>
+                          View <ChevronRight className="w-3 h-3" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -627,12 +695,12 @@ export default function Resources() {
                         navigate(`/booking/new?resource=${selectedResource.id}`);
                       }}
                       disabled={isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium border-t active:scale-[0.98] ${
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium border-t active:scale-[0.98] border-white/20 ${
                         isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
                           ? 'bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed shadow-none'
                           : isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer'
-                          ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.28)] border-white/20'
-                          : 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] text-white hover:from-[#0c5246] hover:to-[#128a74] shadow-[0_4px_12px_rgba(23,163,138,0.3)] border-white/20'
+                          ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.28)]'
+                          : `${theme.gradientBtn} text-white`
                       }`}
                     >
                       {isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
@@ -682,7 +750,7 @@ export default function Resources() {
             <button
               type="button"
               onClick={() => setRequestSentPopup(false)}
-              className="mt-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#0F6657] to-[#17A38A] px-5 py-2.5 text-sm font-medium text-white shadow-[0_4px_12px_rgba(23,163,138,0.3)] transition-all hover:from-[#0c5246] hover:to-[#128a74]"
+              className={`mt-6 inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-all ${theme.gradientBtn}`}
             >
               OK
             </button>

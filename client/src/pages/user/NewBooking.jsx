@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
@@ -188,9 +187,9 @@ export default function NewBooking() {
   const [endTime, setEndTime] = useState('');
   const [purpose, setPurpose] = useState('');
   const [attendees, setAttendees] = useState('');
+  const [requestedQuantity, setRequestedQuantity] = useState('');
   const [lecturer, setLecturer] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
-  const [requestedUtilityIds, setRequestedUtilityIds] = useState([]);
 
   //const [conflict, setConflict] = useState(null);
   const [errors, setErrors] = useState({});
@@ -206,17 +205,17 @@ export default function NewBooking() {
     fetchUtilities();
   }, []);
 
-  // NEW: Pre-fill data if we are editing an existing booking
+  // Pre-fill data if we are editing an existing booking
   useEffect(() => {
-    // FIX: Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
+    // Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
     if (isEditing && bookings.length > 0 && (resources.length > 0 || utilities.length > 0) && !hasInitialized) {
       const bookingToEdit = bookings.find(b => String(b.id) === String(id));
       
       if (bookingToEdit) {
-        // 1. Try normal resource
+        // Try normal resource
         let r = getResourceById(bookingToEdit.resourceId);
         
-        // 2. Try utilities if not found
+        // Try utilities if not found
         if (!r && utilities && utilities.length > 0) {
           const u = utilities.find(util => util.id === bookingToEdit.resourceId);
           if (u) {
@@ -242,9 +241,9 @@ export default function NewBooking() {
         setEndTime(bookingToEdit.endTime || '');
         setPurpose(bookingToEdit.purpose || '');
         setAttendees(bookingToEdit.attendees ? bookingToEdit.attendees.toString() : '');
+        setRequestedQuantity(bookingToEdit.quantity ? bookingToEdit.quantity.toString() : '');
         setLecturer(bookingToEdit.lecturer || '');
         setSpecialRequests(bookingToEdit.specialRequests || '');
-        setRequestedUtilityIds(bookingToEdit.requestedUtilityIds || []);
         
         setStep(2); // Automatically skip to the form step
         setHasInitialized(true); // Lock it so it never overwrites again!
@@ -381,16 +380,19 @@ export default function NewBooking() {
       }
     }
 
+    // Validation for Equipment Quantity
+    if (selectedResource?.type === 'equipment') {
+      if (!requestedQuantity) {
+        e.requestedQuantity = 'Please provide the quantity';
+      } else if (parseInt(requestedQuantity) > selectedResource.quantity) {
+        e.requestedQuantity = `Only ${selectedResource.quantity} available`;
+      } else if (parseInt(requestedQuantity) < 1) {
+        e.requestedQuantity = 'Must request at least 1';
+      }
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
-  };
-
-  const toggleRequestedUtility = (utilityId) => {
-    setRequestedUtilityIds((current) =>
-      current.includes(utilityId)
-        ? current.filter((item) => item !== utilityId)
-        : [...current, utilityId]
-    );
   };
 
   const handleSubmit = async () => {
@@ -414,9 +416,10 @@ export default function NewBooking() {
       endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
+      quantity: requestedQuantity && selectedResource.type === 'equipment' ? parseInt(requestedQuantity) : undefined,
       lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(),
       specialRequests: specialRequests.trim(),
-      requestedUtilityIds,
+      //requestedUtilityIds,
     };
 
     // NEW: Choose between updateBooking and createBooking
@@ -493,7 +496,8 @@ export default function NewBooking() {
                       setSelectedResource(null);
                       setDate(''); setStartTime(''); setEndTime('');
                       setPurpose(''); setAttendees(''); setLecturer('');
-                      setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
+                      setSpecialRequests('');
+                      setResult(null);
                     }}
                     className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
                   >
@@ -629,47 +633,78 @@ export default function NewBooking() {
                     ))}
 
                     {/* --- RENDER EQUIPMENTS (UTILITIES) --- */}
-                    {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => (
-                      <button
-                        key={`util-${utility.id}`}
-                        onClick={() => { 
-                          setSelectedResource({
-                            id: utility.id,
-                            name: utility.utilityName,
-                            location: utility.location,
-                            type: 'equipment',
-                            capacity: null, 
-                            features: [],
-                            access: 'anyone',
-                            status: utility.status,
-                            description: utility.description
-                          }); 
-                          setStep(2); 
-                        }}
-                        className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS['equipment']}`}>
-                            {TYPE_ICONS['equipment']}
+                    {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => {
+                      const isOutOfStock = utility.quantity <= 0;
+
+                      return (
+                        <button
+                          key={`util-${utility.id}`}
+                          disabled={isOutOfStock}
+                          onClick={() => { 
+                            if (isOutOfStock) return; // Fail-safe to prevent selection
+                            
+                            setSelectedResource({
+                              id: utility.id,
+                              name: utility.utilityName,
+                              location: utility.location,
+                              type: 'equipment',
+                              capacity: null,
+                              quantity: utility.quantity, 
+                              features: [],
+                              access: 'anyone',
+                              status: utility.status,
+                              description: utility.description
+                            }); 
+                            setStep(2); 
+                          }}
+                          // NEW: Apply gray styles and remove hover effects if out of stock
+                          className={`text-left p-4 rounded-xl border-2 relative transition-all ${
+                            isOutOfStock 
+                              ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200' 
+                              : `border-gray-100 group ${theme.cardHover}`
+                          }`}
+                        >
+                          {/* NEW: Render Out of Stock Badge */}
+                          {isOutOfStock && (
+                            <div className="absolute top-3 right-3 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                              Out of Stock
+                            </div>
+                          )}
+
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS['equipment']}`}>
+                              {TYPE_ICONS['equipment']}
+                            </div>
+                            
+                            {/* Hide standard category badge if out of stock so it doesn't crowd the top corner */}
+                            {!isOutOfStock && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS['equipment']}`}>
+                                {utility.category || 'Equipment'}
+                              </span>
+                            )}
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS['equipment']}`}>
-                            {utility.category || 'Equipment'}
-                          </span>
-                        </div>
-                        <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{utility.utilityName}</h4>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                          <MapPin className="w-3 h-3" />
-                          {utility.location}
-                        </div>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs">
-                          <Package className="w-3 h-3" />
-                          Quantity: {utility.quantity}
-                        </div>
-                        <div className="mt-2">
-                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">{utility.utilityCode}</span>
-                        </div>
-                      </button>
-                    ))}
+                          <h4 className={`text-gray-900 mb-1 transition-colors ${!isOutOfStock ? theme.textHover : ''}`}>
+                            {utility.utilityName}
+                          </h4>
+                          <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
+                            <MapPin className="w-3 h-3" />
+                            {utility.location}
+                          </div>
+                          
+                          {/* Highlight the quantity in red if it's zero */}
+                          <div className={`flex items-center gap-1 text-xs ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                            <Package className="w-3 h-3" />
+                            Quantity: {utility.quantity}
+                          </div>
+                          
+                          <div className="mt-2">
+                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">
+                              {utility.utilityCode}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </>
                 )}
 
@@ -828,6 +863,28 @@ export default function NewBooking() {
                       </div>
                     )}
 
+                    {/* NEW: Equipment Quantity Field */}
+                    {selectedResource?.type === 'equipment' && selectedResource?.quantity !== undefined && (
+                      <div>
+                        <label className="block text-gray-700 text-sm mb-1.5">
+                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
+                          Quantity <span className="text-red-500">*</span>
+                          <span className="text-gray-400 text-xs ml-1">(only {selectedResource.quantity} left)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={selectedResource.quantity}
+                          disabled={step === 3}
+                          placeholder={`1 – ${selectedResource.quantity}`}
+                          value={requestedQuantity}
+                          onChange={e => { setRequestedQuantity(e.target.value); setErrors(p => ({ ...p, requestedQuantity: '' })); }}
+                          className={inputClass('requestedQuantity')}
+                        />
+                        {errors.requestedQuantity && <p className="text-red-500 text-xs mt-1">{errors.requestedQuantity}</p>}
+                      </div>
+                    )}
+
                     {/* Only shows if NOT a lecturer */}
                     {!isLecturer && (
                       <div>
@@ -861,44 +918,6 @@ export default function NewBooking() {
                         className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:bg-white focus:ring-2 transition-all resize-none ${theme.focusRing}`}
                       />
                     </div>
-
-                    {getUtilitiesForResource(selectedResource.id).length > 0 && (
-                      <div>
-                        <label className="block text-gray-700 text-sm mb-1.5">
-                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
-                          Requested Utilities
-                        </label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {getUtilitiesForResource(selectedResource.id).map((utility) => {
-                            const checked = requestedUtilityIds.includes(utility.id);
-
-                            return (
-                              <label
-                                key={utility.id}
-                                className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-sm transition-all ${
-                                  checked
-                                    ? 'border-[#17A38A]/30 bg-[#17A38A]/5 text-[#0F6657]'
-                                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-[#17A38A]/20 hover:bg-white'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleRequestedUtility(utility.id)}
-                                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#17A38A] focus:ring-[#17A38A]/30"
-                                />
-                                <span>
-                                  <span className="block font-medium">{utility.utilityName}</span>
-                                  <span className="block text-xs text-gray-400">
-                                    {utility.utilityCode} · {utility.category}
-                                  </span>
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
 
                   </div>
                 </div>
@@ -946,7 +965,7 @@ export default function NewBooking() {
                         setStep(1);
                         setSelectedResource(null);
                         setDate(''); setStartTime(''); setEndTime('');
-                        setPurpose(''); setAttendees(''); setLecturer('');
+                      setPurpose(''); setAttendees(''); setRequestedQuantity(''); setLecturer('');
                         setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
                       }}
                       className={`w-full py-2.5 px-4 rounded-xl text-white text-sm font-medium transition-all active:scale-[0.98] mt-1 border-t border-white/30 ${theme.gradientBtnLg}`}
@@ -979,24 +998,6 @@ export default function NewBooking() {
                       ))}
                     </div>
                   </div>
-
-                  {requestedUtilityIds.length > 0 && (
-                    <div className="border-t border-gray-50 pt-3 mt-3">
-                      <p className="text-gray-400 text-xs mb-2">Requested Utilities</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {requestedUtilityIds.map((utilityId) => {
-                          const utility = getUtilitiesForResource(selectedResource.id).find((item) => item.id === utilityId);
-                          if (!utility) return null;
-
-                          return (
-                            <span key={utilityId} className="text-xs px-2 py-0.5 bg-blue-50 text-[#2563EB] rounded-lg border border-blue-100">
-                              {utility.utilityName}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-100 p-5">

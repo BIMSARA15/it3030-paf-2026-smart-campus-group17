@@ -188,6 +188,7 @@ export default function NewBooking() {
   const [endTime, setEndTime] = useState('');
   const [purpose, setPurpose] = useState('');
   const [attendees, setAttendees] = useState('');
+  const [requestedQuantity, setRequestedQuantity] = useState('');
   const [lecturer, setLecturer] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [requestedUtilityIds, setRequestedUtilityIds] = useState([]);
@@ -206,17 +207,17 @@ export default function NewBooking() {
     fetchUtilities();
   }, []);
 
-  // NEW: Pre-fill data if we are editing an existing booking
+  // Pre-fill data if we are editing an existing booking
   useEffect(() => {
-    // FIX: Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
+    // Added !hasInitialized so it only pre-fills ONCE and doesn't overwrite your typing
     if (isEditing && bookings.length > 0 && (resources.length > 0 || utilities.length > 0) && !hasInitialized) {
       const bookingToEdit = bookings.find(b => String(b.id) === String(id));
       
       if (bookingToEdit) {
-        // 1. Try normal resource
+        // Try normal resource
         let r = getResourceById(bookingToEdit.resourceId);
         
-        // 2. Try utilities if not found
+        // Try utilities if not found
         if (!r && utilities && utilities.length > 0) {
           const u = utilities.find(util => util.id === bookingToEdit.resourceId);
           if (u) {
@@ -242,6 +243,7 @@ export default function NewBooking() {
         setEndTime(bookingToEdit.endTime || '');
         setPurpose(bookingToEdit.purpose || '');
         setAttendees(bookingToEdit.attendees ? bookingToEdit.attendees.toString() : '');
+        setRequestedQuantity(bookingToEdit.quantity ? bookingToEdit.quantity.toString() : '');
         setLecturer(bookingToEdit.lecturer || '');
         setSpecialRequests(bookingToEdit.specialRequests || '');
         setRequestedUtilityIds(bookingToEdit.requestedUtilityIds || []);
@@ -381,6 +383,17 @@ export default function NewBooking() {
       }
     }
 
+    // Validation for Equipment Quantity
+    if (selectedResource?.type === 'equipment') {
+      if (!requestedQuantity) {
+        e.requestedQuantity = 'Please provide the quantity';
+      } else if (parseInt(requestedQuantity) > selectedResource.quantity) {
+        e.requestedQuantity = `Only ${selectedResource.quantity} available`;
+      } else if (parseInt(requestedQuantity) < 1) {
+        e.requestedQuantity = 'Must request at least 1';
+      }
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -414,6 +427,7 @@ export default function NewBooking() {
       endTime,
       purpose: purpose.trim(),
       attendees: attendees ? parseInt(attendees) : undefined,
+      quantity: requestedQuantity && selectedResource.type === 'equipment' ? parseInt(requestedQuantity) : undefined,
       lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(),
       specialRequests: specialRequests.trim(),
       requestedUtilityIds,
@@ -638,7 +652,8 @@ export default function NewBooking() {
                             name: utility.utilityName,
                             location: utility.location,
                             type: 'equipment',
-                            capacity: null, 
+                            capacity: null,
+                            quantity: utility.quantity, 
                             features: [],
                             access: 'anyone',
                             status: utility.status,
@@ -828,6 +843,28 @@ export default function NewBooking() {
                       </div>
                     )}
 
+                    {/* NEW: Equipment Quantity Field */}
+                    {selectedResource?.type === 'equipment' && selectedResource?.quantity !== undefined && (
+                      <div>
+                        <label className="block text-gray-700 text-sm mb-1.5">
+                          <Package className="w-3.5 h-3.5 inline mr-1.5" />
+                          Quantity <span className="text-red-500">*</span>
+                          <span className="text-gray-400 text-xs ml-1">(only {selectedResource.quantity} left)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={selectedResource.quantity}
+                          disabled={step === 3}
+                          placeholder={`1 – ${selectedResource.quantity}`}
+                          value={requestedQuantity}
+                          onChange={e => { setRequestedQuantity(e.target.value); setErrors(p => ({ ...p, requestedQuantity: '' })); }}
+                          className={inputClass('requestedQuantity')}
+                        />
+                        {errors.requestedQuantity && <p className="text-red-500 text-xs mt-1">{errors.requestedQuantity}</p>}
+                      </div>
+                    )}
+
                     {/* Only shows if NOT a lecturer */}
                     {!isLecturer && (
                       <div>
@@ -946,7 +983,7 @@ export default function NewBooking() {
                         setStep(1);
                         setSelectedResource(null);
                         setDate(''); setStartTime(''); setEndTime('');
-                        setPurpose(''); setAttendees(''); setLecturer('');
+                      setPurpose(''); setAttendees(''); setRequestedQuantity(''); setLecturer('');
                         setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
                       }}
                       className={`w-full py-2.5 px-4 rounded-xl text-white text-sm font-medium transition-all active:scale-[0.98] mt-1 border-t border-white/30 ${theme.gradientBtnLg}`}

@@ -258,102 +258,106 @@ export default function MyBookings() {
                 const canCancel = booking.status === 'PENDING' || (booking.status === 'APPROVED' && !isPast);
 
                 return (
-                  <div key={booking.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                    <div
-                      className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 cursor-pointer"
-                      onClick={() => setExpandedId(booking.id)}
-                    >
+                  <div key={booking.id} className="relative bg-white rounded-xl border border-gray-100 overflow-hidden">
+                    
+                    {/* Status Badger */}
+                    <div className="absolute top-4 right-5 scale-90 origin-top-right">
+                      <StatusBadge status={booking.status} />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-5">
+                      
                       {/* Resource type icon */}
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-3 ${
                         resource ? TYPE_COLORS[resource.type] : 'bg-gray-100 text-gray-400'
                       }`}>
                         {resource ? TYPE_ICONS[resource.type] : <Building2 className="w-4 h-4" />}
                       </div>
 
                       {/* Main info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-
-                          {/* Left side: Name and purpose */}
-                          <div>
-                            <p className="text-gray-900 text-sm font-medium">{resource?.name || 'Unknown Resource'}</p>
-                            <p className="text-gray-400 text-xs truncate mt-0.5">{booking.purpose}</p>
-                          </div>
-
-                          {/* Right side: Status, Button, and Submitted text grouped together */}
-                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-3">
-                              <div className="scale-90 origin-right">
-                                <StatusBadge status={booking.status} />
-                              </div>
-                              
-                              {/* Edit Button that only shows if status is PENDING */}
-                              {booking.status === 'PENDING' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/booking/edit/${booking.id}`); 
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-blue-200 text-blue-600 bg-white hover:bg-blue-50 shadow-sm"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                  <span className="hidden sm:inline">Edit</span>
-                                </button>
-                              )}
-
-                              {/* Cancel Button */}
-                              {canCancel && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCancellingId(booking.id); 
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-red-200 text-red-600 bg-white hover:bg-red-50 shadow-sm"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  <span className="hidden sm:inline">Cancel Booking</span>
-                                </button>
-                              )}
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation(); 
-                                  setExpandedId(booking.id);
-                                }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border bg-white border-gray-200 text-gray-600 hover:bg-gray-50`}
-                              >
-                                <Eye className={`w-3.5 h-3.5 text-gray-400`} />
-                                <span className="hidden sm:inline">View Details</span>
-                              </button>
-                            </div>
-                            <span className="text-gray-400 text-[11px] hidden sm:block">
-                              Submitted {formatCreated(booking.createdAt)}
-                            </span>
-                          </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        
+                        {/* Text Content */}
+                        <div className="pr-24">
+                          <p className="text-gray-900 text-sm font-semibold truncate">{resource?.name || 'Unknown Resource'}</p>
+                          <p className="text-gray-500 text-xs truncate mt-0.5">{booking.purpose}</p>
                         </div>
 
-                        {/* Bottom Row */}
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <div className="flex items-center gap-1 text-gray-400 text-xs">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDate(booking.date)}
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-400 text-xs">
-                            <Clock className="w-3.5 h-3.5" />
-                            {booking.startTime} – {booking.endTime}
-                          </div>
-                          {booking.attendees && (
-                            <div className="flex items-center gap-1 text-gray-400 text-xs">
-                              <Users className="w-3.5 h-3.5" />
-                              {booking.attendees} attendees
+                        {/* Bottom Area */}
+                        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 mt-4 border-t xl:border-t-0 pt-3 xl:pt-0 border-gray-100">
+                          
+                          {/* Left side meta tags */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-1 text-gray-500 text-xs bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                              <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                              {formatDate(booking.date)}
                             </div>
-                          )}
-                          {resource && (
-                            <div className="flex items-center gap-1 text-gray-400 text-xs">
-                              <MapPin className="w-3.5 h-3.5" />
-                              {resource.location}
+                            <div className="flex items-center gap-1 text-gray-500 text-xs bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                              <Clock className="w-3.5 h-3.5 text-gray-400" />
+                              {booking.startTime} – {booking.endTime}
                             </div>
-                          )}
+                            {booking.attendees && (
+                              <div className="flex items-center gap-1 text-gray-500 text-xs bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                                <Users className="w-3.5 h-3.5 text-gray-400" />
+                                {booking.attendees} attendees
+                              </div>
+                            )}
+                            {resource && (
+                              <div className="flex items-center gap-1 text-gray-500 text-xs bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                                <span className="truncate max-w-[120px]">{resource.location}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Right side: Submitted Date & Action Buttons */}
+                          <div className="flex items-center gap-2 flex-wrap w-full xl:w-auto xl:justify-end flex-shrink-0">
+                            
+                            {/* Submitted Text */}
+                            <span className="text-gray-400 text-[11px] font-medium mr-4 xl:mr-8 mb-2 xl:mb-0 w-full xl:w-auto text-left xl:text-right">
+                              Submitted {formatCreated(booking.createdAt)}
+                            </span>
+
+                            {/* Edit Button */}
+                            {booking.status === 'PENDING' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/booking/edit/${booking.id}`); 
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-blue-200 text-blue-600 bg-white hover:bg-blue-50 shadow-sm flex-1 xl:flex-none justify-center"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                            )}
+
+                            {/* Cancel Button */}
+                            {canCancel && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancellingId(booking.id); 
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-red-200 text-red-600 bg-white hover:bg-red-50 shadow-sm flex-1 xl:flex-none justify-center"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>Cancel</span>
+                              </button>
+                            )}
+                            
+                            {/* Details Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation(); 
+                                setExpandedId(booking.id);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border bg-white border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm flex-1 xl:flex-none justify-center"
+                            >
+                              <Eye className={`w-3.5 h-3.5 text-gray-400`} />
+                              <span>Details</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

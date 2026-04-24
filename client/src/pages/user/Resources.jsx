@@ -25,9 +25,10 @@ const TYPE_CONFIG = {
 };
 
 const DEFAULT_RESOURCE_IMAGES = {
-  lectureRoom: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Gfp-lecture-hall.jpg/960px-Gfp-lecture-hall.jpg',
-  lab: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+  lectureRoom: 'https://i.pinimg.com/736x/f8/98/46/f89846b24148276c9000e38c51c82ce5.jpg',
+  lab: 'https://i.pinimg.com/736x/39/ee/cb/39eecbeca86920e153e277780f20feed.jpg',
   meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+  equipment: 'https://i.pinimg.com/736x/64/e7/8f/64e78f4c21c54ff2b9765fa14b62267b.jpg',
 };
 
 const getResourceImage = (resource) => {
@@ -36,6 +37,7 @@ const getResourceImage = (resource) => {
   const originalType = (resource.resourceType || resource.type || '').toLowerCase();
   if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
   if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+  if (originalType.includes('equipment') || originalType.includes('utility')) return DEFAULT_RESOURCE_IMAGES.equipment;
 
   return DEFAULT_RESOURCE_IMAGES.lectureRoom;
 };
@@ -390,49 +392,68 @@ export default function Resources() {
                 const isLecturerOnly = (resource.access || '').toLowerCase() === 'lecturer';
                 const isBlockedForStudent = isStudentView && isLecturerOnly;
                 const requestAlreadySent = isBlockedForStudent && hasExistingRequest(resource.id);
+                
+                // NEW: Determine if the resource is out of service
+                const isOutOfService = (resource.status || '').toLowerCase() === 'out of service';
 
                 return (
                   <div
                     key={resource.id}
                     onClick={() => {
+                      if (isOutOfService) return; // NEW: Prevent clicking if out of service
                       setSelectedId(isSelected ? null : resource.id);
                       setAccessMessage('');
                     }}
-                    className={`rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-                      isSelected 
-                        ? isBlockedForStudent
-                          ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80'
-                          : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5'
-                        : isBlockedForStudent
-                          ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300'
-                          : 'bg-white border-gray-100 hover:border-[#17A38A]/30'
+                    // NEW: Added relative positioning and disabled styling
+                    className={`rounded-xl border-2 p-5 relative transition-all ${
+                      isOutOfService
+                        ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
+                        : isSelected 
+                          ? isBlockedForStudent
+                            ? 'border-amber-300 shadow-[0_8px_24px_rgba(245,158,11,0.14)] bg-amber-50/80 cursor-pointer hover:shadow-md'
+                            : 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5 cursor-pointer hover:shadow-md'
+                          : isBlockedForStudent
+                            ? 'bg-amber-50/70 border-amber-200 hover:border-amber-300 cursor-pointer hover:shadow-md'
+                            : 'bg-white border-gray-100 hover:border-[#17A38A]/30 cursor-pointer hover:shadow-md'
                     }`}
                   >
+                    {/* NEW: Render Out of Service Badge */}
+                    {isOutOfService && (
+                      <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                        Out of Service
+                      </div>
+                    )}
+
                     {/* Top row */}
                     <div className="flex items-start justify-between mb-3">
                       <div className={`w-10 h-10 rounded-xl ${cfg.bg} ${cfg.border} border flex items-center justify-center ${cfg.color}`}>
                         {cfg.icon}
                       </div>
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className={`text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color} capitalize`}>
-                          {cfg.label}
-                        </span>
-                        <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
-                          isBlockedForStudent
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {getAccessLabel(resource.access)}
-                        </span>
-                      </div>
+                      
+                      {/* Hide standard badges if Out of Service to prevent overlap */}
+                      {!isOutOfService && (
+                        <div className="flex flex-col items-end gap-1.5">
+                          <span className={`text-xs px-2 py-1 rounded-full ${cfg.bg} ${cfg.color} capitalize`}>
+                            {cfg.label}
+                          </span>
+                          <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                            isBlockedForStudent
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {getAccessLabel(resource.access)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Name */}
-                    {/* UPDATED: Title text color when selected */}
                     <h4 className={`font-medium mb-1 transition-colors ${
-                      isBlockedForStudent
-                        ? 'text-amber-900'
-                        : `text-gray-900 ${isSelected ? 'text-[#0F6657]' : ''}`
+                      isOutOfService 
+                        ? 'text-gray-500' 
+                        : isBlockedForStudent
+                          ? 'text-amber-900'
+                          : `text-gray-900 ${isSelected ? 'text-[#0F6657]' : ''}`
                     }`}>
                       {resource.name}
                     </h4>
@@ -445,7 +466,7 @@ export default function Resources() {
 
                     {/* Capacity */}
                     {resource.capacity && (
-                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfService ? 'text-gray-400' : 'text-gray-500'}`}>
                         <Users className="w-3.5 h-3.5" />
                         Capacity: {resource.capacity} persons
                       </div>
@@ -454,19 +475,22 @@ export default function Resources() {
                     {/* Features */}
                     <div className="flex flex-wrap gap-1 mb-3">
                       {resource.features.slice(0, 3).map(f => (
-                        <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
+                        <span key={f} className={`text-xs px-1.5 py-0.5 rounded-md ${isOutOfService ? 'bg-gray-200 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{f}</span>
                       ))}
                       {resource.features.length > 3 && (
-                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-md ${isOutOfService ? 'bg-gray-200 text-gray-400' : 'bg-gray-100 text-gray-400'}`}>
                           +{resource.features.length - 3} more
                         </span>
                       )}
                     </div>
 
                     {/* Stats row */}
-                    <div className={`flex items-center justify-between pt-3 ${isBlockedForStudent ? 'border-t border-amber-100' : 'border-t border-gray-50'}`}>
-                      <div className="text-xs text-gray-400">
-                        {isBlockedForStudent
+                    <div className={`flex items-center justify-between pt-3 ${isBlockedForStudent && !isOutOfService ? 'border-t border-amber-100' : 'border-t border-gray-50'}`}>
+                      <div className="text-xs font-medium">
+                        {/* UPDATED: Added Out of Service display to the footer */}
+                        {isOutOfService
+                          ? <span className="text-red-500 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Currently Unavailable</span>
+                          : isBlockedForStudent
                           ? requestAlreadySent
                             ? <span className="text-amber-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Request already sent</span>
                             : <span className="text-amber-700 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Lecturer access required</span>
@@ -475,9 +499,13 @@ export default function Resources() {
                           : <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Available</span>
                         }
                       </div>
-                      <div className={`flex items-center gap-1 text-xs font-medium ${isBlockedForStudent ? 'text-amber-700' : 'text-[#17A38A]'}`}>
-                        View <ChevronRight className="w-3 h-3" />
-                      </div>
+                      
+                      {/* Hide the 'View' button entirely if out of service */}
+                      {!isOutOfService && (
+                        <div className={`flex items-center gap-1 text-xs font-medium ${isBlockedForStudent ? 'text-amber-700' : 'text-[#17A38A]'}`}>
+                          View <ChevronRight className="w-3 h-3" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

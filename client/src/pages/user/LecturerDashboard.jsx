@@ -192,7 +192,7 @@ export default function LecturerDashboard() {
                     <Users className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[#8A3505] text-sm font-medium">Std Requests</p>
+                    <p className="text-[#8A3505] text-sm font-medium">Student Requests</p>
                     <p className="text-[#A74106] text-xs">{stats.studentRequests} pending request{stats.studentRequests !== 1 ? 's' : ''}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#A74106] group-hover:translate-x-0.5 transition-transform" />

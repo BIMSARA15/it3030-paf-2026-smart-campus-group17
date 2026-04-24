@@ -9,6 +9,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Sidebar from '../../components/Sidebar'; // Import Sidebar
 import Header from '../../components/Header'; // Import header
+import ReportIssueModal from '../../components/tickets/ReportIssueModal';
 import AIChat from '../../components/AIChat';
 
 export default function StudentDashboard() {
@@ -17,6 +18,7 @@ export default function StudentDashboard() {
 
   // Add Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showRaiseTicket, setShowRaiseTicket] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   
@@ -224,20 +226,21 @@ export default function StudentDashboard() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                {/* --- Quick Action: Raise a Ticket (Green Theme) --- */}
-                <button
-                  onClick={() => navigate('/maintenance')}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-[#17A38A]/10 transition-colors group text-left border border-transparent hover:border-[#17A38A]/20"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0F6657] to-[#17A38A] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
-                    <Wrench className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[#0F6657] text-sm font-medium">Raise a Ticket</p>
-                    <p className="text-[#17A38A] text-xs">Report a maintenance issue</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-[#17A38A] group-hover:translate-x-0.5 transition-transform" />
-                </button>
+                {/* --- NEW: Raise a Ticket Action (Light Orange Theme) --- */}
+                  <button
+                    type="button"
+                    onClick={() => setShowRaiseTicket(true)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-orange-50/80 hover:bg-orange-500/10 transition-colors group text-left border border-transparent hover:border-orange-500/20"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <Wrench className="w-4 h-4 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-900 text-sm font-medium">Raise a Ticket</p>
+                      <p className="text-gray-500 text-xs">Report a maintenance issue</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-orange-500 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
           
                 {isAdmin && (
                   <button
@@ -384,6 +387,13 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {showRaiseTicket && (
+        <ReportIssueModal
+          onClose={() => setShowRaiseTicket(false)}
+          onCreated={() => setShowRaiseTicket(false)}
+        />
+      )}
       {/* --- ADD THE AI CHAT WIDGET HERE --- */}
       <AIChat />
     </div>

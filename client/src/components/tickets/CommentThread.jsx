@@ -19,9 +19,21 @@ const ROLE_COLOR = {
   SYSTEM: "bg-slate-100 text-slate-500",
 };
 
+function toTimestamp(value) {
+  if (value == null) return null;
+  if (typeof value === "string") return new Date(value);
+  if (Array.isArray(value) && value.length >= 3) {
+    const [y, mo, d, h = 0, mi = 0, s = 0, nano = 0] = value;
+    return new Date(y, mo - 1, d, h, mi, s, Math.floor(nano / 1e6));
+  }
+  return new Date(value);
+}
+
 function fmt(iso) {
   if (!iso) return "";
-  return new Date(iso).toLocaleString(undefined, {
+  const d = toTimestamp(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -58,11 +70,14 @@ export default function CommentThread({ comments = [], onSubmit }) {
         </div>
       ) : (
         <ul className="space-y-3">
-          {comments.map((c) => {
+          {comments.map((c, index) => {
             const Icon = ROLE_ICON[c.authorRole] || User;
             const color = ROLE_COLOR[c.authorRole] || ROLE_COLOR.USER;
+            const rowKey =
+              c.commentId ||
+              `${c.authorId || "unknown"}-${JSON.stringify(c.createdAt)}-${index}-${(c.message || "").slice(0, 24)}`;
             return (
-              <li key={c.commentId} className="flex gap-3">
+              <li key={rowKey} className="flex gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${color}`}>
                   <Icon className="w-4 h-4" />
                 </div>

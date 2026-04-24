@@ -1,9 +1,11 @@
 package com.smartcampus.api.services;
 
 import com.smartcampus.api.models.Booking;
-import com.smartcampus.api.models.User; // 👈 FIX 1: This imports the User and fixes all the errors!
+import com.smartcampus.api.models.User; // Imports the User and fixes all the errors!
 import com.smartcampus.api.repositories.BookingRepository;
 import com.smartcampus.api.repositories.UserRepository;
+import com.smartcampus.api.models.Utility; 
+import com.smartcampus.api.repositories.UtilityRepository; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,9 @@ public class BookingService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UtilityRepository utilityRepository;
 
     public List<Booking> getAllBookings() {
         return bookingRepository.findAll();
@@ -56,6 +61,20 @@ public class BookingService {
                 }
             } catch (Exception e) {
                 continue;
+            }
+        }
+
+        // DEDUCT EQUIPMENT QUANTITY ---
+        if (newBooking.getQuantity() != null && newBooking.getQuantity() > 0) {
+            Optional<Utility> utilityOpt = utilityRepository.findById(newBooking.getResourceId());
+            if (utilityOpt.isPresent()) {
+                Utility utility = utilityOpt.get();
+                if (utility.getQuantity() < newBooking.getQuantity()) {
+                    throw new Exception("Out of stock! Only " + utility.getQuantity() + " available.");
+                }
+                // Deduct the requested quantity
+                utility.setQuantity(utility.getQuantity() - newBooking.getQuantity());
+                utilityRepository.save(utility);
             }
         }
 
@@ -136,6 +155,19 @@ public class BookingService {
             if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
 
             Booking savedBooking = bookingRepository.save(booking);
+
+            // --- RESTORE STOCK IF REJECTED OR CANCELLED ---
+            if (("REJECTED".equalsIgnoreCase(updateData.getStatus()) || "CANCELLED".equalsIgnoreCase(updateData.getStatus())) 
+                && booking.getQuantity() != null && booking.getQuantity() > 0) {
+                
+                Optional<Utility> utilityOpt = utilityRepository.findById(booking.getResourceId());
+                if (utilityOpt.isPresent()) {
+                    Utility utility = utilityOpt.get();
+                    // Add the quantity back to the system
+                    utility.setQuantity(utility.getQuantity() + booking.getQuantity());
+                    utilityRepository.save(utility);
+                }
+            }
 
             // --- DYNAMIC NOTIFICATIONS FOR STUDENT ---
             String dynamicStudentMessage = String.format(

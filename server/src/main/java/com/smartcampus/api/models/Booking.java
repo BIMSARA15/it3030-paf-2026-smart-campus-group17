@@ -24,6 +24,7 @@ public class Booking {
     private String endTime;
     private String purpose;
     private Integer attendees;
+    private Integer quantity;
     private String lecturer;
     private String specialRequests;
     private List<String> requestedUtilityIds;
@@ -80,6 +81,9 @@ public class Booking {
 
     public Integer getAttendees() { return attendees; }
     public void setAttendees(Integer attendees) { this.attendees = attendees; }
+
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
 
     public String getLecturer() { return lecturer; }
     public void setLecturer(String lecturer) { this.lecturer = lecturer; }

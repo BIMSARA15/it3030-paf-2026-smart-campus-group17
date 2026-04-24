@@ -307,26 +307,43 @@ export default function Resources() {
                 ) : (
                   filteredUtilities.map((utility) => {
                     const isSelected = selectedId === utility.id;
+                    const isOutOfStock = utility.quantity <= 0; // NEW: Check stock level
+
                     return (
                     <button
                       key={utility.id}
+                      disabled={isOutOfStock} // NEW: Disable button if 0
                       onClick={() => {
+                        if (isOutOfStock) return; // NEW: Prevent selection
                         setSelectedId(isSelected ? null : utility.id);
                         setAccessMessage('');
                       }}
-                      className={`text-left w-full rounded-xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-                        isSelected 
-                          ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5'
-                          : 'bg-white border-gray-100 hover:border-[#17A38A]/30'
+                      // NEW: Apply relative positioning and grayscale logic
+                      className={`text-left w-full rounded-xl border-2 p-5 relative transition-all ${
+                        isOutOfStock
+                          ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
+                          : isSelected 
+                            ? 'border-[#17A38A] shadow-[0_8px_24px_rgba(23,163,138,0.12)] bg-[#17A38A]/5 hover:shadow-md cursor-pointer'
+                            : 'bg-white border-gray-100 hover:border-[#17A38A]/30 hover:shadow-md cursor-pointer'
                       }`}
                     >
+                      {/* NEW: Render Out of Stock Badge */}
+                      {isOutOfStock && (
+                        <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                          Out of Stock
+                        </div>
+                      )}
+
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
                           <Package className="w-5 h-5" />
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
-                          {utility.category}
-                        </span>
+                        {/* Hide normal category badge if out of stock to avoid overlap */}
+                        {!isOutOfStock && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
+                            {utility.category}
+                          </span>
+                        )}
                       </div>
 
                       <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
@@ -342,7 +359,8 @@ export default function Resources() {
                         {utility.location}
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
+                      {/* UPDATED: Make quantity text red if out of stock */}
+                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
                         <Package className="w-3.5 h-3.5" />
                         Quantity: {utility.quantity}
                       </div>

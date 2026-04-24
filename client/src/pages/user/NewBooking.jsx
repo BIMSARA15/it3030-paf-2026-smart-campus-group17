@@ -643,48 +643,78 @@ export default function NewBooking() {
                     ))}
 
                     {/* --- RENDER EQUIPMENTS (UTILITIES) --- */}
-                    {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => (
-                      <button
-                        key={`util-${utility.id}`}
-                        onClick={() => { 
-                          setSelectedResource({
-                            id: utility.id,
-                            name: utility.utilityName,
-                            location: utility.location,
-                            type: 'equipment',
-                            capacity: null,
-                            quantity: utility.quantity, 
-                            features: [],
-                            access: 'anyone',
-                            status: utility.status,
-                            description: utility.description
-                          }); 
-                          setStep(2); 
-                        }}
-                        className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS['equipment']}`}>
-                            {TYPE_ICONS['equipment']}
+                    {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => {
+                      const isOutOfStock = utility.quantity <= 0;
+
+                      return (
+                        <button
+                          key={`util-${utility.id}`}
+                          disabled={isOutOfStock}
+                          onClick={() => { 
+                            if (isOutOfStock) return; // Fail-safe to prevent selection
+                            
+                            setSelectedResource({
+                              id: utility.id,
+                              name: utility.utilityName,
+                              location: utility.location,
+                              type: 'equipment',
+                              capacity: null,
+                              quantity: utility.quantity, 
+                              features: [],
+                              access: 'anyone',
+                              status: utility.status,
+                              description: utility.description
+                            }); 
+                            setStep(2); 
+                          }}
+                          // NEW: Apply gray styles and remove hover effects if out of stock
+                          className={`text-left p-4 rounded-xl border-2 relative transition-all ${
+                            isOutOfStock 
+                              ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200' 
+                              : `border-gray-100 group ${theme.cardHover}`
+                          }`}
+                        >
+                          {/* NEW: Render Out of Stock Badge */}
+                          {isOutOfStock && (
+                            <div className="absolute top-3 right-3 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                              Out of Stock
+                            </div>
+                          )}
+
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS['equipment']}`}>
+                              {TYPE_ICONS['equipment']}
+                            </div>
+                            
+                            {/* Hide standard category badge if out of stock so it doesn't crowd the top corner */}
+                            {!isOutOfStock && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS['equipment']}`}>
+                                {utility.category || 'Equipment'}
+                              </span>
+                            )}
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS['equipment']}`}>
-                            {utility.category || 'Equipment'}
-                          </span>
-                        </div>
-                        <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{utility.utilityName}</h4>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                          <MapPin className="w-3 h-3" />
-                          {utility.location}
-                        </div>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs">
-                          <Package className="w-3 h-3" />
-                          Quantity: {utility.quantity}
-                        </div>
-                        <div className="mt-2">
-                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">{utility.utilityCode}</span>
-                        </div>
-                      </button>
-                    ))}
+                          <h4 className={`text-gray-900 mb-1 transition-colors ${!isOutOfStock ? theme.textHover : ''}`}>
+                            {utility.utilityName}
+                          </h4>
+                          <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
+                            <MapPin className="w-3 h-3" />
+                            {utility.location}
+                          </div>
+                          
+                          {/* Highlight the quantity in red if it's zero */}
+                          <div className={`flex items-center gap-1 text-xs ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                            <Package className="w-3 h-3" />
+                            Quantity: {utility.quantity}
+                          </div>
+                          
+                          <div className="mt-2">
+                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">
+                              {utility.utilityCode}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </>
                 )}
 

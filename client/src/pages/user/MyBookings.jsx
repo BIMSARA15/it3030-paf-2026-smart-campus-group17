@@ -25,9 +25,10 @@ const TYPE_COLORS = {
 };
 
 const DEFAULT_RESOURCE_IMAGES = {
-  lectureRoom: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Gfp-lecture-hall.jpg/960px-Gfp-lecture-hall.jpg',
-  lab: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+  lectureRoom: 'https://i.pinimg.com/736x/f8/98/46/f89846b24148276c9000e38c51c82ce5.jpg',
+  lab: 'https://i.pinimg.com/736x/39/ee/cb/39eecbeca86920e153e277780f20feed.jpg',
   meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+  equipment: 'https://i.pinimg.com/736x/64/e7/8f/64e78f4c21c54ff2b9765fa14b62267b.jpg',
 };
 
 const getResourceImage = (resource) => {
@@ -37,6 +38,7 @@ const getResourceImage = (resource) => {
   const originalType = (resource.resourceType || resource.type || '').toLowerCase();
   if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
   if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+  if (originalType.includes('equipment') || originalType.includes('utility')) return DEFAULT_RESOURCE_IMAGES.equipment;
 
   return DEFAULT_RESOURCE_IMAGES.lectureRoom;
 };

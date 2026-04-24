@@ -312,11 +312,6 @@ export default function MyBookings() {
 
                           {/* Right side: Submitted Date & Action Buttons */}
                           <div className="flex items-center gap-2 flex-wrap w-full xl:w-auto xl:justify-end flex-shrink-0">
-                            
-                            {/* Submitted Text */}
-                            <span className="text-gray-400 text-[11px] font-medium mr-4 xl:mr-8 mb-2 xl:mb-0 w-full xl:w-auto text-left xl:text-right">
-                              Submitted {formatCreated(booking.createdAt)}
-                            </span>
 
                             {/* Edit Button */}
                             {booking.status === 'PENDING' && (
@@ -359,6 +354,11 @@ export default function MyBookings() {
                             </button>
                           </div>
                         </div>
+                        <br />
+                        {/* Submitted Text Moved Below */}
+                        <span className="text-gray-400 text-[11px] font-medium w-full xl:w-auto text-left xl:text-right mt-1">
+                          Submitted {formatCreated(booking.createdAt)}
+                        </span>
                       </div>
                     </div>
                   </div>

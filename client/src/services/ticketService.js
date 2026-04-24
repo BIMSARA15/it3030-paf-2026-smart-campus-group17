@@ -143,6 +143,13 @@ function nextPreviewCode(tickets) {
   return `TKT-${String(max + 1).padStart(3, "0")}`;
 }
 
+/** Session user from Spring (includes Mongo `id` for ticket APIs). */
+export const getAuthUserProfile = async () => {
+  const { data } = await api.get("/api/auth/user");
+  if (!data || typeof data !== "object" || data.requiresRegistration) return null;
+  return data;
+};
+
 /** Create a new maintenance ticket. */
 export const createTicket = async (ticketData) => {
   const previewResult = withPreview(() => {
@@ -176,42 +183,42 @@ export const createTicket = async (ticketData) => {
   if (previewResult) return previewResult;
 
   const { data } = await api.post(PATH, ticketData);
-  return data;
+  return normalizeTicket(data);
 };
 
 /** List tickets reported by a specific user (used by My Tickets tab). */
 export const getMyTickets = async (userId) => {
   const previewResult = withPreview(() => readPreviewTickets().filter((ticket) => ticket.reportedByUserId === userId));
-  if (previewResult) return previewResult;
+  if (previewResult) return previewResult.map(normalizeTicket);
 
   const { data } = await api.get(`${PATH}/user/${userId}`);
-  return data;
+  return Array.isArray(data) ? data.map(normalizeTicket) : data;
 };
 
 export const getTicketById = async (id) => {
   const previewResult = withPreview(() => readPreviewTickets().find((ticket) => ticket.id === id));
-  if (previewResult) return previewResult;
+  if (previewResult) return normalizeTicket(previewResult);
 
   const { data } = await api.get(`${PATH}/${id}`);
-  return data;
+  return normalizeTicket(data);
 };
 
 /** List tickets currently assigned to the given technician. */
 export const getTechnicianTickets = async (techId) => {
   const previewResult = withPreview(() => readPreviewTickets().filter((ticket) => ticket.assignedTechnicianId === techId));
-  if (previewResult) return previewResult;
+  if (previewResult) return previewResult.map(normalizeTicket);
 
   const { data } = await api.get(`${PATH}/technician/${techId}`);
-  return data;
+  return Array.isArray(data) ? data.map(normalizeTicket) : data;
 };
 
 /** Admin-only — every ticket in the system. */
 export const getAllTickets = async () => {
   const previewResult = withPreview(() => readPreviewTickets());
-  if (previewResult) return previewResult;
+  if (previewResult) return previewResult.map(normalizeTicket);
 
   const { data } = await api.get(PATH);
-  return data;
+  return Array.isArray(data) ? data.map(normalizeTicket) : data;
 };
 
 /**
@@ -254,8 +261,41 @@ export const updateTicketStatus = async (id, status, note) => {
   if (previewResult) return previewResult;
 
   const { data } = await api.patch(`${PATH}/${id}/status`, { status, note });
-  return data;
+  return normalizeTicket(data);
 };
+
+/** Convert Jackson LocalDateTime array or string to ISO string for the UI. */
+function normalizeInstant(v) {
+  if (v == null) return v;
+  if (typeof v === "string") return v;
+  if (Array.isArray(v) && v.length >= 3) {
+    const [y, mo, d, h = 0, mi = 0, s = 0, nano = 0] = v;
+    return new Date(y, mo - 1, d, h, mi, s, Math.floor(nano / 1e6)).toISOString();
+  }
+  return v;
+}
+
+function normalizeCommentDates(ticket) {
+  if (!ticket?.comments?.length) return ticket;
+  return {
+    ...ticket,
+    comments: ticket.comments.map((c) => ({
+      ...c,
+      createdAt: normalizeInstant(c.createdAt),
+    })),
+    updatedAt: normalizeInstant(ticket.updatedAt) ?? ticket.updatedAt,
+  };
+}
+
+function normalizeTicket(ticket) {
+  if (!ticket) return ticket;
+  const withComments = normalizeCommentDates(ticket);
+  return {
+    ...withComments,
+    createdAt: normalizeInstant(ticket.createdAt) ?? withComments.createdAt,
+    updatedAt: normalizeInstant(ticket.updatedAt) ?? withComments.updatedAt,
+  };
+}
 
 export const addComment = async (id, message) => {
   const previewResult = withPreview(() => {
@@ -286,7 +326,7 @@ export const addComment = async (id, message) => {
   if (previewResult) return previewResult;
 
   const { data } = await api.post(`${PATH}/${id}/comments`, { message });
-  return data;
+  return normalizeTicket(data);
 };
 
 /** Append image URLs to the gallery (max 3 total enforced by the backend). */

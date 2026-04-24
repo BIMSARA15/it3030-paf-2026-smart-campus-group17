@@ -6,7 +6,7 @@ import TicketCard from "../../components/tickets/TicketCard";
 import StatusUpdateModal from "../../components/tickets/StatusUpdateModal";
 import ReportIssueModal from "../../components/tickets/ReportIssueModal";
 import { useAuth } from "../../context/AuthContext";
-import { getTechnicianTickets } from "../../services/ticketService";
+import { getAuthUserProfile, getTechnicianTickets } from "../../services/ticketService";
 
 export default function TechnicianDashboard() {
   const { user } = useAuth();
@@ -18,10 +18,15 @@ export default function TechnicianDashboard() {
   const [showReport, setShowReport] = useState(false);
 
   const refresh = async () => {
-    if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await getTechnicianTickets(user.id);
+      const profile = await getAuthUserProfile();
+      const techId = user?.id || profile?.id;
+      if (!techId) {
+        setTickets([]);
+        return;
+      }
+      const data = await getTechnicianTickets(techId);
       setTickets(data || []);
     } finally {
       setLoading(false);
@@ -137,9 +142,9 @@ export default function TechnicianDashboard() {
         <StatusUpdateModal
           ticket={openTicket}
           onClose={() => setOpenTicket(null)}
-          onChanged={() => {
+          onChanged={(updated) => {
             refresh();
-            setOpenTicket(null);
+            setOpenTicket(updated ?? null);
           }}
         />
       )}

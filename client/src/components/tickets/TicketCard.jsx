@@ -1,4 +1,4 @@
-import { Wrench, Eye, MessageSquare, MapPin, Clock, ArrowRight } from "lucide-react";
+import { Wrench, Eye, MessageSquare, MapPin, Clock, UserCheck } from "lucide-react";
 import TicketStatusBadge from "./TicketStatusBadge";
 import TicketPriorityBadge from "./TicketPriorityBadge";
 import { findResourceLabel } from "../../data/resources";
@@ -57,9 +57,12 @@ export default function TicketCard({ ticket, onClick }) {
           <span className="inline-flex items-center gap-1">
             <Clock className="w-3 h-3" /> {timeAgo(ticket.createdAt)}
           </span>
-          {ticket.assignedTechnicianName && (
-            <span className="inline-flex items-center gap-1">
-              <ArrowRight className="w-3 h-3" /> {ticket.assignedTechnicianName}
+          {(ticket.assignedTechnicianName || ticket.assignedTechnicianId) && (
+            <span className="inline-flex items-center gap-1 font-medium text-slate-600">
+              <UserCheck className="w-3 h-3 shrink-0" />
+              Assigned to:{" "}
+              {ticket.assignedTechnicianName ||
+                (ticket.assignedTechnicianId ? `Technician (${ticket.assignedTechnicianId})` : "—")}
             </span>
           )}
           {ticket.comments?.length > 0 && (

@@ -24,6 +24,23 @@ const TYPE_COLORS = {
   equipment: 'bg-orange-100 text-orange-600',
 };
 
+const DEFAULT_RESOURCE_IMAGES = {
+  lectureRoom: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Gfp-lecture-hall.jpg/960px-Gfp-lecture-hall.jpg',
+  lab: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800',
+  meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+};
+
+const getResourceImage = (resource) => {
+  if (!resource) return DEFAULT_RESOURCE_IMAGES.lectureRoom;
+  if (resource.image) return resource.image;
+
+  const originalType = (resource.resourceType || resource.type || '').toLowerCase();
+  if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
+  if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+
+  return DEFAULT_RESOURCE_IMAGES.lectureRoom;
+};
+
 // Helper component for the Details Modal
 function InfoCard({ icon, label, value, accent }) {
   return (
@@ -452,8 +469,8 @@ export default function MyBookings() {
               {/* Hero Image Section */}
               <div className="relative h-48 overflow-hidden bg-slate-900">
                 <img 
-                  src="https://images.unsplash.com/photo-1771911650735-b471e85e8b17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsZWN0dXJlJTIwaGFsbCUyMGF1ZGl0b3JpdW0lMjBtb2Rlcm4lMjBpbnRlcmlvcnxlbnwxfHx8fDE3NzY5MjY1Mzl8MA&ixlib=rb-4.1.0&q=80&w=1080" 
-                  alt="Venue" 
+                  src={getResourceImage(expandedResource)} 
+                  alt={expandedResource?.name || 'Venue'} 
                   className="w-full h-full object-cover opacity-70" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />

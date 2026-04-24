@@ -130,7 +130,7 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 }
 
 export default function AllBookings() {
-  const { bookings, getResourceById, approveBooking, rejectBooking, fetchBookings, purgeBooking, utilities } = useBooking();
+  const { bookings, getResourceById, getUtilityById, approveBooking, rejectBooking, fetchBookings, purgeBooking, utilities } = useBooking();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -160,13 +160,13 @@ export default function AllBookings() {
     let item = getResourceById(id);
     if (item) return item;
 
-    const util = utilities?.find(u => u.id === id);
+    const util = getUtilityById(id);
     if (util) {
       return {
         id: util.id,
-        name: util.utilityName,
+        name: util.utilityName || util.name || 'Unknown Equipment',
         type: 'equipment',
-        location: util.location,
+        location: util.location || 'Unknown Location',
       };
     }
     return null;

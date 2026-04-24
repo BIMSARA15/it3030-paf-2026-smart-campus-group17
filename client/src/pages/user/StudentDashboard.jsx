@@ -10,9 +10,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import Sidebar from '../../components/Sidebar'; // Import Sidebar
 import Header from '../../components/Header'; // Import header
 import ReportIssueModal from '../../components/tickets/ReportIssueModal';
+import AIChat from '../../components/AIChat';
 
 export default function StudentDashboard() {
-  const { currentUser, bookings, resources, getResourceById, fetchUserBookings } = useBooking();
+  const { currentUser, bookings, resources, getResourceById, getUtilityById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   // Add Sidebar State
@@ -100,6 +101,21 @@ export default function StudentDashboard() {
     { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
   ];
 
+  const getBookingItem = (id) => {
+    const resource = getResourceById(id);
+    if (resource) return resource;
+
+    const utility = getUtilityById(id);
+    if (utility) {
+      return {
+        ...utility,
+        name: utility.utilityName || utility.name || 'Unknown Equipment',
+        type: 'equipment'
+      };
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar Component */}
@@ -131,19 +147,24 @@ export default function StudentDashboard() {
             </button>
           </div>
 
-          {/* Stat cards */}
+         {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            {statCards.map(({ label, value, icon: Icon, color, bg, border }) => (
-              <div key={label} className={`bg-white rounded-xl border ${border} p-4 flex flex-col gap-3`}>
-                <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
+            {statCards.map((card) => {
+              const IconComponent = card.icon; // Assign it here to satisfy ESLint
+              
+              return (
+                <div key={card.label} className={`bg-white rounded-xl border ${card.border} p-4 flex flex-col gap-3`}>
+                  <div className={`w-9 h-9 rounded-lg ${card.bg} flex items-center justify-center`}>
+                    {/* Render the extracted component */}
+                    <IconComponent className={`w-5 h-5 ${card.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>{card.value}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{card.label}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl text-gray-900" style={{ fontWeight: 700 }}>{value}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{label}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
@@ -281,7 +302,7 @@ export default function StudentDashboard() {
               </div>
               <div className="divide-y divide-gray-50">
                 {upcoming.map(booking => {
-                  const resource = getResourceById(booking.resourceId);
+                  const resource = getBookingItem(booking.resourceId);
                   return (
                     <div key={booking.id} className="flex items-center gap-4 px-5 py-3.5">
                       <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -327,7 +348,7 @@ export default function StudentDashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {recent.map(booking => {
-                    const resource = getResourceById(booking.resourceId);
+                    const resource = getBookingItem(booking.resourceId);
                     return (
                       <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3">
@@ -373,6 +394,8 @@ export default function StudentDashboard() {
           onCreated={() => setShowRaiseTicket(false)}
         />
       )}
+      {/* --- ADD THE AI CHAT WIDGET HERE --- */}
+      <AIChat />
     </div>
   );
 }

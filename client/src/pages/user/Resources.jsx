@@ -162,7 +162,7 @@ export default function Resources() {
   ) : null;
 
   const counts = {
-    all: resources.length,
+    all: resources.length + utilities.length,
     room: resources.filter(r => r.type === 'room').length,
     lab: resources.filter(r => r.type === 'lab').length,
     equipment: utilities.length,
@@ -302,112 +302,9 @@ export default function Resources() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Resource grid */}
             <div className={`${selectedResource ? 'lg:col-span-2' : 'lg:col-span-3'} grid grid-cols-1 sm:grid-cols-2 ${selectedResource ? '' : 'xl:grid-cols-3'} gap-3 content-start`}>
-              {typeFilter === 'equipment' ? (
-                utilitiesLoading ? (
-                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
-                    <Package className="w-10 h-10 text-orange-300 mx-auto mb-3 animate-pulse" />
-                    <p className="text-gray-500">Loading equipment...</p>
-                  </div>
-                ) : utilitiesError && utilities.length === 0 ? (
-                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-red-100">
-                    <ShieldAlert className="w-10 h-10 text-red-300 mx-auto mb-3" />
-                    <p className="text-gray-700 font-medium">Unable to load equipment</p>
-                    <p className="text-gray-500 text-sm mt-1">Please make sure the backend is running and try again.</p>
-                    <button
-                      type="button"
-                      onClick={fetchUtilities}
-                      className="mt-4 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 text-sm font-medium hover:bg-orange-100 transition-colors"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : filteredUtilities.length === 0 ? (
-                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
-                    <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">
-                      {utilities.length === 0 ? 'No equipment has been added by admin yet' : 'No equipment matches your search'}
-                    </p>
-                  </div>
-                ) : (
-                  filteredUtilities.map((utility) => {
-                    const isSelected = selectedId === utility.id;
-                    const isOutOfStock = utility.quantity <= 0; // NEW: Check stock level
-
-                    return (
-                    <button
-                      key={utility.id}
-                      disabled={isOutOfStock} // NEW: Disable button if 0
-                      onClick={() => {
-                        if (isOutOfStock) return; // NEW: Prevent selection
-                        setSelectedId(isSelected ? null : utility.id);
-                        setAccessMessage('');
-                      }}
-                      // NEW: Apply relative positioning and grayscale logic
-                      className={`text-left w-full rounded-xl border-2 p-5 relative transition-all ${
-                        isOutOfStock
-                          ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
-                          : isSelected 
-                            ? theme.cardSelected
-                            : `bg-white border-gray-100 ${theme.cardHover}`
-                      }`}
-                    >
-                      {/* NEW: Render Out of Stock Badge */}
-                      {isOutOfStock && (
-                        <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
-                          Out of Stock
-                        </div>
-                      )}
-
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
-                          <Package className="w-5 h-5" />
-                        </div>
-                        {/* Hide normal category badge if out of stock to avoid overlap */}
-                        {!isOutOfStock && (
-                          <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600">
-                            {utility.category}
-                          </span>
-                        )}
-                      </div>
-
-                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
-                        {utility.utilityCode}
-                      </span>
-
-                      <h4 className="font-medium mb-1 text-gray-900">
-                        {utility.utilityName}
-                      </h4>
-
-                      <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-2">
-                        <MapPin className="w-3.5 h-3.5" />
-                        {utility.location}
-                      </div>
-
-                      {/* UPDATED: Make quantity text red if out of stock */}
-                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                        <Package className="w-3.5 h-3.5" />
-                        Quantity: {utility.quantity}
-                      </div>
-
-                      {utility.description && (
-                        <p className="text-gray-500 text-sm line-clamp-2 mb-3">
-                          {utility.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
-                          {utility.status}
-                        </span>
-                        <span className="text-emerald-600 flex items-center gap-1 text-xs">
-                          <CheckCircle className="w-3 h-3" /> Admin Added
-                        </span>
-                      </div>
-                    </button>
-                    );
-                  })
-                )
-              ) : filtered.map(resource => {
+              
+              {/* 1. Render Rooms & Labs FIRST if filter is NOT Equipment (so 'all', 'room', or 'lab') */}
+              {typeFilter !== 'equipment' && filtered.map(resource => {
                 const cfg = TYPE_CONFIG[resource.type];
                 const stats = getResourceStats(resource.id);
                 const isSelected = selectedId === resource.id;
@@ -533,7 +430,112 @@ export default function Resources() {
                 );
               })}
 
-              {typeFilter !== 'equipment' && filtered.length === 0 && (
+              {/* 2. Render Equipment (Utilities) SECOND if filter is 'all' or 'equipment' */}
+              {(typeFilter === 'equipment' || typeFilter === 'all') && (
+                utilitiesLoading ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
+                    <Package className="w-10 h-10 text-orange-300 mx-auto mb-3 animate-pulse" />
+                    <p className="text-gray-500">Loading equipment...</p>
+                  </div>
+                ) : utilitiesError && utilities.length === 0 ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-red-100">
+                    <ShieldAlert className="w-10 h-10 text-red-300 mx-auto mb-3" />
+                    <p className="text-gray-700 font-medium">Unable to load equipment</p>
+                    <p className="text-gray-500 text-sm mt-1">Please make sure the backend is running and try again.</p>
+                    <button
+                      type="button"
+                      onClick={fetchUtilities}
+                      className="mt-4 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 text-sm font-medium hover:bg-orange-100 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : typeFilter === 'equipment' && filteredUtilities.length === 0 ? (
+                  <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
+                    <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      {utilities.length === 0 ? 'No equipment has been added by admin yet' : 'No equipment matches your search'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredUtilities.map((utility) => {
+                    const isSelected = selectedId === utility.id;
+                    const isOutOfStock = utility.quantity <= 0; 
+
+                    return (
+                    <button
+                      key={utility.id}
+                      disabled={isOutOfStock} 
+                      onClick={() => {
+                        if (isOutOfStock) return; 
+                        setSelectedId(isSelected ? null : utility.id);
+                        setAccessMessage('');
+                      }}
+                      className={`text-left w-full rounded-xl border-2 p-5 relative transition-all ${
+                        isOutOfStock
+                          ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
+                          : isSelected 
+                            ? theme.cardSelected
+                            : `bg-white border-gray-100 ${theme.cardHover}`
+                      }`}
+                    >
+                      {isOutOfStock && (
+                        <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
+                          Out of Stock
+                        </div>
+                      )}
+
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        {!isOutOfStock && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 lowercase capitalize">
+                            {utility.category}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                        {utility.utilityCode}
+                      </span>
+
+                      <h4 className="font-medium mb-1 text-gray-900">
+                        {utility.utilityName}
+                      </h4>
+
+                      <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-2">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {utility.location}
+                      </div>
+
+                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                        <Package className="w-3.5 h-3.5" />
+                        Quantity: {utility.quantity}
+                      </div>
+
+                      {utility.description && (
+                        <p className="text-gray-500 text-sm line-clamp-2 mb-3">
+                          {utility.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+                          {utility.status}
+                        </span>
+                        <span className="text-emerald-600 flex items-center gap-1 text-xs">
+                          <CheckCircle className="w-3 h-3" /> Admin Added
+                        </span>
+                      </div>
+                    </button>
+                    );
+                  })
+                )
+              )}
+
+              {/* Combined Empty States for Rooms/Labs/All */}
+              {typeFilter !== 'equipment' && filtered.length === 0 && (typeFilter !== 'all' || filteredUtilities.length === 0) && (
                 <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
                   <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No resources match your search</p>

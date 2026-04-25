@@ -95,6 +95,7 @@ export default function MyBookings() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
   const [qrModalId, setQrModalId] = useState(null); // QR code
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Create a local state to hold JUST this user's bookings, so we can sort and filter without affecting global state
   const [myBookings, setMyBookings] = useState([]);
@@ -180,15 +181,22 @@ export default function MyBookings() {
     ];
   };
 
-  const handleCancelSubmit = (id) => {
+  const handleCancelSubmit = async (id) => {
     if (!cancelReason.trim()) {
       setCancelError('Please tell us why you are cancelling.');
       return;
     }
-    cancelBooking(id, cancelReason); 
+    
+    // Wait for the backend to process the cancellation
+    await cancelBooking(id, cancelReason); 
+    
+    // Close the cancel form and clear inputs
     setCancellingId(null);
     setCancelReason('');
     setCancelError('');
+    
+    // Show our new Success Popup
+    setShowSuccessModal(true);
   };
 
   const resetCancelState = () => {
@@ -236,7 +244,7 @@ export default function MyBookings() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">My Bookings</h1>
-              <p className="text-gray-500 text-sm mt-0.5">{myBookings.length} total booking{myBookings.length !== 1 ? 's' : ''}</p>
+              {/* <p className="text-gray-500 text-sm mt-0.5">{myBookings.length} total booking{myBookings.length !== 1 ? 's' : ''}</p> */}
             </div>
             {/* Dynamic Gradient Button */}
             <button
@@ -281,6 +289,11 @@ export default function MyBookings() {
             </div>
           </div>
 
+          {/* Add this new block exactly here, under the filters */}
+          <div className="text-sm text-gray-500 mt-2 mb-1">
+            Showing {filtered.length} of {myBookings.length} bookings
+          </div>
+
           {/* Bookings list */}
           {filtered.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-100 py-16 text-center">
@@ -303,7 +316,7 @@ export default function MyBookings() {
               {filtered.map(booking => {
                 const resource = getBookingItem(booking.resourceId);
                 const isPast = booking.date < today;
-                const canCancel = booking.status === 'PENDING' || (booking.status === 'APPROVED' && !isPast);
+                const canCancel = booking.status === 'PENDING' || booking.status === 'APPROVED';
 
                 return (
                   <div key={booking.id} className="relative bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -375,20 +388,6 @@ export default function MyBookings() {
                               </button>
                             )}
 
-                            {/* Cancel Button */}
-                            {canCancel && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCancellingId(booking.id); 
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-red-200 text-red-600 bg-white hover:bg-red-50 shadow-sm flex-1 xl:flex-none justify-center"
-                              >
-                                <XCircle className="w-3.5 h-3.5" />
-                                <span>Cancel</span>
-                              </button>
-                            )}
-
                             {/* QR Code Button (Only for APPROVED) */}
                             {booking.status === 'APPROVED' && (
                               <button
@@ -404,6 +403,20 @@ export default function MyBookings() {
                               >
                                 <QrCode className="w-3.5 h-3.5" />
                                 <span>QR Code</span>
+                              </button>
+                            )}
+
+                            {/* Cancel Button */}
+                            {canCancel && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancellingId(booking.id); 
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-red-200 text-red-600 bg-white hover:bg-red-50 shadow-sm flex-1 xl:flex-none justify-center"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>Cancel</span>
                               </button>
                             )}
 
@@ -693,7 +706,11 @@ export default function MyBookings() {
                     </button>
                   )}
                   
-                  {(expandedBooking.status === 'PENDING' || (expandedBooking.status === 'APPROVED' && expandedBooking.date >= today)) && (
+                  {/* Change the condition here from: */}
+                  {/* {(expandedBooking.status === 'PENDING' || (expandedBooking.status === 'APPROVED' && expandedBooking.date >= today)) && ( */}
+
+                  {/* To this: */}
+                  {(expandedBooking.status === 'PENDING' || expandedBooking.status === 'APPROVED') && (
                     <button
                       onClick={() => {
                         setExpandedId(null);
@@ -834,6 +851,35 @@ export default function MyBookings() {
           </div>
         );
       })()}
+   {/* SUCCESS POPUP MODAL (Add this right here) */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 sm:p-8 text-center">
+              
+              {/* Dynamic Theme Icon - Matches Lecturer/Student colors */}
+              <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 ${theme.lightBg} ${theme.textAccent}`}>
+                <CheckCircle className="w-10 h-10" />
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Cancellation Successful</h3>
+              <p className="text-gray-500 text-sm mb-8 font-medium">
+                Your booking has been cancelled and the resource has been freed up.
+              </p>
+              
+              {/* Dynamic Theme Button - Matches Lecturer/Student colors */}
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className={`w-full py-3 rounded-xl text-white text-sm font-semibold transition-all shadow-sm ${theme.gradientBtn}`}
+              >
+                Got it
+              </button>
+              
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

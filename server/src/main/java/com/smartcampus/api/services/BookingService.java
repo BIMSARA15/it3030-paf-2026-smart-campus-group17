@@ -1,11 +1,11 @@
 package com.smartcampus.api.services;
 
 import com.smartcampus.api.models.Booking;
-import com.smartcampus.api.models.User; // Imports the User and fixes all the errors!
+import com.smartcampus.api.models.Resource;
+import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.BookingRepository;
+import com.smartcampus.api.repositories.ResourceRepository;
 import com.smartcampus.api.repositories.UserRepository;
-import com.smartcampus.api.models.Utility; 
-import com.smartcampus.api.repositories.UtilityRepository; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,8 +31,9 @@ public class BookingService {
     @Autowired
     private UserRepository userRepository;
 
+    // 👇 NEW: Injecting Resource Repo to fetch the missing details!
     @Autowired
-    private UtilityRepository utilityRepository;
+    private ResourceRepository resourceRepository;
 
     public List<Booking> getAllBookings() {
         return bookingRepository.findAll();
@@ -64,18 +65,14 @@ public class BookingService {
             }
         }
 
-        // DEDUCT EQUIPMENT QUANTITY ---
-        if (newBooking.getQuantity() != null && newBooking.getQuantity() > 0) {
-            Optional<Utility> utilityOpt = utilityRepository.findById(newBooking.getResourceId());
-            if (utilityOpt.isPresent()) {
-                Utility utility = utilityOpt.get();
-                if (utility.getQuantity() < newBooking.getQuantity()) {
-                    throw new Exception("Out of stock! Only " + utility.getQuantity() + " available.");
-                }
-                // Deduct the requested quantity
-                utility.setQuantity(utility.getQuantity() - newBooking.getQuantity());
-                utilityRepository.save(utility);
-            }
+        // --- BUG FIX 2: FETCH MISSING DETAILS FOR EMAILS & NOTIFICATIONS ---
+        // The frontend only sends resourceId. We must fetch the actual name, block, and level from the DB here!
+        if (newBooking.getResourceId() != null) {
+            resourceRepository.findById(newBooking.getResourceId()).ifPresent(resource -> {
+                newBooking.setResourceName(resource.getResourceName()); 
+                newBooking.setBlock(resource.getBlock());
+                newBooking.setLevel(resource.getLevel());
+            });
         }
 
         newBooking.setStatus("PENDING");
@@ -85,24 +82,32 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(newBooking);
 
         // --- DYNAMIC NOTIFICATIONS FOR ADMIN ---
+        String assetName = savedBooking.getResourceName() != null ? savedBooking.getResourceName() : "Asset (" + savedBooking.getResourceId() + ")";
+        if (savedBooking.getBlock() != null && savedBooking.getLevel() != null) {
+            assetName += " - Block " + savedBooking.getBlock() + ", Lvl " + savedBooking.getLevel();
+        }
+
         String dynamicAdminMessage = String.format(
             "A new booking request requires your approval.\n\n" +
+            "🔖 Booking ID: %s\n" +
             "👤 Name: %s\n" +
             "📧 Email: %s\n" +
-            "🆔 ID Number: %s\n" +
-            "🏢 Resource: %s\n" +
+            "🏫 Asset: %s\n" +
             "📅 Date: %s\n" +
-            "⏰ Time: %s to %s\n" +
-            "📝 Purpose: %s",
+            "⏰ Time: %s to %s\n",
+            savedBooking.getId(),
             savedBooking.getUserName(),
             savedBooking.getUserEmail(),
-            savedBooking.getUserId(),
-            savedBooking.getResourceId(), 
+            assetName, 
             savedBooking.getDate(),
             savedBooking.getStartTime(),
-            savedBooking.getEndTime(),
-            savedBooking.getPurpose()
+            savedBooking.getEndTime()
         );
+
+        if (savedBooking.getLecturer() != null && !savedBooking.getLecturer().isBlank()) {
+            dynamicAdminMessage += "👨‍🏫 Lecturer in Charge: " + savedBooking.getLecturer() + "\n";
+        }
+        dynamicAdminMessage += "📝 Purpose: " + savedBooking.getPurpose();
 
         List<User> adminUsers = userRepository.findByRole("ADMIN");
         for (User admin : adminUsers) {
@@ -113,13 +118,12 @@ public class BookingService {
             );
         }
 
-       // --- -AUTOMATED HTML EMAILSs ---
+       // --- AUTOMATED HTML EMAILS ---
         try {
-            // Send the beautiful PENDING email to the user
             emailService.sendBookingHtmlEmail(
                 savedBooking, 
                 "Booking Request Received - Pending Approval", 
-                "pending-email" // This matches the filename exactly (without .html)
+                "pending-email"
             );
         } catch (Exception e) {
             System.err.println("Failed to send booking creation emails: " + e.getMessage());
@@ -156,36 +160,29 @@ public class BookingService {
 
             Booking savedBooking = bookingRepository.save(booking);
 
-            // --- RESTORE STOCK IF REJECTED OR CANCELLED ---
-            if (("REJECTED".equalsIgnoreCase(updateData.getStatus()) || "CANCELLED".equalsIgnoreCase(updateData.getStatus())) 
-                && booking.getQuantity() != null && booking.getQuantity() > 0) {
-                
-                Optional<Utility> utilityOpt = utilityRepository.findById(booking.getResourceId());
-                if (utilityOpt.isPresent()) {
-                    Utility utility = utilityOpt.get();
-                    // Add the quantity back to the system
-                    utility.setQuantity(utility.getQuantity() + booking.getQuantity());
-                    utilityRepository.save(utility);
-                }
-            }
-
             // --- DYNAMIC NOTIFICATIONS FOR STUDENT ---
+            String assetName = savedBooking.getResourceName() != null ? savedBooking.getResourceName() : "Asset (" + savedBooking.getResourceId() + ")";
+            
             String dynamicStudentMessage = String.format(
                 "Your booking request has been %s.\n\n" +
-                "🏢 Resource: %s\n" +
+                "🔖 Booking ID: %s\n" +
+                "🏫 Asset: %s\n" +
                 "📅 Date: %s\n" +
-                "⏰ Time: %s to %s\n\n",
+                "⏰ Time: %s to %s\n" +
+                "👨‍💼 Reviewed By: %s\n\n",
                 savedBooking.getStatus(),
-                savedBooking.getResourceId(),
+                savedBooking.getId(),
+                assetName,
                 savedBooking.getDate(),
                 savedBooking.getStartTime(),
-                savedBooking.getEndTime()
+                savedBooking.getEndTime(),
+                savedBooking.getReviewedBy() != null ? savedBooking.getReviewedBy() : "Admin Officer"
             );
 
-            if ("APPROVED".equalsIgnoreCase(savedBooking.getStatus()) && savedBooking.getAdminNote() != null) {
-                dynamicStudentMessage += "📝 Admin Note: " + savedBooking.getAdminNote();
-            } else if ("REJECTED".equalsIgnoreCase(savedBooking.getStatus()) && savedBooking.getRejectionReason() != null) {
-                dynamicStudentMessage += "❌ Reason: " + savedBooking.getRejectionReason();
+            if ("APPROVED".equalsIgnoreCase(savedBooking.getStatus()) && savedBooking.getAdminNote() != null && !savedBooking.getAdminNote().isBlank()) {
+                dynamicStudentMessage += "💬 Message from Officer: " + savedBooking.getAdminNote();
+            } else if ("REJECTED".equalsIgnoreCase(savedBooking.getStatus()) && savedBooking.getRejectionReason() != null && !savedBooking.getRejectionReason().isBlank()) {
+                dynamicStudentMessage += "❌ Reason for Rejection: " + savedBooking.getRejectionReason();
             }
 
             notificationService.sendNotification(
@@ -200,20 +197,24 @@ public class BookingService {
                     emailService.sendBookingHtmlEmail(
                         savedBooking, 
                         "Booking APPROVED - UniBook Smart Campus", 
-                        "approved-email" // Matches the filename
+                        "approved-email"
                     );
                 } 
                 else if ("REJECTED".equalsIgnoreCase(savedBooking.getStatus())) {
-                    // You can keep the old plain text one for rejections, or create a rejected-email.html later!
                     emailService.sendBookingHtmlEmail(
                         savedBooking, 
                         "Booking REJECTED - UniBook Smart Campus", 
-                        "rejected-email" // Matches the filename
+                        "rejected-email"
                     );
                 }
             } catch (Exception e) {
                 System.err.println("Failed to send status update email: " + e.getMessage());
             }
+
+            // --- BUG FIX 1: RETURN THE SAVED BOOKING ---
+            // Previously, this returned Optional.empty(), which caused the Controller to return a 404 Not Found error!
+            // This caused the frontend to crash, preventing the modals from closing and the UI from updating.
+            return Optional.of(savedBooking);
         }
         return Optional.empty();
     }
@@ -237,14 +238,12 @@ public class BookingService {
         return false;
     }
     
-    // Update booking details
     public Booking updateBookingDetails(String id, Booking updatedData) throws Exception {
         Optional<Booking> existingBookingOpt = bookingRepository.findById(id);
 
         if (existingBookingOpt.isPresent()) {
             Booking existingBooking = existingBookingOpt.get();
 
-            // Update the fields
             existingBooking.setDate(updatedData.getDate());
             existingBooking.setStartTime(updatedData.getStartTime());
             existingBooking.setEndTime(updatedData.getEndTime());
@@ -252,6 +251,8 @@ public class BookingService {
             existingBooking.setAttendees(updatedData.getAttendees());
             existingBooking.setLecturer(updatedData.getLecturer());
             existingBooking.setSpecialRequests(updatedData.getSpecialRequests());
+            existingBooking.setRequestedUtilityIds(updatedData.getRequestedUtilityIds());
+            
             existingBooking.setUpdatedAt(LocalDateTime.now());
 
             return bookingRepository.save(existingBooking);

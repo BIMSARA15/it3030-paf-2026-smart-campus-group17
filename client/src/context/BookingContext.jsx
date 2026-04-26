@@ -340,6 +340,7 @@ const createBooking = async (bookingData) => {
         }),
       });
 
+
       if (!response.ok) {
         throw new Error('Failed to cancel booking in database');
       }

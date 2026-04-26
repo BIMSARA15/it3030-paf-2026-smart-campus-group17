@@ -28,7 +28,6 @@ public class Booking {
     private String lecturer;
     private String specialRequests;
     
-    // 👇 RE-ADDED MISSING FIELD to fix the BookingService error
     private List<String> requestedUtilityIds;
     
     private String status; // PENDING, APPROVED, REJECTED, CANCELLED
@@ -96,7 +95,6 @@ public class Booking {
     public String getSpecialRequests() { return specialRequests; }
     public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
 
-    // 👇 RE-ADDED MISSING GETTER & SETTER
     public List<String> getRequestedUtilityIds() { return requestedUtilityIds; }
     public void setRequestedUtilityIds(List<String> requestedUtilityIds) { this.requestedUtilityIds = requestedUtilityIds; }
 

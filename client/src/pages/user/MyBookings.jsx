@@ -100,7 +100,7 @@ export default function MyBookings() {
   // Create a local state to hold JUST this user's bookings, so we can sort and filter without affecting global state
   const [myBookings, setMyBookings] = useState([]);
 
-  // Fetch the data using the REST API when the page loads (or when bookings change)
+  // Fetch the data using the REST API when the page loads or when bookings change
   useEffect(() => {
     const loadData = async () => {
       const emailToSearch = currentUser?.email || 'it23345478@my.sliit.lk'; 

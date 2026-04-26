@@ -46,29 +46,41 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 
   // CHANGED: Made function async to wait for the backend
   const handleSubmit = async () => {
-    if (action === 'reject' && !reason.trim()) {
-      setError('Please provide a rejection reason.');
+    if ((action === 'reject' || action === 'cancel') && !reason.trim()) {
+      setError(`Please provide a ${action === 'cancel' ? 'cancellation' : 'rejection'} reason.`);
       return;
     }
-    setIsSubmitting(true); // START LOADING
-    await onConfirm(action === 'reject' ? reason : note || undefined);
-    // Modal will close automatically via onConfirm, so we don't need to set it back to false
+    setIsSubmitting(true); 
+    
+    // FIX: Send 'reason' for BOTH reject and cancel. Only send 'note' for approve.
+    await onConfirm(action === 'approve' ? note || undefined : reason);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md z-10">
-        <div className={`p-5 border-b rounded-t-2xl ${action === 'approve' ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+        <div className={`p-5 border-b rounded-t-2xl ${
+          action === 'approve' ? 'bg-emerald-50 border-emerald-100' : 
+          action === 'cancel' ? 'bg-amber-50 border-amber-100' : 
+          'bg-red-50 border-red-100'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${action === 'approve' ? 'bg-emerald-100' : 'bg-red-100'}`}>
-              {action === 'approve'
-                ? <CheckCircle className="w-5 h-5 text-emerald-600" />
-                : <XCircle className="w-5 h-5 text-red-600" />}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              action === 'approve' ? 'bg-emerald-100' : 
+              action === 'cancel' ? 'bg-amber-100' : 'bg-red-100'
+            }`}>
+              {action === 'approve' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : 
+               action === 'cancel' ? <XCircle className="w-5 h-5 text-amber-600" /> :
+               <XCircle className="w-5 h-5 text-red-600" />}
             </div>
             <div>
-              <h3 className={action === 'approve' ? 'text-emerald-900' : 'text-red-900'}>
-                {action === 'approve' ? 'Approve Booking' : 'Reject Booking'}
+              <h3 className={
+                action === 'approve' ? 'text-emerald-900' : 
+                action === 'cancel' ? 'text-amber-900' : 'text-red-900'
+              }>
+                {action === 'approve' ? 'Approve Booking' : 
+                 action === 'cancel' ? 'Cancel Approved Booking' : 'Reject Booking'}
               </h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 {userName} · {resourceName}
@@ -99,7 +111,7 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
           ) : (
             <div>
               <label className="block text-gray-700 text-sm mb-1.5">
-                Rejection Reason <span className="text-red-500">*</span>
+                {action === 'cancel' ? 'Cancellation Reason' : 'Rejection Reason'} <span className="text-red-500">*</span>
               </label>
               <textarea
                 rows={3}
@@ -132,15 +144,17 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-medium transition-all ${
               isSubmitting ? 'opacity-70 cursor-not-allowed ' : ''
             }${
-              action === 'approve'
-                ? 'bg-emerald-600 hover:bg-emerald-700'
-                : 'bg-red-600 hover:bg-red-700'
+              action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 
+              action === 'cancel' ? 'bg-amber-600 hover:bg-amber-700' : 
+              'bg-red-600 hover:bg-red-700'
             }`}
           >
             {isSubmitting ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
             ) : action === 'approve' ? (
               'Confirm Approval'
+            ) : action === 'cancel' ? (
+              'Confirm Cancellation'
             ) : (
               'Confirm Rejection'
             )}
@@ -152,7 +166,8 @@ function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onC
 }
 
 export default function AllBookings() {
-  const { bookings, getResourceById, getUtilityById, approveBooking, rejectBooking, fetchBookings, purgeBooking, utilities } = useBooking();
+  // Change line ~126 to include cancelBooking:
+  const { bookings, getResourceById, getUtilityById, approveBooking, rejectBooking, cancelBooking, fetchBookings, purgeBooking, utilities } = useBooking();
   const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -234,7 +249,7 @@ export default function AllBookings() {
           // Updated to include the ID in the text
           message: `The Booking Request ${formattedId} has been Successfully Approved.` 
         });
-      } else if (reason) {
+      } else if (action === 'reject' && reason) {
         await rejectBooking(bookingId, reason);
         setResultModal({
           type: 'success', 
@@ -242,6 +257,14 @@ export default function AllBookings() {
           bookingId: formattedId,
           // Updated to include the ID in the text
           message: `The Booking Request ${formattedId} has been Successfully Rejected.` 
+        });
+      }else if (action === 'cancel' && reason) {
+        await cancelBooking(bookingId, reason);
+        setResultModal({
+          type: 'success', 
+          title: 'Booking Cancelled',
+          bookingId: formattedId,
+          message: `The Booking Request ${formattedId} has been Successfully Cancelled.` 
         });
       }
     } catch (error) {
@@ -835,8 +858,20 @@ export default function AllBookings() {
                                             </button>
                                           </>
                                         )}
+                                        {/* NEW: Show Cancel button ONLY when APPROVED */}
+                                        {booking.status === 'APPROVED' && (
+                                          <button
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              setModal({ bookingId: booking.id, action: 'cancel' }); 
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors shadow-sm"
+                                          >
+                                            <XCircle className="w-3.5 h-3.5" /> Cancel
+                                          </button>
+                                        )}
 
-                                      {/* 2. Show Delete Record ONLY when NOT PENDING (Approved, Rejected, Cancelled) */}
+                                        {/* 2. Show Delete Record ONLY when NOT PENDING */}
                                         {booking.status !== 'PENDING' && (
                                           <button
                                             onClick={(e) => {

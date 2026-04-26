@@ -32,7 +32,7 @@ public class BookingController {
 
     @GetMapping
     public ResponseEntity<List<Booking>> getAllBookings() {
-        return ResponseEntity.ok(bookingService.getAllBookings());
+        return ResponseEntity.ok(bookingService.getAllBookings()); //200 OK Status
     }
 
     // Endpoint for fetching bookings by ID
@@ -47,7 +47,7 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
     }
 
-    // 3. MERGED Create Booking
+    // Create Booking
     @PostMapping
     public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
         // --- ADD THESE DEBUG LOGS HERE ---
@@ -100,14 +100,14 @@ public class BookingController {
         try {
             // Hand off to the Service (which now handles the saving AND the dynamic notifications cleanly)
             Booking createdBooking = bookingService.createBooking(booking);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); 
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); //201 Created Status
             
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); //400 Bad Request
         }
     }
 
-    // MERGED Update booking status
+    // Update booking status
     @PutMapping("/{id}/status")
     public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
         
@@ -116,10 +116,10 @@ public class BookingController {
         if (updatedBookingOpt.isPresent()) {
             return ResponseEntity.ok(updatedBookingOpt.get());
         }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.notFound().build(); //404 Not Found Status
     }
 
-    // 5. TEAMMATE'S QR Code Check-in Endpoint
+    // QR Code Check-in Endpoint
     @PutMapping("/{id}/checkin")
     public ResponseEntity<Booking> checkInBooking(@PathVariable String id) {
         Optional<Booking> checkedInBooking = bookingService.checkInBooking(id);
@@ -127,24 +127,24 @@ public class BookingController {
                                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // 6. TEAMMATE'S Delete Endpoint
+    // Delete Endpoint
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBooking(@PathVariable String id) {
         boolean isDeleted = bookingService.deleteBooking(id);
         if (isDeleted) {
-            return ResponseEntity.noContent().build(); 
+            return ResponseEntity.noContent().build(); //204 No Content Status
         }
-        return ResponseEntity.notFound().build(); 
+        return ResponseEntity.notFound().build(); //404 Not Found Status
     }
 
-    // 7. Update an existing booking's details
+    // Update an existing booking's details
     @PutMapping("/{id}")
     public ResponseEntity<?> updateBookingDetails(@PathVariable String id, @RequestBody Booking bookingDetails) {
         try {
             Booking updatedBooking = bookingService.updateBookingDetails(id, bookingDetails);
             return ResponseEntity.ok(updatedBooking);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); //400 Bad Request
         }
     }
 }

@@ -31,7 +31,7 @@ public class BookingService {
     @Autowired
     private UserRepository userRepository;
 
-    // 👇 NEW: Injecting Resource Repo to fetch the missing details!
+    //Resource Repo to fetch the missing details
     @Autowired
     private ResourceRepository resourceRepository;
 
@@ -57,6 +57,7 @@ public class BookingService {
                 LocalTime existingStart = parseBookingTime(existing.getStartTime());
                 LocalTime existingEnd = parseBookingTime(existing.getEndTime());
 
+                //Conflict if new booking starts before existing ends AND new booking ends after existing starts
                 if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
                     throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
                 }
@@ -65,7 +66,6 @@ public class BookingService {
             }
         }
 
-        // --- BUG FIX 2: FETCH MISSING DETAILS FOR EMAILS & NOTIFICATIONS ---
         // The frontend only sends resourceId. We must fetch the actual name, block, and level from the DB here!
         if (newBooking.getResourceId() != null) {
             resourceRepository.findById(newBooking.getResourceId()).ifPresent(resource -> {
@@ -211,9 +211,7 @@ public class BookingService {
                 System.err.println("Failed to send status update email: " + e.getMessage());
             }
 
-            // --- BUG FIX 1: RETURN THE SAVED BOOKING ---
-            // Previously, this returned Optional.empty(), which caused the Controller to return a 404 Not Found error!
-            // This caused the frontend to crash, preventing the modals from closing and the UI from updating.
+            // RETURN THE SAVED BOOKING 
             return Optional.of(savedBooking);
         }
         return Optional.empty();

@@ -21,15 +21,8 @@ const api = axios.create({
 // NOTIFICATION API CALLS
 // ==========================================
 
-// src/services/api.js (Keep your existing axios config at the top)
-
-// Notice we don't need to pass userId in the URL! 
-// The backend securely figures it out from the session cookie.
-// src/services/api.js
-
 export const getUserNotifications = async () => {
   try {
-    // FIXED: Added /api to the URL
     const response = await api.get('/api/notifications');
     return response.data;
   } catch (error) {
@@ -40,10 +33,37 @@ export const getUserNotifications = async () => {
 
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    // FIXED: Added /api to the URL
     await api.patch(`/api/notifications/${notificationId}/read`);
   } catch (error) {
     console.error("Failed to mark notification as read", error);
+  }
+};
+
+// --- NEW FUNCTION APPENDED HERE ---
+export const markAllNotificationsAsRead = async () => {
+  try {
+    await api.patch('/api/notifications/read-all');
+  } catch (error) {
+    console.error("Failed to mark all notifications as read", error);
+  }
+};
+
+// Add this to the BOTTOM of your src/services/api.js file
+export const deleteNotification = async (notificationId) => {
+  try {
+    await api.delete(`/api/notifications/${notificationId}`);
+  } catch (error) {
+    console.error("Failed to delete notification", error);
+    throw error;
+  }
+};
+
+export const deleteMultipleNotifications = async (ids) => {
+  try {
+    await api.delete('/api/notifications/bulk', { data: ids });
+  } catch (error) {
+    console.error("Failed to delete multiple notifications", error);
+    throw error;
   }
 };
 

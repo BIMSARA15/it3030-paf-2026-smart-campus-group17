@@ -49,6 +49,10 @@ const getAccessLabel = (access = '') => {
   return 'Open Access';
 };
 
+const normalizeUtilityStatus = (status = '') => status.trim().toLowerCase();
+const shouldShowUtility = (utility) => normalizeUtilityStatus(utility?.status) !== 'maintenance';
+const isUtilityInUse = (utility) => normalizeUtilityStatus(utility?.status) === 'in use';
+
 export default function Resources() {
   const {
     resources,
@@ -141,6 +145,8 @@ export default function Resources() {
   });
 
   const filteredUtilities = utilities.filter((utility) => {
+    if (!shouldShowUtility(utility)) return false;
+
     const query = search.trim().toLowerCase();
     return query === '' ||
       utility.utilityName.toLowerCase().includes(query) ||
@@ -156,6 +162,8 @@ export default function Resources() {
     const total = rb.filter(b => b.status === 'APPROVED').length;
     return { upcoming, total };
   };
+  const getVisibleUtilitiesForResource = (resourceId) =>
+    getUtilitiesForResource(resourceId).filter(shouldShowUtility);
 
   const selectedResource = selectedId ? (
     resources.find(r => r.id === selectedId) || 
@@ -478,28 +486,34 @@ export default function Resources() {
                 ) : (
                   filteredUtilities.map((utility) => {
                     const isSelected = selectedId === utility.id;
-                    const isOutOfStock = utility.quantity <= 0; 
+                    const isOutOfStock = utility.quantity <= 0;
+                    const isInUse = isUtilityInUse(utility);
+                    const isDisabled = isOutOfStock || isInUse;
 
                     return (
                     <button
                       key={utility.id}
-                      disabled={isOutOfStock} 
+                      disabled={isDisabled}
                       onClick={() => {
-                        if (isOutOfStock) return; 
+                        if (isDisabled) return;
                         setSelectedId(isSelected ? null : utility.id);
                         setAccessMessage('');
                       }}
                       className={`text-left w-full rounded-xl border-2 p-5 relative transition-all ${
-                        isOutOfStock
+                        isDisabled
                           ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200'
                           : isSelected 
                             ? theme.cardSelected
                             : `bg-white border-gray-100 ${theme.cardHover}`
                       }`}
                     >
-                      {isOutOfStock && (
-                        <div className="absolute top-4 right-4 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
-                          Out of Stock
+                      {isDisabled && (
+                        <div className={`absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-md z-10 border ${
+                          isInUse
+                            ? 'bg-amber-100 text-amber-700 border-amber-200'
+                            : 'bg-red-100 text-red-600 border-red-200'
+                        }`}>
+                          {isInUse ? 'In Use' : 'Out of Stock'}
                         </div>
                       )}
 
@@ -507,7 +521,7 @@ export default function Resources() {
                         <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${equipmentAccent.bg} ${equipmentAccent.border} ${equipmentAccent.color}`}>
                           <Package className="w-5 h-5" />
                         </div>
-                        {!isOutOfStock && (
+                        {!isDisabled && (
                           <span className={`text-xs px-2 py-1 rounded-full lowercase capitalize ${equipmentAccent.bg} ${equipmentAccent.color}`}>
                             {utility.category}
                           </span>
@@ -527,7 +541,7 @@ export default function Resources() {
                         {utility.location}
                       </div>
 
-                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                      <div className={`flex items-center gap-1.5 text-xs mb-3 ${isOutOfStock ? 'text-red-500 font-medium' : isInUse ? 'text-amber-600 font-medium' : 'text-gray-500'}`}>
                         <Package className="w-3.5 h-3.5" />
                         Quantity: {utility.quantity}
                       </div>
@@ -539,11 +553,17 @@ export default function Resources() {
                       )}
 
                       <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          isInUse
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}>
                           {utility.status}
                         </span>
-                        <span className="text-emerald-600 flex items-center gap-1 text-xs">
-                          <CheckCircle className="w-3 h-3" /> Admin Added
+                        <span className={`flex items-center gap-1 text-xs ${
+                          isInUse ? 'text-amber-700' : 'text-emerald-600'
+                        }`}>
+                          <CheckCircle className="w-3 h-3" /> {isInUse ? 'Temporarily unavailable' : 'Admin Added'}
                         </span>
                       </div>
                     </button>
@@ -641,16 +661,23 @@ export default function Resources() {
                     )}
 
                     {/* Available Utilities (Hide for Equipments) */}
-                    {selectedResource.type !== 'equipment' && getUtilitiesForResource(selectedResource.id).length > 0 && (
+                    {selectedResource.type !== 'equipment' && getVisibleUtilitiesForResource(selectedResource.id).length > 0 && (
                       <div className="mb-4">
                         <div className="flex items-center gap-1.5 mb-2">
                           <Package className="w-3.5 h-3.5 text-gray-400" />
                           <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Available Utilities</p>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {getUtilitiesForResource(selectedResource.id).map((utility) => (
-                            <span key={utility.id} className="text-xs px-2 py-1 bg-blue-50 border border-blue-100 text-[#2563EB] rounded-lg">
-                              {utility.utilityName}
+                          {getVisibleUtilitiesForResource(selectedResource.id).map((utility) => (
+                            <span
+                              key={utility.id}
+                              className={`text-xs px-2 py-1 rounded-lg ${
+                                isUtilityInUse(utility)
+                                  ? 'bg-amber-50 border border-amber-100 text-amber-700'
+                                  : 'bg-blue-50 border border-blue-100 text-[#2563EB]'
+                              }`}
+                            >
+                              {utility.utilityName}{isUtilityInUse(utility) ? ' (In Use)' : ''}
                             </span>
                           ))}
                         </div>

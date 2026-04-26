@@ -30,6 +30,9 @@ import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
 import StudentRequests from './pages/user/StudentRequests';
 
+// --- NEW IMPORT FOR NOTIFICATIONS ---
+import Notifications from './pages/Notifications';
+
 function App() {
   const { user, loading } = useAuth();
 
@@ -50,7 +53,6 @@ function App() {
       <div className="app-container">
         <Routes>
           {/* Public Route: Landing Page */}
-          {/* Public Route: Landing Page */}
           <Route 
             path="/" 
             element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Landing />} 
@@ -61,8 +63,6 @@ function App() {
             path="/login" 
             element={(user && !user.requiresRegistration) ? <Navigate to={getDashboardRoute(user.role)} replace /> : <Login />} 
           />
-
-        
 
           {/* ========================================== */}
           {/* TEAM DASHBOARD ROUTES (PLACEHOLDERS)         */}
@@ -170,7 +170,6 @@ function App() {
             path="/student"
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER']}>
-               
                   <StudentDashboard />
               </ProtectedRoute>
             } 
@@ -222,6 +221,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN']}>
                 <Maintenance />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* --- NEW ROUTE FOR NOTIFICATIONS PAGE (Merchant included) --- */}
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT', 'USER', 'LECTURER', 'ADMIN', 'TECHNICIAN', 'MERCHANT']}>
+                <Notifications />
               </ProtectedRoute>
             }
           />

@@ -3,18 +3,40 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, CheckCircle, XCircle, Calendar, Clock,
   Users, MapPin, ChevronDown, Building2, FlaskConical, Wrench,
-  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info, Loader2
+  Eye, Trash2, SlidersHorizontal, X, AlertCircle, Info, Loader2,
+  Hash, FileText, Bell, ArrowLeft
 } from 'lucide-react';
 import { useBooking } from "../../context/BookingContext";
 import { StatusBadge } from "../../components/StatusBadge";
 import Sidebar from "../../components/Sidebar"; 
 import Header from "../../components/Header";
 
+const TYPE_ICONS = {
+  room: <Building2 className="w-4 h-4" />,
+  lab: <FlaskConical className="w-4 h-4" />,
+  equipment: <Wrench className="w-4 h-4" />,
+};
+
 const TYPE_COLORS = {
   room: 'bg-blue-100 text-blue-600',
   lab: 'bg-violet-100 text-violet-600',
   equipment: 'bg-orange-100 text-orange-600',
 };
+
+function InfoCard({ icon, label, value, accent }) {
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-gray-100 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-md transition-all cursor-default">
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${accent || "bg-indigo-50 text-indigo-500"}`}>
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] text-gray-400 mb-0.5 uppercase tracking-wide font-bold">{label}</p>
+        {/* Removed truncate so full text is visible, added pre-wrap for line breaks */}
+        <p className="text-sm text-gray-800 font-semibold whitespace-pre-wrap break-words">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onClose }) {
   const [note, setNote] = useState('');
@@ -244,6 +266,29 @@ export default function AllBookings() {
   const modalBooking = modal ? bookings.find(b => b.id === modal.bookingId) : null;
   const modalResource = modalBooking ? getBookingItem(modalBooking.resourceId) : null;
 
+  const expandedBooking = expandedId ? bookings.find(b => b.id === expandedId) : null;
+  const expandedResource = expandedBooking ? getBookingItem(expandedBooking.resourceId) : null;
+
+  const adminTheme = {
+    textAccent: 'text-[#1E3A8A]',
+    activeFilter: 'bg-[#1E3A8A] text-white shadow-md',
+    lightBg: 'bg-[#1E3A8A]/10',
+    progressLine: 'bg-[#1E3A8A]'
+  };
+
+  const getSteps = (currentStatus) => {
+    return [
+      { label: "Submitted", done: true, active: false },
+      { label: "Under Review", done: currentStatus !== 'PENDING', active: currentStatus === 'PENDING' },
+      { 
+        label: currentStatus === 'REJECTED' ? "Rejected" : currentStatus === 'CANCELLED' ? "Cancelled" : "Decision", 
+        done: currentStatus === 'APPROVED' || currentStatus === 'REJECTED' || currentStatus === 'CANCELLED', 
+        active: false 
+      },
+      { label: "Approved", done: currentStatus === 'APPROVED', active: currentStatus === 'APPROVED' },
+    ];
+  };
+
   return (
     // WRAPPED IN LAYOUT
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
@@ -372,6 +417,184 @@ export default function AllBookings() {
                 </div>
               </div>
             )}
+
+            {/* <-- ADD THIS NEW DETAILS MODAL HERE --> */}
+            {expandedBooking && ( 
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                
+                {/* SAFE FIX: We use negative positioning to stretch the blur 40px off the screen in all directions */}
+                <div className="absolute -top-10 -bottom-10 -left-10 -right-10 bg-black/50 backdrop-blur-sm" onClick={() => setExpandedId(null)} />
+                
+                <div className="relative z-10 bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                  {/* Top Header Bar */}
+                  <div className="flex items-center justify-between p-4 bg-white border-b border-gray-50">
+                    <button onClick={() => setExpandedId(null)} className={`flex items-center gap-1.5 text-sm ${adminTheme.textAccent} hover:opacity-80 transition-opacity font-medium`}>
+                      <ArrowLeft className="w-4 h-4" /> Back to List
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setExpandedId(null)} className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Scrollable Content */}
+                  <div className="overflow-y-auto overflow-x-hidden pb-4 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300/80">
+                    
+                    {/* Hero Header Section */}
+                    <div className="bg-white p-6 sm:p-8 flex flex-col border-b border-gray-100">
+                      
+                      {/* Top Row: ID Badge and Status Badge */}
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 text-gray-500 text-xs border border-gray-200 font-mono font-medium">
+                          <Hash className="w-3.5 h-3.5" />
+                          ID-{expandedBooking.id.slice(-5).toUpperCase()}
+                        </div>
+                        <StatusBadge status={expandedBooking.status} />
+                      </div>
+
+                      {/* Bottom Row: Resource Name and Location */}
+                      <div>
+                        <h1 className="text-gray-900 text-2xl sm:text-3xl font-bold mb-2">
+                          {expandedResource?.name || 'Unknown Resource'}
+                        </h1>
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <MapPin className="w-4 h-4" />
+                          <span className="text-sm font-medium">
+                            {expandedResource?.location || 'No location specified'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                    </div>
+
+                    {/* Feedback & Actions Area */}
+                    <div className="px-6 py-6 bg-gray-50/50 border-b border-gray-50">
+                      
+                      {/* Admin Feedback Section */}
+                      {(expandedBooking.rejectionReason || expandedBooking.adminNote) && (
+                        <div className={`mb-5 p-4 rounded-2xl border ${
+                          expandedBooking.status === 'REJECTED' ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'
+                        }`}>
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5">
+                              {expandedBooking.status === 'REJECTED' ? <AlertCircle className="w-5 h-5 text-red-600" /> : <CheckCircle className="w-5 h-5 text-emerald-600" />}
+                            </div>
+                            <div>
+                              <p className={`text-xs font-bold uppercase tracking-wider ${expandedBooking.status === 'REJECTED' ? 'text-red-800' : 'text-emerald-800'}`}>
+                                {expandedBooking.status === 'REJECTED' ? 'Reason for Rejection' : 'Admin Note'}
+                              </p>
+                              <p className={`text-sm mt-1 font-medium ${expandedBooking.status === 'REJECTED' ? 'text-red-700' : 'text-emerald-700'}`}>
+                                {expandedBooking.status === 'REJECTED' ? expandedBooking.rejectionReason : expandedBooking.adminNote}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* User Cancellation Reason */}
+                      {expandedBooking.status === 'CANCELLED' && expandedBooking.cancellationReason && (
+                        <div className="mb-5 p-4 rounded-2xl border bg-white border-gray-200">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-gray-500 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider text-gray-700">Reason for Cancellation</p>
+                              <p className="text-sm mt-1 text-gray-600 font-medium">{expandedBooking.cancellationReason}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Specific Details List for Admin */}
+                      <div className="flex flex-col gap-3">
+                        
+                        {/* Custom Requester Profile Card */}
+                        <div className="bg-white rounded-2xl p-4 border border-gray-100 flex items-center gap-3.5 hover:-translate-y-0.5 hover:shadow-sm transition-all">
+                          <div className="w-11 h-11 rounded-full bg-[#1E3A8A] flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <span className="text-white text-sm font-bold tracking-wider">
+                              {(expandedBooking.userName || 'User').split(' ').map(n => n).join('').slice(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex flex-col justify-center">
+                            <p className="text-[11px] text-gray-400 mb-0.5 uppercase tracking-wide font-bold">Requester</p>
+                            <p className="text-gray-900 font-bold text-sm">{expandedBooking.userName || 'Unknown User'}</p>
+                            <p className="text-gray-500 text-xs mt-0.5">{expandedBooking.userEmail}</p>
+                          </div>
+                        </div>
+                        
+                        {/* 2-Column Grid for Date, Time, Location, and Attendance */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <InfoCard 
+                            icon={<Calendar className="w-4 h-4" />} 
+                            label="Requested Date"  
+                            value={formatDate(expandedBooking.date)} 
+                            accent="bg-blue-50 text-blue-600" 
+                          />
+                          <InfoCard 
+                            icon={<Clock className="w-4 h-4" />} 
+                            label="Requested Time" 
+                            value={`${expandedBooking.startTime} – ${expandedBooking.endTime}`} 
+                            accent="bg-purple-50 text-purple-600" 
+                          />
+                          <InfoCard 
+                          icon={<MapPin className="w-4 h-4" />} 
+                          label="Resource Location" 
+                          value={expandedResource?.location || `${expandedBooking.block || ''} ${expandedBooking.level || ''}`.trim() || 'No location specified'} 
+                          accent="bg-emerald-50 text-emerald-600" 
+                        />
+                          
+                          {/* Show Quantity for Equipment, Attendees for Rooms/Labs */}
+                          {expandedResource?.type === 'equipment' ? (
+                            <InfoCard 
+                              icon={<Hash className="w-4 h-4" />} 
+                              label="Quantity" 
+                              value={`${expandedBooking.quantity || 1}`} 
+                              accent="bg-orange-50 text-orange-600" 
+                            />
+                          ) : (
+                            <InfoCard 
+                              icon={<Users className="w-4 h-4" />} 
+                              label="Attendees" 
+                              value={`${expandedBooking.attendees || 0} attendees`} 
+                              accent="bg-orange-50 text-orange-600" 
+                            />
+                          )}
+                        </div>
+
+                        {/* Purpose Card - Added right below Requester */}
+                        <InfoCard 
+                          icon={<FileText className="w-4 h-4" />} 
+                          label="Purpose" 
+                          value={expandedBooking.purpose} 
+                          accent="bg-slate-50 text-slate-600" 
+                        />
+
+                        {/* Optional Extras (Full Width) */}
+                        {expandedBooking.lecturer && (
+                           <InfoCard icon={<Building2 className="w-4 h-4" />} label="Lecturer in Charge" value={expandedBooking.lecturer} accent="bg-violet-50 text-violet-600" />
+                        )}
+                        {expandedBooking.specialRequests && (
+                           <InfoCard icon={<FileText className="w-4 h-4" />} label="Special Requests" value={expandedBooking.specialRequests} accent="bg-rose-50 text-rose-600" />
+                        )}
+                        
+                      </div>
+                      
+                      <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 font-medium border-t border-gray-100 pt-4">
+                        <div className="flex gap-4">
+                          <span className="flex items-center gap-1.5"><Bell className="w-3.5 h-3.5" /> Submitted: {formatCreated(expandedBooking.createdAt)}</span>
+                          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Updated: {formatCreated(expandedBooking.updatedAt)}</span>
+                        </div>
+                        {expandedBooking.reviewedBy && (
+                          <span>Reviewed by: {expandedBooking.reviewedBy}</span>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* <-- END NEW DETAILS MODAL --> */}
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -631,108 +854,11 @@ export default function AllBookings() {
                                         onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === booking.id ? null : booking.id); }}
                                         className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 bg-white rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
                                       >
-                                        <Eye className="w-3.5 h-3.5" /> View Details
+                                        <Eye className="w-3.5 h-3.5" /> Details
                                       </button>
                                 </div>
                                 </td>
                             </tr>
-                            
-                            {isExpanded && (
-                                <tr className="bg-white border-b border-gray-50">
-                                <td colSpan={6} className="px-6 py-5 bg-slate-50/50 border-x-4 border-l-[#1E3A8A] border-r-transparent">
-                                    <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-50">
-                                        <div>
-                                          <p className="text-gray-400 text-xs mb-0.5">Booking ID</p>
-                                          {/* Slices the last 5 characters and adds the ID- prefix */}
-                                          <p className="text-gray-700 text-sm font-mono">ID-{booking.id.slice(-5).toUpperCase()}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-gray-400 text-xs mb-0.5">Email</p>
-                                          <p className="text-gray-700 text-sm">{booking.userEmail}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-gray-400 text-xs mb-0.5">Submitted</p>
-                                          <p className="text-gray-700 text-sm">{formatCreated(booking.createdAt)}</p>
-                                        </div>
-                                        <div>
-                                          <p className="text-gray-400 text-xs mb-0.5">Last Updated</p>
-                                          <p className="text-gray-700 text-sm">{formatCreated(booking.updatedAt)}</p>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Second Row wrapped in a Grid for horizontal layout */}
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                        <div>
-                                          <p className="text-gray-400 text-xs mb-0.5">Full Purpose</p>
-                                          <p className="text-gray-700 text-sm">{booking.purpose}</p>
-                                        </div>
-                                        <div>
-                                          {booking.lecturer && (
-                                            <>
-                                              <p className="text-gray-400 text-xs mb-0.5">Lecturer in Charge</p>
-                                              <p className="text-gray-700 text-sm">{booking.lecturer}</p>
-                                            </>
-                                          )}
-                                        </div>
-                                        <div>
-                                          {resource && (
-                                            <>
-                                              <p className="text-gray-400 text-xs mb-0.5">Resource Location</p>
-                                              <div className="flex items-center gap-1 text-gray-700 text-sm">
-                                                <MapPin className="w-3.5 h-3.5 text-gray-400" /> {resource.location}
-                                              </div>
-                                            </>
-                                          )}
-                                        </div>
-                                        <div>
-                                          {booking.specialRequests && (
-                                            <>
-                                              <p className="text-gray-400 text-xs mb-0.5">Special Requests</p>
-                                              <p className="text-gray-700 text-sm">{booking.specialRequests}</p>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {booking.status === 'REJECTED' && booking.rejectionReason && (
-                                        <div className="mt-3 flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-xl">
-                                            <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                                            <div>
-                                            <p className="text-red-700 text-xs">Rejection Reason</p>
-                                            <p className="text-red-600 text-sm">{booking.rejectionReason}</p>
-                                            </div>
-                                        </div>
-                                      )}
-
-                                      {booking.adminNote && (
-                                        <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-                                            <Eye className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                                            <div>
-                                            <p className="text-blue-700 text-xs">Admin Note</p>
-                                            <p className="text-blue-600 text-sm">{booking.adminNote}</p>
-                                            </div>
-                                        </div>
-                                      )}
-
-                                      {booking.status === 'CANCELLED' && booking.cancellationReason && (
-                                        <div className="mt-3 flex items-start gap-2 p-3 rounded-xl border bg-gray-50 border-gray-200">
-                                            <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                                            <div>
-                                            <p className="text-gray-700 text-xs">Cancellation Reason (User)</p>
-                                            <p className="text-gray-600 text-sm">{booking.cancellationReason}</p>
-                                            </div>
-                                        </div>
-                                      )}
-
-                                      {booking.reviewedBy && (
-                                        <p className="text-gray-400 text-xs mt-3">Reviewed by: {booking.reviewedBy}</p>
-                                      )}
-
-                                    </div> {/* <-- Closes the white card wrapper */}
-                                </td>
-                                </tr>
-                            )}
                             </Fragment>
                         );
                         })}

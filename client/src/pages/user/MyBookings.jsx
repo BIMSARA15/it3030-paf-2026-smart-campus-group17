@@ -4,7 +4,7 @@ import {
   CalendarPlus, Building2, FlaskConical, Wrench, MapPin,
   Calendar, Clock, Users, ChevronDown, XCircle, Info,
   Search, AlertCircle, CheckCircle, Eye, Pencil,
-  Hash, FileText, Bell, ArrowLeft, Share2, X
+  Hash, FileText, Bell, ArrowLeft, Share2, X, QrCode, Download
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -94,6 +94,8 @@ export default function MyBookings() {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
+  const [qrModalId, setQrModalId] = useState(null); // QR code
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Create a local state to hold JUST this user's bookings, so we can sort and filter without affecting global state
   const [myBookings, setMyBookings] = useState([]);
@@ -179,21 +181,56 @@ export default function MyBookings() {
     ];
   };
 
-  const handleCancelSubmit = (id) => {
+  const handleCancelSubmit = async (id) => {
     if (!cancelReason.trim()) {
       setCancelError('Please tell us why you are cancelling.');
       return;
     }
-    cancelBooking(id, cancelReason); 
+    
+    // Wait for the backend to process the cancellation
+    await cancelBooking(id, cancelReason); 
+    
+    // Close the cancel form and clear inputs
     setCancellingId(null);
     setCancelReason('');
     setCancelError('');
+    
+    // Show our new Success Popup
+    setShowSuccessModal(true);
   };
 
   const resetCancelState = () => {
     setCancellingId(null);
     setCancelReason('');
     setCancelError('');
+  };
+
+  const handleDownloadQR = () => {
+    const svg = document.getElementById('qr-code-svg');
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      // Fill with white background before drawing SVG
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = `Booking-QR-${qrModalId}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+    
+    // Convert SVG to data URL safely
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   return (
@@ -207,7 +244,7 @@ export default function MyBookings() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">My Bookings</h1>
-              <p className="text-gray-500 text-sm mt-0.5">{myBookings.length} total booking{myBookings.length !== 1 ? 's' : ''}</p>
+              {/* <p className="text-gray-500 text-sm mt-0.5">{myBookings.length} total booking{myBookings.length !== 1 ? 's' : ''}</p> */}
             </div>
             {/* Dynamic Gradient Button */}
             <button
@@ -252,6 +289,11 @@ export default function MyBookings() {
             </div>
           </div>
 
+          {/* Add this new block exactly here, under the filters */}
+          <div className="text-sm text-gray-500 mt-2 mb-1">
+            Showing {filtered.length} of {myBookings.length} bookings
+          </div>
+
           {/* Bookings list */}
           {filtered.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-100 py-16 text-center">
@@ -274,7 +316,7 @@ export default function MyBookings() {
               {filtered.map(booking => {
                 const resource = getBookingItem(booking.resourceId);
                 const isPast = booking.date < today;
-                const canCancel = booking.status === 'PENDING' || (booking.status === 'APPROVED' && !isPast);
+                const canCancel = booking.status === 'PENDING' || booking.status === 'APPROVED';
 
                 return (
                   <div key={booking.id} className="relative bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -346,6 +388,24 @@ export default function MyBookings() {
                               </button>
                             )}
 
+                            {/* QR Code Button (Only for APPROVED) */}
+                            {booking.status === 'APPROVED' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); 
+                                  setQrModalId(booking.id);
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border bg-white shadow-sm flex-1 xl:flex-none justify-center ${
+                                  isLecturer 
+                                    ? 'border-[#8A3505]/30 text-[#8A3505] hover:bg-[#8A3505]/10' 
+                                    : 'border-[#0F6657]/30 text-[#0F6657] hover:bg-[#0F6657]/10'
+                                }`}
+                              >
+                                <QrCode className="w-3.5 h-3.5" />
+                                <span>QR Code</span>
+                              </button>
+                            )}
+
                             {/* Cancel Button */}
                             {canCancel && (
                               <button
@@ -359,7 +419,7 @@ export default function MyBookings() {
                                 <span>Cancel</span>
                               </button>
                             )}
-                            
+
                             {/* Details Button */}
                             <button
                               onClick={(e) => {
@@ -646,7 +706,11 @@ export default function MyBookings() {
                     </button>
                   )}
                   
-                  {(expandedBooking.status === 'PENDING' || (expandedBooking.status === 'APPROVED' && expandedBooking.date >= today)) && (
+                  {/* Change the condition here from: */}
+                  {/* {(expandedBooking.status === 'PENDING' || (expandedBooking.status === 'APPROVED' && expandedBooking.date >= today)) && ( */}
+
+                  {/* To this: */}
+                  {(expandedBooking.status === 'PENDING' || expandedBooking.status === 'APPROVED') && (
                     <button
                       onClick={() => {
                         setExpandedId(null);
@@ -663,7 +727,159 @@ export default function MyBookings() {
           </div>
         </div>
       )}
-      
+
+      {/* NEW QR Code Popup Modal */}
+      {qrModalId && (() => {
+        const qrBooking = myBookings.find(b => b.id === qrModalId);
+        if (!qrBooking) return null;
+        
+        // Fetch resource details so we can display the location
+        const qrResource = getBookingItem(qrBooking.resourceId);
+        
+        return (
+          <div className="fixed inset-0 z- flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm transition-opacity">
+            <div className="bg-white rounded-[2rem] shadow-xl w-full max-w-2xl overflow-hidden flex flex-col relative max-h-[95vh]">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 sm:p-6 border-b border-gray-50">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Check-in Pass</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">Show this pass to the admin or facility manager</p>
+                </div>
+                <button 
+                  onClick={() => setQrModalId(null)} 
+                  className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Body */}
+              <div className="overflow-y-auto p-5 sm:p-6 pb-8 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  
+                  {/* Left Side: QR Code Area */}
+                  <div className="w-full md:w-auto flex flex-col items-center flex-shrink-0">
+                    <div className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm mb-5">
+                      <QRCodeSVG 
+                        id="qr-code-svg"
+                        value={`${window.location.origin}/admin/verify/${qrBooking.id}`} 
+                        size={180} 
+                        level="H"
+                        includeMargin={true} 
+                      />
+                    </div>
+
+                    {qrBooking.checkedIn ? (
+                      <span className={`inline-flex items-center gap-1.5 px-4 py-2 ${theme.lightBg} ${theme.textAccent} rounded-xl text-sm font-medium w-full justify-center border border-black/5`}>
+                        <CheckCircle className={`w-4 h-4 ${theme.textAccent}`} /> Checked In Successfully
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium w-full justify-center border border-gray-200">
+                        <Clock className="w-4 h-4 text-gray-400" /> Awaiting Check-in
+                      </span>
+                    )}
+
+                    <button
+                      onClick={handleDownloadQR}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 mt-4 rounded-xl text-white text-sm font-medium transition-all ${theme.gradientBtn}`}
+                    >
+                      <Download className="w-4 h-4" /> Save as PNG
+                    </button>
+                  </div>
+
+                  {/* Right Side: Details Area */}
+                  <div className="w-full flex-1">
+                    <h4 className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-4">Booking Information</h4>
+                    
+                    <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex flex-col gap-4">
+                       
+                       {/* ID and Resource */}
+                       <div className="grid grid-cols-2 gap-4">
+                         <div>
+                           <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Booking ID</p>
+                           <p className="text-sm font-semibold text-gray-900">ID-{qrBooking.id.slice(-5).toUpperCase()}</p>
+                         </div>
+                         <div>
+                           <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Resource</p>
+                           <p className="text-sm font-semibold text-gray-900">{qrResource?.name || 'Unknown Resource'}</p>
+                         </div>
+                       </div>
+
+                       {/* Date and Time */}
+                       <div className="grid grid-cols-2 gap-4">
+                         <div>
+                           <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Date</p>
+                           <p className="text-sm font-medium text-gray-700">{formatDate(qrBooking.date)}</p>
+                         </div>
+                         <div>
+                           <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Time</p>
+                           <p className="text-sm font-medium text-gray-700">{qrBooking.startTime} – {qrBooking.endTime}</p>
+                         </div>
+                       </div>
+
+                       {/* Location and Attendees */}
+                       <div className="grid grid-cols-2 gap-4">
+                         <div>
+                           <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Location</p>
+                           <p className="text-sm font-medium text-gray-700">{qrResource?.location || 'N/A'}</p>
+                         </div>
+                         {qrBooking.attendees && (
+                           <div>
+                             <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Attendees</p>
+                             <p className="text-sm font-medium text-gray-700">{qrBooking.attendees} people</p>
+                           </div>
+                         )}
+                       </div>
+                       
+                       {/* Purpose spans full width */}
+                       <div>
+                         <p className="text-[11px] text-gray-400 uppercase tracking-wide font-bold mb-1">Purpose</p>
+                         <p className="text-sm font-medium text-gray-700">{qrBooking.purpose}</p>
+                       </div>
+
+                    </div>
+
+                    <div className="mt-5 flex items-center gap-2 text-xs text-gray-400 font-medium">
+                      <Bell className="w-3.5 h-3.5" /> Submitted on {formatCreated(qrBooking.createdAt)}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+   {/* SUCCESS POPUP MODAL (Add this right here) */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 sm:p-8 text-center">
+              
+              {/* Dynamic Theme Icon - Matches Lecturer/Student colors */}
+              <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 ${theme.lightBg} ${theme.textAccent}`}>
+                <CheckCircle className="w-10 h-10" />
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Cancellation Successful</h3>
+              <p className="text-gray-500 text-sm mb-8 font-medium">
+                Your booking has been cancelled and the resource has been freed up.
+              </p>
+              
+              {/* Dynamic Theme Button - Matches Lecturer/Student colors */}
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className={`w-full py-3 rounded-xl text-white text-sm font-semibold transition-all shadow-sm ${theme.gradientBtn}`}
+              >
+                Got it
+              </button>
+              
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

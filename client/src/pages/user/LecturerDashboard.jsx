@@ -18,13 +18,16 @@ export default function LecturerDashboard() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showRaiseTicket, setShowRaiseTicket] = useState(false);
+  // Create a local state to hold the live dashboard bookings
   const [myBookings, setMyBookings] = useState([]);
 
+  // React to changes: fetch fresh data when the component loads or when 'bookings' updates
   useEffect(() => {
     const loadData = async () => {
       const emailToSearch = currentUser?.email || 'it23345478@my.sliit.lk'; 
       const userSpecificBookings = await fetchUserBookings(emailToSearch);
       
+      // Sort them so the newest updates appear correctly
       const sorted = userSpecificBookings.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -46,11 +49,13 @@ export default function LecturerDashboard() {
 
   const today = new Date().toISOString().split('T')[0];
   
+  // FIX: Use spread operator [...] before sort() to prevent mutating the array
   const upcoming = [...myBookings]
     .filter(b => b.status === 'APPROVED' && b.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
     .slice(0, 5);
 
+  // FIX: Safe sorting for createdAt and prevent mutation
   const recent = [...myBookings]
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -59,6 +64,7 @@ export default function LecturerDashboard() {
     })
     .slice(0, 6);
 
+  // Chart data – last 7 days bookings
   const chartData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -89,7 +95,7 @@ export default function LecturerDashboard() {
     const resource = getResourceById(id);
     if (resource) return resource;
 
-    const utility = getUtilityById?.(id);
+    const utility = getUtilityById(id);
     if (utility) {
       return {
         ...utility,
@@ -97,7 +103,6 @@ export default function LecturerDashboard() {
         type: 'equipment'
       };
     }
-
     return null;
   };
 
@@ -109,6 +114,7 @@ export default function LecturerDashboard() {
         <Header />
         
         <div className="p-4 lg:p-6 space-y-6">
+          {/* Page header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-gray-900 text-2xl font-semibold">
@@ -119,6 +125,7 @@ export default function LecturerDashboard() {
               </p>
             </div>
             
+            {/* RUST/ORANGE GRADIENT BUTTON */}
             <button
               onClick={() => navigate('/booking/new')}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#8A3505] to-[#C54E08] text-white hover:from-[#702A04] hover:to-[#A74106] shadow-[0_4px_12px_rgba(167,65,6,0.3)] border-t border-white/20 rounded-xl transition-all text-sm font-medium"
@@ -128,6 +135,7 @@ export default function LecturerDashboard() {
             </button>
           </div>
 
+          {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {statCards.map((card) => {
               const Icon = card.icon;
@@ -147,6 +155,8 @@ export default function LecturerDashboard() {
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+            
+            {/* Chart */}
             <div className="xl:col-span-2 bg-white rounded-xl border border-gray-100 p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -171,9 +181,12 @@ export default function LecturerDashboard() {
               </ResponsiveContainer>
             </div>
 
+            {/* Quick actions */}
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h3 className="text-gray-900 mb-4 font-medium">Quick Actions</h3>
               <div className="space-y-2">
+                
+                {/* RUST/ORANGE QUICK ACTION BUTTON */}
                 <button
                   onClick={() => navigate('/booking/new')}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#A74106]/5 hover:bg-[#A74106]/10 transition-colors group text-left border border-transparent hover:border-[#A74106]/20"
@@ -215,10 +228,9 @@ export default function LecturerDashboard() {
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-
+                {/* RUST/ORANGE QUICK ACTION: RAISE A TICKET */}
                 <button
-                  type="button"
-                  onClick={() => setShowRaiseTicket(true)}
+                  onClick={() => navigate('/maintenance')}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#A74106]/5 hover:bg-[#A74106]/10 transition-colors group text-left border border-transparent hover:border-[#A74106]/20"
                 >
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8A3505] to-[#C54E08] flex items-center justify-center flex-shrink-0 shadow-sm border-t border-white/20">
@@ -234,6 +246,7 @@ export default function LecturerDashboard() {
             </div>
           </div>
 
+          {/* Upcoming bookings */}
           {upcoming.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
@@ -269,6 +282,7 @@ export default function LecturerDashboard() {
             </div>
           )}
 
+          {/* Recent bookings table */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
               <h3 className="text-gray-900 font-medium">Recent Requests</h3>
@@ -317,14 +331,13 @@ export default function LecturerDashboard() {
           </div>
         </div>
       </div>
-
+      {/* --- ADD THE AI CHAT WIDGET HERE --- */}
       {showRaiseTicket && (
         <ReportIssueModal
           onClose={() => setShowRaiseTicket(false)}
           onCreated={() => setShowRaiseTicket(false)}
         />
       )}
-
       <AIChat />
     </div>
   );

@@ -6,7 +6,6 @@
         .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .header { border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; text-align: center; }
         .title { color: #1e293b; font-size: 24px; margin: 0; }
-        /* PENDING HIGHLIGHT - ORANGE */
         .status-badge { display: inline-block; background-color: #fef3c7; color: #d97706; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; border: 1px solid #fde68a; }
         .details-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         .details-table th, .details-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }
@@ -26,11 +25,16 @@
         <p>We have received your booking request. It is currently waiting for administrator review. Here are your requested details:</p>
 
         <table class="details-table">
-            <tr><th>Resource ID:</th><td th:text="${resourceId}">-</td></tr>
+            <tr><th>Booking ID:</th><td style="font-family: monospace; color: #64748b;" th:text="${bookingId}">-</td></tr>
+            <tr><th>Asset Name:</th><td th:text="${assetName}">-</td></tr>
             <tr><th>Date:</th><td th:text="${date}">-</td></tr>
             <tr><th>Time:</th><td><span th:text="${startTime}"></span> to <span th:text="${endTime}"></span></td></tr>
+            
+            <tr th:if="${lecturer != null and !lecturer.isEmpty()}">
+                <th>Lecturer:</th><td th:text="${lecturer}">-</td>
+            </tr>
+            
             <tr><th>Purpose:</th><td th:text="${purpose}">-</td></tr>
-            <tr><th>Request ID:</th><td style="font-size: 11px; color: #64748b;" th:text="${bookingId}">-</td></tr>
         </table>
 
         <div class="footer">

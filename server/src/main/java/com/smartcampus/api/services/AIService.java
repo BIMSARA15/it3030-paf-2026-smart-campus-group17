@@ -1,5 +1,6 @@
 package com.smartcampus.api.services;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,14 +14,21 @@ import java.util.List;
 @Service
 public class AIService {
     
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final String PYTHON_API_URL = "http://localhost:8000/chat";
+    // Pull the URL and Token from application.properties
+    @Value("${ai.microservice.url}")
+    private String aiServiceUrl;
 
-    // 👈 FIX: Accept the List of history
-   // Change String userId to User user
+    @Value("${ai.microservice.token}")
+    private String aiToken;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
     public String askAI(User user, List<Map<String, String>> history) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        // --- SECURITY SETUP: Attach the token to the header ---
+        headers.set("Authorization", "Bearer " + aiToken);
 
         Map<String, Object> requestBody = new HashMap<>();
         // Send the secure details to Python
@@ -33,7 +41,8 @@ public class AIService {
 
         try {
             @SuppressWarnings("unchecked")
-            Map<String, String> response = restTemplate.postForObject(PYTHON_API_URL, request, Map.class);
+            // Use the dynamic aiServiceUrl instead of the hardcoded one
+            Map<String, String> response = restTemplate.postForObject(aiServiceUrl, request, Map.class);
             
             if (response != null && response.containsKey("reply")) {
                 return response.get("reply");
@@ -42,7 +51,7 @@ public class AIService {
             
         } catch (Exception e) {
             System.err.println("AI Connection Error: " + e.getMessage());
-            throw new RuntimeException("Could not connect to the Python AI Microservice.");
+            throw new RuntimeException("Could not connect to AI microservice.");
         }
     }
 }

@@ -1,8 +1,27 @@
 import { MapPin, Package, Pencil, Trash2 } from 'lucide-react';
 
 export default function UtilityCard({ utility, onEdit, onDelete, deleting }) {
+  const statusClasses = {
+    Available: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    'In Use': 'bg-amber-50 text-amber-700 border-amber-100',
+    Maintenance: 'bg-red-50 text-red-700 border-red-100',
+  };
+  const statusAccent = {
+    Available: 'from-emerald-500/80 to-teal-500/80',
+    'In Use': 'from-amber-500/80 to-orange-500/80',
+    Maintenance: 'from-red-500/80 to-rose-500/80',
+  };
+  const quantityClasses =
+    utility.status === 'Maintenance'
+      ? 'bg-red-50 text-red-700'
+      : utility.status === 'In Use'
+        ? 'bg-amber-50 text-amber-700'
+        : 'bg-emerald-50 text-emerald-700';
+
   return (
-    <article className="group h-full rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(37,99,235,0.1)]">
+    <article className="group relative h-full rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(37,99,235,0.1)]">
+      <div className={`absolute inset-x-0 top-0 h-1.5 rounded-t-[24px] bg-gradient-to-r ${statusAccent[utility.status] || 'from-slate-400 to-slate-500'}`} />
+
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-[#2563EB]">
           <Package className="h-5 w-5" />
@@ -25,7 +44,9 @@ export default function UtilityCard({ utility, onEdit, onDelete, deleting }) {
       <div className="mt-3 space-y-2.5 text-slate-500">
         <div className="text-sm">
           <span className="font-medium text-slate-600">Quantity:</span>{' '}
-          <span>{utility.quantity}</span>
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${quantityClasses}`}>
+            {utility.quantity}
+          </span>
         </div>
 
         <div className="flex items-center gap-2 text-sm">
@@ -41,7 +62,7 @@ export default function UtilityCard({ utility, onEdit, onDelete, deleting }) {
       )}
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusClasses[utility.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
           {utility.status}
         </span>
 

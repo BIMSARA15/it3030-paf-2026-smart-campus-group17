@@ -1,3 +1,4 @@
+// server/src/main/java/com/smartcampus/api/services/EmailService.java
 package com.smartcampus.api.services;
 
 import com.smartcampus.api.models.Booking;
@@ -16,11 +17,9 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    // 1. Inject the HTML Template Engine
     @Autowired
     private SpringTemplateEngine templateEngine;
 
-    // --- KEEP YOUR OLD METHOD FOR REMINDERS ---
     public void sendEmail(String to, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
@@ -30,37 +29,40 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    // --- NEW METHOD FOR BEAUTIFUL HTML BOOKING EMAILS ---
     public void sendBookingHtmlEmail(Booking booking, String subject, String templateName) {
         try {
-            // 1. Prepare the dynamic data to inject into the HTML
             Context context = new Context();
             context.setVariable("userName", booking.getUserName());
             context.setVariable("bookingId", booking.getId());
-            context.setVariable("resourceId", booking.getResourceId());
+            
+            // Format Asset Name nicely
+            String assetName = booking.getResourceName() != null ? booking.getResourceName() : booking.getResourceId();
+            if (booking.getBlock() != null && booking.getLevel() != null) {
+                assetName += " (Block " + booking.getBlock() + ", Level " + booking.getLevel() + ")";
+            }
+            context.setVariable("assetName", assetName);
+            
             context.setVariable("date", booking.getDate());
             context.setVariable("startTime", booking.getStartTime());
             context.setVariable("endTime", booking.getEndTime());
             context.setVariable("purpose", booking.getPurpose());
             
-            // Add admin note if it exists
-            if (booking.getAdminNote() != null) {
-                context.setVariable("adminNote", booking.getAdminNote());
-            }
+            // New Extra Details
+            context.setVariable("lecturer", booking.getLecturer());
+            context.setVariable("reviewedBy", booking.getReviewedBy() != null ? booking.getReviewedBy() : "Admin Officer");
+            context.setVariable("adminNote", booking.getAdminNote());
+            context.setVariable("rejectionReason", booking.getRejectionReason());
 
-            // 2. Process the HTML template with the data
             String htmlContent = templateEngine.process(templateName, context);
 
-            // 3. Create a MimeMessage (which allows HTML styling)
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
             helper.setTo(booking.getUserEmail());
             helper.setSubject(subject);
-            helper.setText(htmlContent, true); // The 'true' flag means "This is HTML!"
-            helper.setFrom("your-project-email@gmail.com"); // Make sure this matches your application.properties
+            helper.setText(htmlContent, true); 
+            helper.setFrom("your-project-email@gmail.com"); 
 
-            // 4. Send it!
             mailSender.send(message);
             System.out.println("✅ HTML Email sent successfully to: " + booking.getUserEmail());
             

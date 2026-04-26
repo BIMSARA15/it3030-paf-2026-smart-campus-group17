@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, 
+  LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, UserCog,
   LogOut, GraduationCap, ChevronRight, X, Menu, SendHorizontal
 } from 'lucide-react';
 
@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { name: 'All Bookings', path: '/admin/bookings', icon: BookOpen },
         { name: 'Resources', path: '/admin/resources', icon: Building2 },
         { name: 'Equipment', path: '/admin/utilities', icon: Wrench },
-        { name: 'Technicians', path: '/admin/technicians',icon: Wrench },
+        { name: 'Technicians', path: '/admin/technicians',icon: UserCog },
       ]
     : isTechnician
     ? [{ name: 'Dashboard', path: dashboardPath, icon: LayoutGrid }]

@@ -23,6 +23,10 @@ const TYPE_COLORS = {
   equipment: 'bg-slate-100 text-slate-600',
 };
 
+const normalizeUtilityStatus = (status = '') => status.trim().toLowerCase();
+const shouldShowUtility = (utility) => normalizeUtilityStatus(utility?.status) !== 'maintenance';
+const isUtilityInUse = (utility) => normalizeUtilityStatus(utility?.status) === 'in use';
+
 // Helper to convert 12h format back to 24h for math calculations behind the scenes
 const formatTo24Hour = (timeStr) => {
   if (!timeStr) return '';
@@ -352,6 +356,8 @@ export default function NewBooking() {
 
   // Filter logic specifically for the Equipments (Utilities)
   const filteredUtilities = utilities.filter((utility) => {
+    if (!shouldShowUtility(utility)) return false;
+
     const query = search.trim().toLowerCase();
     return query === '' ||
       (utility.utilityName || '').toLowerCase().includes(query) ||
@@ -639,13 +645,15 @@ export default function NewBooking() {
                     {/* --- RENDER EQUIPMENTS (UTILITIES) --- */}
                     {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => {
                       const isOutOfStock = utility.quantity <= 0;
+                      const isInUse = isUtilityInUse(utility);
+                      const isDisabled = isOutOfStock || isInUse;
 
                       return (
                         <button
                           key={`util-${utility.id}`}
-                          disabled={isOutOfStock}
+                          disabled={isDisabled}
                           onClick={() => { 
-                            if (isOutOfStock) return; // Fail-safe to prevent selection
+                            if (isDisabled) return; // Fail-safe to prevent selection
                             
                             setSelectedResource({
                               id: utility.id,
@@ -663,15 +671,19 @@ export default function NewBooking() {
                           }}
                           // NEW: Apply gray styles and remove hover effects if out of stock
                           className={`text-left p-4 rounded-xl border-2 relative transition-all ${
-                            isOutOfStock 
+                            isDisabled 
                               ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200' 
                               : `border-gray-100 group ${theme.cardHover}`
                           }`}
                         >
                           {/* NEW: Render Out of Stock Badge */}
-                          {isOutOfStock && (
-                            <div className="absolute top-3 right-3 bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold px-2 py-1 rounded-md z-10">
-                              Out of Stock
+                          {isDisabled && (
+                            <div className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-md z-10 border ${
+                              isInUse
+                                ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                : 'bg-red-100 text-red-600 border-red-200'
+                            }`}>
+                              {isInUse ? 'In Use' : 'Out of Stock'}
                             </div>
                           )}
 
@@ -681,13 +693,13 @@ export default function NewBooking() {
                             </div>
                             
                             {/* Hide standard category badge if out of stock so it doesn't crowd the top corner */}
-                            {!isOutOfStock && (
+                            {!isDisabled && (
                               <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors.equipment}`}>
                                 {utility.category || 'Equipment'}
                               </span>
                             )}
                           </div>
-                          <h4 className={`text-gray-900 mb-1 transition-colors ${!isOutOfStock ? theme.textHover : ''}`}>
+                          <h4 className={`text-gray-900 mb-1 transition-colors ${!isDisabled ? theme.textHover : ''}`}>
                             {utility.utilityName}
                           </h4>
                           <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
@@ -696,7 +708,7 @@ export default function NewBooking() {
                           </div>
                           
                           {/* Highlight the quantity in red if it's zero */}
-                          <div className={`flex items-center gap-1 text-xs ${isOutOfStock ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                          <div className={`flex items-center gap-1 text-xs ${isOutOfStock ? 'text-red-500 font-medium' : isInUse ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
                             <Package className="w-3 h-3" />
                             Quantity: {utility.quantity}
                           </div>

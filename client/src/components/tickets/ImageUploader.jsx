@@ -1,91 +1,111 @@
-import { useState } from "react";
-import { Plus, X, Image as ImageIcon } from "lucide-react";
+import { useState, useRef } from "react";
+import { UploadCloud, X } from "lucide-react";
 
-/**
- * Lightweight image-URL list (no real file upload backend yet).
- * Caps the gallery at MAX images (default 3) to match the backend rule.
- *
- * Props:
- *   value     : string[]            current list of URLs
- *   onChange  : (string[]) => void  updates parent state
- *   max       : number              hard cap (default 3)
- */
 export default function ImageUploader({ value = [], onChange, max = 3 }) {
-  const [draft, setDraft] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
-  const add = () => {
-    const url = draft.trim();
-    if (!url) return;
-    if (value.length >= max) return;
-    onChange([...value, url]);
-    setDraft("");
+  // Convert uploaded files to Base64 strings so the backend accepts them
+  const processFiles = async (files) => {
+    // Only accept image files
+    const validFiles = Array.from(files).filter(file => file.type.startsWith("image/"));
+    
+    // Calculate how many more images are allowed
+    const availableSlots = max - value.length;
+    const filesToProcess = validFiles.slice(0, availableSlots);
+
+    const promises = filesToProcess.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file); // Converts the image to a Base64 String
+      });
+    });
+
+    const base64Images = await Promise.all(promises);
+    onChange([...value, ...base64Images]);
   };
 
-  const remove = (idx) => {
-    onChange(value.filter((_, i) => i !== idx));
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+      // Reset input value so the same file can be selected again if removed
+      e.target.value = null; 
+    }
+  };
+
+  const removeImage = (indexToRemove) => {
+    onChange(value.filter((_, index) => index !== indexToRemove));
   };
 
   return (
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-        Image Attachments (up to {max})
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold text-slate-700">
+        Attach Images (Max {max})
       </label>
 
-      <div className="flex gap-2">
-        <input
-          type="url"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Paste image URL..."
-          disabled={value.length >= max}
-          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-slate-50"
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!draft || value.length >= max}
-          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50"
+      {/* Drag & Drop Zone */}
+      {value.length < max && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors ${
+            isDragging 
+              ? "border-orange-500 bg-orange-50" 
+              : "border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400"
+          }`}
         >
-          Add
-        </button>
-      </div>
-
-      {value.length === max && (
-        <p className="text-xs text-amber-600 mt-1.5">
-          Maximum of {max} images reached.
-        </p>
+          <UploadCloud className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-orange-500" : "text-slate-400"}`} />
+          <p className="text-sm text-slate-600 text-center font-medium">
+            Click or drag & drop images here
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            JPEG, PNG, GIF (Upload up to {max - value.length} more)
+          </p>
+          
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleChange}
+            accept="image/*"
+            multiple
+            className="hidden"
+          />
+        </div>
       )}
 
+      {/* Image Previews Gallery */}
       {value.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 mt-3">
-          {value.map((url, idx) => (
-            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50 group">
-              <img
-                src={url}
-                alt={`attachment ${idx + 1}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          {value.map((imgUrl, idx) => (
+            <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-square shadow-sm">
+              <img 
+                src={imgUrl} 
+                alt={`upload-preview-${idx}`} 
+                className="w-full h-full object-cover" 
               />
-              <div className="absolute inset-0 flex items-center justify-center text-slate-300 -z-10">
-                <ImageIcon className="w-8 h-8" />
-              </div>
+              
+              {/* Delete Button (Shows on Hover) */}
               <button
                 type="button"
-                onClick={() => remove(idx)}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Remove image"
+                onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
+                className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 shadow-md"
               >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           ))}
-          {value.length < max && (
-            <div className="aspect-square rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
-              <Plus className="w-6 h-6" />
-            </div>
-          )}
         </div>
       )}
     </div>

@@ -20,7 +20,7 @@ const TYPE_CONFIG = {
   },
   equipment: {
     label: 'Equipment', icon: <Wrench className="w-5 h-5" />,
-    color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100',
+    color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100',
   },
 };
 
@@ -86,6 +86,24 @@ export default function Resources() {
     focusRing: isLecturer
       ? 'focus:border-[#C54E08] focus:ring-[#C54E08]/10'
       : 'focus:border-[#17A38A] focus:ring-[#17A38A]/10'
+  };
+  const equipmentAccent = isLecturer
+    ? {
+        color: 'text-[#A74106]',
+        bg: 'bg-[#A74106]/10',
+        border: 'border-[#A74106]/20',
+      }
+    : {
+        color: 'text-[#0F6657]',
+        bg: 'bg-[#17A38A]/10',
+        border: 'border-[#17A38A]/20',
+      };
+  const typeConfig = {
+    ...TYPE_CONFIG,
+    equipment: {
+      ...TYPE_CONFIG.equipment,
+      ...equipmentAccent,
+    },
   };
 
   // 2. Add Sidebar State
@@ -230,7 +248,7 @@ export default function Resources() {
                       : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {t !== 'all' && TYPE_CONFIG[t].icon}
+                  {t !== 'all' && typeConfig[t].icon}
                   <span className="capitalize">{t === 'all' ? 'All Resources' : `${t.charAt(0).toUpperCase() + t.slice(1)}s`}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${typeFilter === t ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
                     {counts[t]}
@@ -305,7 +323,7 @@ export default function Resources() {
               
               {/* 1. Render Rooms & Labs FIRST if filter is NOT Equipment (so 'all', 'room', or 'lab') */}
               {typeFilter !== 'equipment' && filtered.map(resource => {
-                const cfg = TYPE_CONFIG[resource.type];
+                const cfg = typeConfig[resource.type];
                 const stats = getResourceStats(resource.id);
                 const isSelected = selectedId === resource.id;
                 const isLecturerOnly = (resource.access || '').toLowerCase() === 'lecturer';
@@ -434,7 +452,7 @@ export default function Resources() {
               {(typeFilter === 'equipment' || typeFilter === 'all') && (
                 utilitiesLoading ? (
                   <div className="sm:col-span-2 xl:col-span-3 text-center py-16 bg-white rounded-xl border border-gray-100">
-                    <Package className="w-10 h-10 text-orange-300 mx-auto mb-3 animate-pulse" />
+                    <Package className={`w-10 h-10 mx-auto mb-3 animate-pulse ${equipmentAccent.color}`} />
                     <p className="text-gray-500">Loading equipment...</p>
                   </div>
                 ) : utilitiesError && utilities.length === 0 ? (
@@ -445,7 +463,7 @@ export default function Resources() {
                     <button
                       type="button"
                       onClick={fetchUtilities}
-                      className="mt-4 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100 text-sm font-medium hover:bg-orange-100 transition-colors"
+                      className={`mt-4 px-4 py-2 rounded-xl border text-sm font-medium transition-colors hover:brightness-95 ${equipmentAccent.bg} ${equipmentAccent.color} ${equipmentAccent.border}`}
                     >
                       Retry
                     </button>
@@ -486,11 +504,11 @@ export default function Resources() {
                       )}
 
                       <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
+                        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${equipmentAccent.bg} ${equipmentAccent.border} ${equipmentAccent.color}`}>
                           <Package className="w-5 h-5" />
                         </div>
                         {!isOutOfStock && (
-                          <span className="text-xs px-2 py-1 rounded-full bg-orange-50 text-orange-600 lowercase capitalize">
+                          <span className={`text-xs px-2 py-1 rounded-full lowercase capitalize ${equipmentAccent.bg} ${equipmentAccent.color}`}>
                             {utility.category}
                           </span>
                         )}
@@ -555,7 +573,7 @@ export default function Resources() {
                     />
                     <div className="absolute inset-0 flex items-end p-4">
                       <div>
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${TYPE_CONFIG[selectedResource.type].bg} ${TYPE_CONFIG[selectedResource.type].color} capitalize mb-2 inline-block`}>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${typeConfig[selectedResource.type].bg} ${typeConfig[selectedResource.type].color} capitalize mb-2 inline-block`}>
                           {selectedResource.type}
                         </span>
                         <h3 className="text-white text-lg font-semibold">{selectedResource.name}</h3>

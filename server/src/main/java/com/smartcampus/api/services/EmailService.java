@@ -1,7 +1,8 @@
-// server/src/main/java/com/smartcampus/api/services/EmailService.java
 package com.smartcampus.api.services;
 
 import com.smartcampus.api.models.Booking;
+import com.smartcampus.api.models.Ticket;
+import com.smartcampus.api.models.User;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
@@ -20,6 +21,7 @@ public class EmailService {
     @Autowired
     private SpringTemplateEngine templateEngine;
 
+    // --- 1. ORIGINAL PLAIN TEXT METHOD (Used by ReminderService) ---
     public void sendEmail(String to, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
@@ -29,29 +31,21 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    // --- 2. HTML METHOD FOR BOOKINGS ---
     public void sendBookingHtmlEmail(Booking booking, String subject, String templateName) {
         try {
             Context context = new Context();
             context.setVariable("userName", booking.getUserName());
             context.setVariable("bookingId", booking.getId());
-            
-            // Format Asset Name nicely
-            String assetName = booking.getResourceName() != null ? booking.getResourceName() : booking.getResourceId();
-            if (booking.getBlock() != null && booking.getLevel() != null) {
-                assetName += " (Block " + booking.getBlock() + ", Level " + booking.getLevel() + ")";
-            }
-            context.setVariable("assetName", assetName);
-            
+            context.setVariable("resourceId", booking.getResourceId());
             context.setVariable("date", booking.getDate());
             context.setVariable("startTime", booking.getStartTime());
             context.setVariable("endTime", booking.getEndTime());
             context.setVariable("purpose", booking.getPurpose());
             
-            // New Extra Details
-            context.setVariable("lecturer", booking.getLecturer());
-            context.setVariable("reviewedBy", booking.getReviewedBy() != null ? booking.getReviewedBy() : "Admin Officer");
-            context.setVariable("adminNote", booking.getAdminNote());
-            context.setVariable("rejectionReason", booking.getRejectionReason());
+            if (booking.getAdminNote() != null) {
+                context.setVariable("adminNote", booking.getAdminNote());
+            }
 
             String htmlContent = templateEngine.process(templateName, context);
 
@@ -60,14 +54,39 @@ public class EmailService {
             
             helper.setTo(booking.getUserEmail());
             helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            helper.setFrom("your-project-email@gmail.com");
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("❌ Failed to send Booking HTML email: " + e.getMessage());
+        }
+    }
+
+    // --- 3. NEW HTML METHOD FOR TICKETS (Fixes the compile error!) ---
+    public void sendTicketHtmlEmail(Ticket ticket, User user, String subject, String templateName) {
+        try {
+            Context context = new Context();
+            // Map the specific Ticket variables required by the HTML templates
+            context.setVariable("userName", user.getName());
+            context.setVariable("ticketCode", ticket.getTicketCode());
+            context.setVariable("issueTitle", ticket.getTitle());
+            context.setVariable("status", ticket.getStatus().toString());
+            context.setVariable("priority", ticket.getPriority().toString());
+            
+            String htmlContent = templateEngine.process(templateName, context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setTo(user.getEmail());
+            helper.setSubject(subject);
             helper.setText(htmlContent, true); 
             helper.setFrom("your-project-email@gmail.com"); 
 
             mailSender.send(message);
-            System.out.println("✅ HTML Email sent successfully to: " + booking.getUserEmail());
-            
         } catch (Exception e) {
-            System.err.println("❌ Failed to send HTML email: " + e.getMessage());
+            System.err.println("❌ Failed to send Ticket HTML email: " + e.getMessage());
         }
     }
 }

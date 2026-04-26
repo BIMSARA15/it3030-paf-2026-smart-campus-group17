@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import {
   Bell, Building2, GraduationCap, LayoutDashboard,
   LogOut, Wrench, X, Menu
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getUserNotifications } from "../../services/api";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
 export default function TechnicianLayout() {
   const { user, logout } = useAuth();
@@ -13,8 +16,36 @@ export default function TechnicianLayout() {
 
   const [isOpen, setIsOpen] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Exact matches for the dashboard, startsWith for sub-pages
+  // --- WEBSOCKET FOR SIDEBAR BADGE ---
+  useEffect(() => {
+    const identifier = user?.id || user?.email;
+    if (!identifier) return;
+
+    const fetchInitialNotifications = async () => {
+      try {
+        const data = await getUserNotifications();
+        setUnreadCount(data.filter((n) => !n.read).length);
+      } catch (error) {
+        console.error("Failed to fetch sidebar notifications:", error);
+      }
+    };
+    fetchInitialNotifications();
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+      onConnect: () => {
+        client.subscribe(`/topic/notifications/${identifier}`, (message) => {
+          const newNotification = JSON.parse(message.body);
+          if (!newNotification.read) setUnreadCount((prev) => prev + 1);
+        });
+      },
+    });
+    client.activate();
+    return () => client.deactivate();
+  }, [user]);
+
   const isActive = (path, exact) => {
     if (exact) return location.pathname === path;
     return location.pathname.startsWith(path);
@@ -35,10 +66,10 @@ export default function TechnicianLayout() {
     { name: "Dashboard", path: "/staff", icon: LayoutDashboard, exact: true },
     { name: "Facilities & Assets", path: "/staff/facilities", icon: Building2 },
     { name: "Maintenance", path: "/staff/maintenance", icon: Wrench },
-    { name: "Notifications", path: "/staff/notifications", icon: Bell, badge: 1 },
+    // DYNAMIC BADGE APPLIED HERE
+    { name: "Notifications", path: "/staff/notifications", icon: Bell, badge: unreadCount > 0 ? unreadCount : null },
   ];
 
-  // Using the Technician's specific color palette applied to the new Sidebar structure
   const theme = {
     headerBg: "bg-gradient-to-br from-[#27324A] via-[#303B53] to-[#1F2937]",
     roleTag: "bg-slate-100 border-slate-300 text-[#27324A]",
@@ -53,13 +84,11 @@ export default function TechnicianLayout() {
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC]">
-      {/* ── Collapsible Sidebar ── */}
       <aside
         className={`relative z-30 bg-white border-r border-gray-100 flex flex-col shadow-[12px_0_40px_rgba(15,23,42,0.05)] transition-all duration-300 ease-in-out shrink-0 ${
           isOpen ? "w-64" : "w-20"
         }`}
       >
-        {/* DYNAMIC HEADER SECTION */}
         <div
           className={`relative ${theme.headerBg} text-white transition-all duration-300 ${
             isOpen ? "h-48 rounded-br-[2.5rem]" : "h-32 rounded-br-2xl"
@@ -104,7 +133,6 @@ export default function TechnicianLayout() {
             )}
           </div>
 
-          {/* User Profile Card Overlapping Header */}
           <div
             className={`absolute bottom-0 left-4 right-4 translate-y-1/2 z-20 ${
               !isOpen && "flex justify-center translate-y-2/3 left-2 right-2"
@@ -151,7 +179,6 @@ export default function TechnicianLayout() {
           </p>
         )}
 
-        {/* NAVIGATION LINKS */}
         <div className={`flex-1 overflow-visible ${isOpen ? "px-3 mt-2" : "px-2 mt-4"}`}>
           <nav className="space-y-1">
             {navLinks.map((link) => {
@@ -177,7 +204,6 @@ export default function TechnicianLayout() {
                   />
                   {isOpen && <span className="text-[14px] font-semibold whitespace-nowrap">{link.name}</span>}
 
-                  {/* Notification Badge */}
                   {link.badge && (
                     <span
                       className={`absolute right-3 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold ${
@@ -188,12 +214,12 @@ export default function TechnicianLayout() {
                     </span>
                   )}
 
-                  {/* DYNAMIC THEME TOOLTIP */}
                   {!isOpen && (
                     <div
                       className={`absolute left-full ml-4 px-2.5 py-1.5 ${theme.tooltipBg} text-white text-[13px] font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap z-[100] ${theme.tooltipShadow} flex items-center`}
                     >
                       {link.name}
+                      {link.badge && ` (${link.badge})`}
                       <div
                         className={`absolute top-1/2 -left-1 -translate-y-1/2 border-[5px] border-transparent ${theme.tooltipArrow}`}
                       ></div>
@@ -205,7 +231,6 @@ export default function TechnicianLayout() {
           </nav>
         </div>
 
-        {/* SIGN OUT BUTTON */}
         <div className={`p-4 mt-auto shrink-0 ${!isOpen && "flex justify-center"}`}>
           <button
             onClick={() => setShowLogoutConfirm(true)}
@@ -230,12 +255,10 @@ export default function TechnicianLayout() {
         </div>
       </aside>
 
-      {/* ── Main content ── */}
       <main className="flex-1 min-w-0 overflow-auto">
         <Outlet />
       </main>
 
-      {/* ── LOGOUT CONFIRMATION MODAL ── */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div

@@ -20,7 +20,7 @@ const TYPE_ICONS = {
 const TYPE_COLORS = {
   room: 'bg-blue-100 text-blue-600',
   lab: 'bg-violet-100 text-violet-600',
-  equipment: 'bg-orange-100 text-orange-600',
+  equipment: 'bg-slate-100 text-slate-600',
 };
 
 // Helper to convert 12h format back to 24h for math calculations behind the scenes
@@ -173,6 +173,10 @@ export default function NewBooking() {
     checkboxHover: isLecturer ? 'hover:border-[#C54E08]/20' : 'hover:border-[#17A38A]/20',
     checkboxRing: isLecturer ? 'text-[#C54E08] focus:ring-[#C54E08]/30' : 'text-[#17A38A] focus:ring-[#17A38A]/30'
     
+  };
+  const typeColors = {
+    ...TYPE_COLORS,
+    equipment: isLecturer ? 'bg-[#A74106]/10 text-[#A74106]' : 'bg-[#17A38A]/10 text-[#0F6657]',
   };
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -603,10 +607,10 @@ export default function NewBooking() {
                         className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
                             {TYPE_ICONS[(resource.type || '').toLowerCase()] || <Wrench className="w-4 h-4" />}
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
                             {resource.type}
                           </span>
                         </div>
@@ -672,13 +676,13 @@ export default function NewBooking() {
                           )}
 
                           <div className="flex items-start justify-between gap-2 mb-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TYPE_COLORS['equipment']}`}>
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeColors.equipment}`}>
                               {TYPE_ICONS['equipment']}
                             </div>
                             
                             {/* Hide standard category badge if out of stock so it doesn't crowd the top corner */}
                             {!isOutOfStock && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS['equipment']}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors.equipment}`}>
                                 {utility.category || 'Equipment'}
                               </span>
                             )}
@@ -727,7 +731,7 @@ export default function NewBooking() {
               <div className="lg:col-span-2 space-y-4">
                 <div className="bg-white rounded-xl border border-gray-100 p-5">
                   <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-50">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${TYPE_COLORS[selectedResource.type]}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${typeColors[selectedResource.type]}`}>
                       {TYPE_ICONS[selectedResource.type]}
                     </div>
                     <div>

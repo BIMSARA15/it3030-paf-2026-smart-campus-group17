@@ -1,3 +1,4 @@
+// server/src/main/java/com/smartcampus/api/controllers/NotificationController.java
 package com.smartcampus.api.controllers;
 
 import com.smartcampus.api.models.Notification;
@@ -20,42 +21,28 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
-    // INJECT THE USER REPO HERE TOO!
     @Autowired
     private UserRepository userRepository;
 
-    // Helper method to safely extract the REAL Database ID
     private String extractUserIdSafe(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return null; 
-        }
+        if (authentication == null || !authentication.isAuthenticated()) return null; 
 
         Object principal = authentication.getPrincipal();
         String userId = null;
 
         if (principal instanceof OAuth2User) {
             OAuth2User oauth2User = (OAuth2User) principal;
-            
-            // 1. Try Dev Account ID
             userId = oauth2User.getAttribute("id");
 
-            // 2. Real Microsoft Login: Match email to database!
             if (userId == null) {
                 String email = oauth2User.getAttribute("email");
                 if (email != null) {
                     Optional<User> dbUser = userRepository.findByEmail(email);
-                    if (dbUser.isPresent()) {
-                        userId = dbUser.get().getId(); // Securely returns SS12345678, etc.
-                    }
+                    if (dbUser.isPresent()) userId = dbUser.get().getId();
                 }
             }
         }
-
-        // 3. Ultimate Fallback
-        if (userId == null) {
-            userId = authentication.getName();
-        }
-
+        if (userId == null) userId = authentication.getName();
         return userId;
     }
 
@@ -63,7 +50,6 @@ public class NotificationController {
     public ResponseEntity<List<Notification>> getMyNotifications(Authentication authentication) {
         String userId = extractUserIdSafe(authentication);
         if (userId == null) return ResponseEntity.status(401).build();
-
         return ResponseEntity.ok(notificationService.getUserNotifications(userId));
     }
 
@@ -76,9 +62,20 @@ public class NotificationController {
     @PatchMapping("/read-all")
     public ResponseEntity<?> markAllRead(Authentication authentication) {
         String userId = extractUserIdSafe(authentication);
-        if (userId != null) {
-            notificationService.markAllAsRead(userId);
-        }
+        if (userId != null) notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteNotification(@PathVariable String id) {
+        notificationService.deleteNotification(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- NEW: BULK DELETE ENDPOINT ---
+    @DeleteMapping("/bulk")
+    public ResponseEntity<?> deleteMultipleNotifications(@RequestBody List<String> ids) {
+        notificationService.deleteMultipleNotifications(ids);
         return ResponseEntity.ok().build();
     }
 }

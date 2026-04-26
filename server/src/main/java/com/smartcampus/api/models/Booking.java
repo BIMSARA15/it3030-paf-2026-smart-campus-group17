@@ -3,7 +3,7 @@ package com.smartcampus.api.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
-//import java.util.List;
+import java.util.List;
 
 @Document(collection = "bookings")
 public class Booking {
@@ -28,6 +28,9 @@ public class Booking {
     private String lecturer;
     private String specialRequests;
     
+    // 👇 RE-ADDED MISSING FIELD to fix the BookingService error
+    private List<String> requestedUtilityIds;
+    
     private String status; // PENDING, APPROVED, REJECTED, CANCELLED
     private String rejectionReason;
     private String adminNote;
@@ -47,13 +50,13 @@ public class Booking {
 
     public String getResourceId() { return resourceId; }
     public void setResourceId(String resourceId) { this.resourceId = resourceId; }
-    
+
     public String getResourceName() { return resourceName; }
     public void setResourceName(String resourceName) { this.resourceName = resourceName; }
-    
+
     public String getBlock() { return block; }
     public void setBlock(String block) { this.block = block; }
-    
+
     public String getLevel() { return level; }
     public void setLevel(String level) { this.level = level; }
 
@@ -93,6 +96,10 @@ public class Booking {
     public String getSpecialRequests() { return specialRequests; }
     public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
 
+    // 👇 RE-ADDED MISSING GETTER & SETTER
+    public List<String> getRequestedUtilityIds() { return requestedUtilityIds; }
+    public void setRequestedUtilityIds(List<String> requestedUtilityIds) { this.requestedUtilityIds = requestedUtilityIds; }
+
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
@@ -115,10 +122,8 @@ public class Booking {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public boolean isCheckedIn() { return checkedIn; }
-    public void setCheckedIn(boolean checkedIn) { this.checkedIn = checkedIn; } //QR Innovation
+    public void setCheckedIn(boolean checkedIn) { this.checkedIn = checkedIn; }
     
     public boolean isReminderSent() { return reminderSent; }
     public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
-    
-
 }

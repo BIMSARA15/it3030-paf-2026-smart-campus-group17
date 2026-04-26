@@ -1,5 +1,10 @@
+import React, { useState, useEffect } from "react";
 import { Bell, ChevronDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { getUserNotifications } from "../../services/api";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
 /**
  * Reusable top header for technician pages.
@@ -7,18 +12,51 @@ import { useAuth } from "../../context/AuthContext";
 export default function TechnicianTopBar({
   title,
   subtitle,
-  notifCount = 0,
   actionLabel,
   actionIcon: ActionIcon,
   onAction,
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+
   const initials = (user?.name || "MT")
     .split(" ")
     .map((p) => p[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  // --- WEBSOCKET & API LOGIC ---
+  useEffect(() => {
+    const identifier = user?.id || user?.email;
+    if (!identifier) return;
+
+    const fetchInitialNotifications = async () => {
+      try {
+        const data = await getUserNotifications();
+        setNotifications(data);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+    fetchInitialNotifications();
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+      onConnect: () => {
+        client.subscribe(`/topic/notifications/${identifier}`, (message) => {
+          const newNotification = JSON.parse(message.body);
+          setNotifications((prev) => [newNotification, ...prev]);
+        });
+      },
+    });
+
+    client.activate();
+    return () => client.deactivate();
+  }, [user]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <header className="border-b border-slate-100 bg-white px-6 py-4">
@@ -29,9 +67,15 @@ export default function TechnicianTopBar({
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="relative rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+          {/* UPDATED BELL BUTTON */}
+          <button 
+            onClick={() => navigate('/staff/notifications')}
+            className="relative rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          >
             <Bell className="w-5 h-5" />
-            {notifCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-400" />}
+            {unreadCount > 0 && (
+              <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-rose-500" />
+            )}
           </button>
 
           <div className="hidden items-center gap-3 sm:flex">

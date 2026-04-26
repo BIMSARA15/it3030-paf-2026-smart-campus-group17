@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .header { border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; text-align: center; }
+        .title { color: #1e293b; font-size: 24px; margin: 0; }
+        /* CLOSED/RESOLVED HIGHLIGHT - GREEN */
+        .status-badge { display: inline-block; background-color: #dcfce7; color: #15803d; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; border: 1px solid #bbf7d0; text-transform: uppercase;}
+        .details-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .details-table th, .details-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .details-table th { color: #64748b; width: 35%; font-weight: 600; }
+        .details-table td { font-weight: 500; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">UniBook Smart Campus</h1>
+            <div class="status-badge">✅ Status: <span th:text="${status}"></span></div>
+        </div>
+        
+        <p>Hello <span th:text="${userName}">User</span>,</p>
+        <p>The technical team has updated the status of your support ticket. It has now been marked as <strong th:text="${status}"></strong>.</p>
+
+        <table class="details-table">
+            <tr><th>Ticket ID:</th><td style="font-family: monospace; color: #64748b; font-weight: bold;" th:text="${ticketCode}">-</td></tr>
+            <tr><th>Issue:</th><td th:text="${issueTitle}">-</td></tr>
+            <tr><th>Priority:</th><td th:text="${priority}">-</td></tr>
+        </table>
+
+        <div class="footer">
+            <p>If you are still experiencing issues related to this request, please open a new ticket via your dashboard.</p>
+            <p>&copy; 2026 Smart Campus System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

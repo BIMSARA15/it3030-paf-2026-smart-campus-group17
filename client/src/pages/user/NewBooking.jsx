@@ -9,6 +9,7 @@ import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import BookingSuccessModal from '../../components/bookings/BookingSuccessModal';
 //import AIChat from '../components/AIChat';
 
 const TYPE_ICONS = {
@@ -480,65 +481,24 @@ export default function NewBooking() {
         <Header />
         <div className="p-4 lg:p-6 text-left relative">
           
+          {/* Extracted Success Popup Modal */}
           {showSuccessModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-              <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center z-10 border border-gray-100">
-                
-                <button
-                  onClick={() => setShowSuccessModal(false)}
-                  className="absolute top-4 right-4 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 mt-2">
-                  <CheckCircle className="w-8 h-8 text-emerald-600" />
-                </div>
-                <h2 className="text-gray-900 text-xl font-semibold mb-2">
-                  {isEditing ? 'Booking Updated!' : 'Booking Submitted!'}
-                </h2>
-                <p className="text-gray-500 text-sm mb-6">
-                  {isEditing ? 'Booking Details Updated Successfully.' : result?.message}
-                </p>
-                
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-6 text-left">
-                  <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-amber-800 text-sm font-medium flex items-center gap-2">
-                        Your booking is now <StatusBadge status="PENDING" size="sm" />
-                      </p>
-                      <p className="text-amber-700 text-xs mt-1">An administrator will review your request and notify you of the outcome.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowSuccessModal(false);
-                      setStep(1);
-                      setSelectedResource(null);
-                      setDate(''); setStartTime(''); setEndTime('');
-                      setPurpose(''); setAttendees(''); setLecturer('');
-                      setSpecialRequests('');
-                      setResult(null);
-                    }}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
-                  >
-                    New Booking
-                  </button>
-                  
-                  <button
-                    onClick={() => navigate('/bookings/my')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-medium border-t border-white/20 transition-all ${theme.gradientBtn}`}
-                  >
-                    My Bookings
-                  </button>
-                </div>
-              </div>
-            </div>
+            <BookingSuccessModal
+              isEditing={isEditing}
+              resultMessage={result?.message}
+              theme={theme}
+              onClose={() => setShowSuccessModal(false)}
+              onNewBooking={() => {
+                setShowSuccessModal(false);
+                setStep(1);
+                setSelectedResource(null);
+                setDate(''); setStartTime(''); setEndTime('');
+                setPurpose(''); setAttendees(''); setLecturer('');
+                setSpecialRequests('');
+                setResult(null);
+              }}
+              onViewBookings={() => navigate('/bookings/my')}
+            />
           )}
 
           <div className="mb-6">

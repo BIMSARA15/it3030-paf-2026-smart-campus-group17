@@ -6,7 +6,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { 
   LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, 
-  LogOut, GraduationCap, X, Menu, SendHorizontal, Bell
+  LogOut, GraduationCap, X, Menu, SendHorizontal, Bell, UserCog
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -69,7 +69,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { name: 'All Bookings', path: '/admin/bookings', icon: BookOpen },
         { name: 'Resources', path: '/admin/resources', icon: Building2 },
         { name: 'Equipment', path: '/admin/utilities', icon: Wrench },
-        { name: 'Technicians', path: '/admin/technicians',icon: Wrench },
+        { name: 'Technicians', path: '/admin/technicians',icon: UserCog },
         { name: 'Notifications', path: '/notifications', icon: Bell },
       ]
     : isTechnician

@@ -12,6 +12,6 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
     List<Booking> findApprovedUnremindedBookings();
 
     // Custom query to find approved bookings for the same resource on the same date
-    @Query("{ 'resourceId': ?0, 'date': ?1, 'status': 'APPROVED' }")
+    @Query("{ 'resourceId': ?0, 'date': ?1, 'status': { $in: ['APPROVED', 'PENDING'] } }")
     List<Booking> findApprovedBookingsForResourceOnDate(String resourceId, String date);
 }

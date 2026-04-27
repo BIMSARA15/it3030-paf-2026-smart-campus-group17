@@ -28,7 +28,6 @@ public class Booking {
     private String lecturer;
     private String specialRequests;
     
-    // 👇 RE-ADDED MISSING FIELD to fix the BookingService error
     private List<String> requestedUtilityIds;
     
     private String status; // PENDING, APPROVED, REJECTED, CANCELLED
@@ -38,6 +37,7 @@ public class Booking {
     private String cancellationReason;
 
     private boolean checkedIn = false; //QR Innovation
+    private LocalDateTime checkInTime; // For QR Innovation, to track when the user checked in
     private boolean reminderSent = false; // For ReminderService to track if we've sent a reminder email
     
     private LocalDateTime createdAt;
@@ -96,7 +96,6 @@ public class Booking {
     public String getSpecialRequests() { return specialRequests; }
     public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
 
-    // 👇 RE-ADDED MISSING GETTER & SETTER
     public List<String> getRequestedUtilityIds() { return requestedUtilityIds; }
     public void setRequestedUtilityIds(List<String> requestedUtilityIds) { this.requestedUtilityIds = requestedUtilityIds; }
 
@@ -126,4 +125,7 @@ public class Booking {
     
     public boolean isReminderSent() { return reminderSent; }
     public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
+
+    public LocalDateTime getCheckInTime() { return checkInTime; }
+    public void setCheckInTime(LocalDateTime checkInTime) { this.checkInTime = checkInTime; }
 }

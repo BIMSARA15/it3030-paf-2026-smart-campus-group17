@@ -299,8 +299,8 @@ export default function NewBooking() {
         setAccessNotice('');
       }
     }
-  }, [searchParams, resources, utilities, currentRole]); // <-- Added utilities to dependency array
- // NEW: Calculate conflict on the fly instead of using state and useEffect
+  }, [searchParams, resources, utilities, currentRole]); // Added utilities to dependency array
+ // Conflict
   const conflict = useMemo(() => {
     const start24 = formatTo24Hour(startTime);
     const end24 = formatTo24Hour(endTime);

@@ -10,6 +10,9 @@ import { useBooking } from "../../context/BookingContext";
 import { StatusBadge } from "../../components/StatusBadge";
 import Sidebar from "../../components/Sidebar"; 
 import Header from "../../components/Header";
+import ReviewModal from '../../components/bookings/ReviewModal';
+import { DeleteWarningModal } from '../../components/bookings/NotificationModals';
+import InfoCard from '../../components/bookings/InfoCard';
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -23,147 +26,134 @@ const TYPE_COLORS = {
   equipment: 'bg-orange-100 text-orange-600',
 };
 
-function InfoCard({ icon, label, value, accent }) {
-  return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-100 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-md transition-all cursor-default">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${accent || "bg-indigo-50 text-indigo-500"}`}>
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] text-gray-400 mb-0.5 uppercase tracking-wide font-bold">{label}</p>
-        {/* Removed truncate so full text is visible, added pre-wrap for line breaks */}
-        <p className="text-sm text-gray-800 font-semibold whitespace-pre-wrap break-words">{value}</p>
-      </div>
-    </div>
-  );
-}
 
-function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onClose }) {
-  const [note, setNote] = useState('');
-  const [reason, setReason] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // Track loading state
 
-  // CHANGED: Made function async to wait for the backend
-  const handleSubmit = async () => {
-    if ((action === 'reject' || action === 'cancel') && !reason.trim()) {
-      setError(`Please provide a ${action === 'cancel' ? 'cancellation' : 'rejection'} reason.`);
-      return;
-    }
-    setIsSubmitting(true); 
+// function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onClose }) {
+//   const [note, setNote] = useState('');
+//   const [reason, setReason] = useState('');
+//   const [error, setError] = useState('');
+//   const [isSubmitting, setIsSubmitting] = useState(false); // Track loading state
+
+//   // CHANGED: Made function async to wait for the backend
+//   const handleSubmit = async () => {
+//     if ((action === 'reject' || action === 'cancel') && !reason.trim()) {
+//       setError(`Please provide a ${action === 'cancel' ? 'cancellation' : 'rejection'} reason.`);
+//       return;
+//     }
+//     setIsSubmitting(true); 
     
-    // FIX: Send 'reason' for BOTH reject and cancel. Only send 'note' for approve.
-    await onConfirm(action === 'approve' ? note || undefined : reason);
-  };
+//     // FIX: Send 'reason' for BOTH reject and cancel. Only send 'note' for approve.
+//     await onConfirm(action === 'approve' ? note || undefined : reason);
+//   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md z-10">
-        <div className={`p-5 border-b rounded-t-2xl ${
-          action === 'approve' ? 'bg-emerald-50 border-emerald-100' : 
-          action === 'cancel' ? 'bg-amber-50 border-amber-100' : 
-          'bg-red-50 border-red-100'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              action === 'approve' ? 'bg-emerald-100' : 
-              action === 'cancel' ? 'bg-amber-100' : 'bg-red-100'
-            }`}>
-              {action === 'approve' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : 
-               action === 'cancel' ? <XCircle className="w-5 h-5 text-amber-600" /> :
-               <XCircle className="w-5 h-5 text-red-600" />}
-            </div>
-            <div>
-              <h3 className={
-                action === 'approve' ? 'text-emerald-900' : 
-                action === 'cancel' ? 'text-amber-900' : 'text-red-900'
-              }>
-                {action === 'approve' ? 'Approve Booking' : 
-                 action === 'cancel' ? 'Cancel Approved Booking' : 'Reject Booking'}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {userName} · {resourceName}
-              </p>
-            </div>
-            <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+//       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+//       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md z-10">
+//         <div className={`p-5 border-b rounded-t-2xl ${
+//           action === 'approve' ? 'bg-emerald-50 border-emerald-100' : 
+//           action === 'cancel' ? 'bg-amber-50 border-amber-100' : 
+//           'bg-red-50 border-red-100'
+//         }`}>
+//           <div className="flex items-center gap-3">
+//             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+//               action === 'approve' ? 'bg-emerald-100' : 
+//               action === 'cancel' ? 'bg-amber-100' : 'bg-red-100'
+//             }`}>
+//               {action === 'approve' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : 
+//                action === 'cancel' ? <XCircle className="w-5 h-5 text-amber-600" /> :
+//                <XCircle className="w-5 h-5 text-red-600" />}
+//             </div>
+//             <div>
+//               <h3 className={
+//                 action === 'approve' ? 'text-emerald-900' : 
+//                 action === 'cancel' ? 'text-amber-900' : 'text-red-900'
+//               }>
+//                 {action === 'approve' ? 'Approve Booking' : 
+//                  action === 'cancel' ? 'Cancel Approved Booking' : 'Reject Booking'}
+//               </h3>
+//               <p className="text-xs text-gray-500 mt-0.5">
+//                 {userName} · {resourceName}
+//               </p>
+//             </div>
+//             <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600">
+//               <X className="w-5 h-5" />
+//             </button>
+//           </div>
+//         </div>
 
-        <div className="p-5">
-          {action === 'approve' ? (
-            <div>
-              <label className="block text-gray-700 text-sm mb-1.5">Admin Note (Optional)</label>
-              <textarea
-                rows={3}
-                placeholder="Add any notes or conditions for this approval..."
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-emerald-400 focus:bg-white transition-colors resize-none"
-              />
-              <div className="mt-3 flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <p className="text-emerald-700 text-sm">Approving this booking will confirm the resource reservation. The requester will be notified.</p>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-gray-700 text-sm mb-1.5">
-                {action === 'cancel' ? 'Cancellation Reason' : 'Rejection Reason'} <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Please provide a clear reason for rejecting this booking request..."
-                value={reason}
-                onChange={e => { setReason(e.target.value); setError(''); }}
-                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-colors resize-none ${
-                  error ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-red-400 focus:bg-white'
-                }`}
-              />
-              {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-              <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
-                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <p className="text-amber-700 text-sm">The rejection reason will be visible to the requester. Please be clear and professional.</p>
-              </div>
-            </div>
-          )}
-        </div>
+//         <div className="p-5">
+//           {action === 'approve' ? (
+//             <div>
+//               <label className="block text-gray-700 text-sm mb-1.5">Admin Note (Optional)</label>
+//               <textarea
+//                 rows={3}
+//                 placeholder="Add any notes or conditions for this approval..."
+//                 value={note}
+//                 onChange={e => setNote(e.target.value)}
+//                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-emerald-400 focus:bg-white transition-colors resize-none"
+//               />
+//               <div className="mt-3 flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+//                 <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+//                 <p className="text-emerald-700 text-sm">Approving this booking will confirm the resource reservation. The requester will be notified.</p>
+//               </div>
+//             </div>
+//           ) : (
+//             <div>
+//               <label className="block text-gray-700 text-sm mb-1.5">
+//                 {action === 'cancel' ? 'Cancellation Reason' : 'Rejection Reason'} <span className="text-red-500">*</span>
+//               </label>
+//               <textarea
+//                 rows={3}
+//                 placeholder="Please provide a clear reason for rejecting this booking request..."
+//                 value={reason}
+//                 onChange={e => { setReason(e.target.value); setError(''); }}
+//                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-colors resize-none ${
+//                   error ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50 focus:border-red-400 focus:bg-white'
+//                 }`}
+//               />
+//               {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+//               <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+//                 <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+//                 <p className="text-amber-700 text-sm">The rejection reason will be visible to the requester. Please be clear and professional.</p>
+//               </div>
+//             </div>
+//           )}
+//         </div>
 
-        <div className="px-5 pb-5 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-medium transition-all ${
-              isSubmitting ? 'opacity-70 cursor-not-allowed ' : ''
-            }${
-              action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 
-              action === 'cancel' ? 'bg-amber-600 hover:bg-amber-700' : 
-              'bg-red-600 hover:bg-red-700'
-            }`}
-          >
-            {isSubmitting ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
-            ) : action === 'approve' ? (
-              'Confirm Approval'
-            ) : action === 'cancel' ? (
-              'Confirm Cancellation'
-            ) : (
-              'Confirm Rejection'
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+//         <div className="px-5 pb-5 flex gap-2">
+//           <button
+//             onClick={onClose}
+//             className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             onClick={handleSubmit}
+//             disabled={isSubmitting}
+//             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-medium transition-all ${
+//               isSubmitting ? 'opacity-70 cursor-not-allowed ' : ''
+//             }${
+//               action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 
+//               action === 'cancel' ? 'bg-amber-600 hover:bg-amber-700' : 
+//               'bg-red-600 hover:bg-red-700'
+//             }`}
+//           >
+//             {isSubmitting ? (
+//               <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+//             ) : action === 'approve' ? (
+//               'Confirm Approval'
+//             ) : action === 'cancel' ? (
+//               'Confirm Cancellation'
+//             ) : (
+//               'Confirm Rejection'
+//             )}
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 export default function AllBookings() {
   // Change line ~126 to include cancelBooking:
@@ -387,59 +377,19 @@ export default function AllBookings() {
               </div>
             )}
 
-            {/* NEW: Custom Delete Confirmation Modal */}
-            {deleteModalId && (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDeleteModalId(null)}></div>
-                <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center z-10 border border-gray-100 animate-in zoom-in-95 duration-200">
-                  
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 mt-2 bg-red-100">
-                    <Trash2 className="w-8 h-8 text-red-600" />
-                  </div>
-                  
-                  <h2 className="text-gray-900 text-xl font-semibold mb-2">Delete Record?</h2>
-                  <p className="text-gray-500 text-sm mb-6">
-                    <span className="block mb-1.5">
-                      Are you sure you want to permanently delete booking record <strong className="text-gray-800 font-mono">ID-{deleteModalId.slice(-5).toUpperCase()}?</strong>
-                    </span>
-                    <span className="block text-gray-400">
-                      This action cannot be undone.
-                    </span>
-                  </p>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setDeleteModalId(null)}
-                      className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={async () => {
-                        // Save the ID temporarily before we clear the state
-                        const idToDelete = deleteModalId; 
-                        
-                        // Close the warning modal instantly
-                        setDeleteModalId(null); 
-                        
-                        // Wait for the database to finish deleting
-                        await purgeBooking(idToDelete);
-                        
-                        // Trigger your existing success modal!
-                        setResultModal({
-                          type: 'success',
-                          title: 'Record Deleted',
-                          message: `Booking record ID-${idToDelete.slice(-5).toUpperCase()} has been permanently removed from the system.`
-                        });
-                      }}
-                      className="flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-medium bg-red-600 hover:bg-red-700 shadow-[0_4px_12px_rgba(220,38,38,0.2)] transition-all"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <DeleteWarningModal
+        deleteModalId={deleteModalId}
+        onClose={() => setDeleteModalId(null)}
+        onConfirm={async (idToDelete) => {
+          setDeleteModalId(null); 
+          await purgeBooking(idToDelete);
+          setResultModal({
+            type: 'success',
+            title: 'Record Deleted',
+            message: `Booking record ID-${idToDelete.slice(-5).toUpperCase()} has been permanently removed.`
+          });
+        }}
+      />
 
             {/* <-- ADD THIS NEW DETAILS MODAL HERE --> */}
             {expandedBooking && ( 

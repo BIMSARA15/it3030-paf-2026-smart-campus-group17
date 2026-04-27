@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.time.LocalDate;
 
 @Service
 public class BookingService {
@@ -31,7 +32,7 @@ public class BookingService {
     @Autowired
     private UserRepository userRepository;
 
-    // 👇 NEW: Injecting Resource Repo to fetch the missing details!
+    //Resource Repo to fetch the missing details
     @Autowired
     private ResourceRepository resourceRepository;
 
@@ -57,6 +58,7 @@ public class BookingService {
                 LocalTime existingStart = parseBookingTime(existing.getStartTime());
                 LocalTime existingEnd = parseBookingTime(existing.getEndTime());
 
+                //Conflict if new booking starts before existing ends AND new booking ends after existing starts
                 if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
                     throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
                 }
@@ -65,7 +67,6 @@ public class BookingService {
             }
         }
 
-        // --- BUG FIX 2: FETCH MISSING DETAILS FOR EMAILS & NOTIFICATIONS ---
         // The frontend only sends resourceId. We must fetch the actual name, block, and level from the DB here!
         if (newBooking.getResourceId() != null) {
             resourceRepository.findById(newBooking.getResourceId()).ifPresent(resource -> {
@@ -211,23 +212,59 @@ public class BookingService {
                 System.err.println("Failed to send status update email: " + e.getMessage());
             }
 
-            // --- BUG FIX 1: RETURN THE SAVED BOOKING ---
-            // Previously, this returned Optional.empty(), which caused the Controller to return a 404 Not Found error!
-            // This caused the frontend to crash, preventing the modals from closing and the UI from updating.
+            // RETURN THE SAVED BOOKING 
             return Optional.of(savedBooking);
         }
         return Optional.empty();
     }
 
-    public Optional<Booking> checkInBooking(String id) {
+    public Booking checkInBooking(String id) throws Exception {
         Optional<Booking> existingBooking = bookingRepository.findById(id);
         if (existingBooking.isPresent()) {
             Booking booking = existingBooking.get();
+
+            if (booking.isCheckedIn()) {
+                throw new Exception("Student is already checked in.");
+            }
+
+            LocalDate bookingDate;
+            try {
+                bookingDate = LocalDate.parse(booking.getDate());
+            } catch (Exception e) {
+                throw new Exception("Invalid booking date format.");
+            }
+            
+            LocalTime startTime = parseBookingTime(booking.getStartTime());
+            LocalTime endTime = parseBookingTime(booking.getEndTime());
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDate today = now.toLocalDate();
+            LocalTime currentTime = now.toLocalTime();
+
+            // Strict Date Validation
+            if (!today.isEqual(bookingDate)) {
+                if (today.isBefore(bookingDate)) {
+                    throw new Exception("Check-in failed: Booking is scheduled for a future date (" + booking.getDate() + ").");
+                } else {
+                    throw new Exception("Check-in failed: Booking date (" + booking.getDate() + ") has already passed.");
+                }
+            }
+
+            // Strict Time Validation (Allowing them to check in 15 mins early)
+            if (currentTime.isBefore(startTime.minusMinutes(15))) {
+                throw new Exception("Check-in failed: Too early. You can only check in 15 minutes before the start time (" + booking.getStartTime() + ").");
+            }
+            if (currentTime.isAfter(endTime)) {
+                throw new Exception("Check-in failed: The booking time has already ended.");
+            }
+
+            // Process Check-in
             booking.setCheckedIn(true);
-            booking.setUpdatedAt(LocalDateTime.now());
-            return Optional.of(bookingRepository.save(booking));
+            booking.setCheckInTime(now); // Save the exact timestamp
+            booking.setUpdatedAt(now);
+            return bookingRepository.save(booking);
         }
-        return Optional.empty();
+        throw new Exception("Booking not found.");
     }
 
     public boolean deleteBooking(String id) {
@@ -243,6 +280,35 @@ public class BookingService {
 
         if (existingBookingOpt.isPresent()) {
             Booking existingBooking = existingBookingOpt.get();
+
+            // --- NEW: OVERLAP CONFLICT CHECK FOR EDITS ---
+            List<Booking> otherBookings = bookingRepository.findApprovedBookingsForResourceOnDate(
+                existingBooking.getResourceId(), 
+                updatedData.getDate()
+            );
+
+            LocalTime newStart = parseBookingTime(updatedData.getStartTime());
+            LocalTime newEnd = parseBookingTime(updatedData.getEndTime());
+
+            for (Booking other : otherBookings) {
+                // Skip checking against the booking we are currently editing!
+                if (other.getId().equals(existingBooking.getId())) {
+                    continue;
+                }
+                
+                try {
+                    LocalTime existingStart = parseBookingTime(other.getStartTime());
+                    LocalTime existingEnd = parseBookingTime(other.getEndTime());
+
+                    // Conflict if new booking starts before existing ends AND new booking ends after existing starts
+                    if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
+                        throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+            }
+            // --- END OF CONFLICT CHECK ---
 
             existingBooking.setDate(updatedData.getDate());
             existingBooking.setStartTime(updatedData.getStartTime());

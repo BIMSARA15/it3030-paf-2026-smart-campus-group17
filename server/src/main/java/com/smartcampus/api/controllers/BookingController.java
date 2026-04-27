@@ -12,6 +12,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
+import com.smartcampus.api.dto.CreateBookingRequest;
+import com.smartcampus.api.dto.UpdateBookingStatusRequest;
+import com.smartcampus.api.dto.UpdateBookingDetailsRequest;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +36,7 @@ public class BookingController {
 
     @GetMapping
     public ResponseEntity<List<Booking>> getAllBookings() {
-        return ResponseEntity.ok(bookingService.getAllBookings());
+        return ResponseEntity.ok(bookingService.getAllBookings()); //200 OK Status
     }
 
     // Endpoint for fetching bookings by ID
@@ -47,18 +51,30 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
     }
 
-    // 3. MERGED Create Booking
+    // Create Booking using DTO
     @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
-        // --- ADD THESE DEBUG LOGS HERE ---
+    public ResponseEntity<?> createBooking(@RequestBody CreateBookingRequest request, Authentication authentication) {
+        
+        // Map DTO to our Database Model
+        Booking booking = new Booking();
+        booking.setResourceId(request.getResourceId());
+        booking.setUserName(request.getUserName());
+        booking.setUserEmail(request.getUserEmail());
+        booking.setUserDept(request.getUserDept());
+        booking.setDate(request.getDate());
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        booking.setPurpose(request.getPurpose());
+        booking.setAttendees(request.getAttendees());
+        booking.setQuantity(request.getQuantity());
+        booking.setLecturer(request.getLecturer());
+        booking.setSpecialRequests(request.getSpecialRequests());
+        booking.setRequestedUtilityIds(request.getRequestedUtilityIds());
+
         System.out.println("\n====== [JAVA DEBUG] INCOMING BOOKING ======");
         System.out.println("Resource ID received: " + booking.getResourceId());
-        System.out.println("Resource Name received: " + booking.getResourceName());
-        System.out.println("Block received: " + booking.getBlock());
-        System.out.println("Level received: " + booking.getLevel());
         System.out.println("===========================================\n");
         
-       
         // Map Microsoft Email to Real MongoDB ID
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
@@ -66,7 +82,6 @@ public class BookingController {
             
             if (principal instanceof OAuth2User) {
                 OAuth2User oauth2User = (OAuth2User) principal;
-                
                 realUserId = oauth2User.getAttribute("id");
                 
                 if (realUserId == null) {
@@ -79,11 +94,9 @@ public class BookingController {
                     }
                 }
             }
-            
             if (realUserId == null) {
                 realUserId = authentication.getName();
             }
-            
             if (realUserId != null) {
                 booking.setUserId(realUserId); 
             }
@@ -98,53 +111,77 @@ public class BookingController {
         }
         
         try {
-            // Hand off to the Service (which now handles the saving AND the dynamic notifications cleanly)
+            // Hand off to the Service 
             Booking createdBooking = bookingService.createBooking(booking);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); 
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); //201 Created Status
             
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); //400 Bad Request
         }
     }
 
-    // MERGED Update booking status
+    // Update booking status using DTO
     @PutMapping("/{id}/status")
-    public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
+    public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody UpdateBookingStatusRequest request) {
         
+        // Map DTO to Model
+        Booking updateData = new Booking();
+        updateData.setStatus(request.getStatus());
+        updateData.setAdminNote(request.getAdminNote());
+        updateData.setRejectionReason(request.getRejectionReason());
+        updateData.setReviewedBy(request.getReviewedBy());
+        updateData.setCancellationReason(request.getCancellationReason());
+
         Optional<Booking> updatedBookingOpt = bookingService.updateBookingStatus(id, updateData);
         
         if (updatedBookingOpt.isPresent()) {
             return ResponseEntity.ok(updatedBookingOpt.get());
         }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.notFound().build(); //404 Not Found Status
     }
 
-    // 5. TEAMMATE'S QR Code Check-in Endpoint
+    // QR Code Check-in Endpoint
     @PutMapping("/{id}/checkin")
-    public ResponseEntity<Booking> checkInBooking(@PathVariable String id) {
-        Optional<Booking> checkedInBooking = bookingService.checkInBooking(id);
-        return checkedInBooking.map(ResponseEntity::ok)
-                               .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<?> checkInBooking(@PathVariable String id) {
+        try {
+            Booking checkedInBooking = bookingService.checkInBooking(id);
+            return ResponseEntity.ok(checkedInBooking);
+        } catch (Exception e) {
+            // Sends the custom error message back to the frontend to display
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); 
+        }
     }
 
-    // 6. TEAMMATE'S Delete Endpoint
+    // Delete Endpoint
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBooking(@PathVariable String id) {
         boolean isDeleted = bookingService.deleteBooking(id);
         if (isDeleted) {
-            return ResponseEntity.noContent().build(); 
+            return ResponseEntity.noContent().build(); //204 No Content Status
         }
-        return ResponseEntity.notFound().build(); 
+        return ResponseEntity.notFound().build(); //404 Not Found Status
     }
 
-    // 7. Update an existing booking's details
+    // Update an existing booking's details using DTO
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateBookingDetails(@PathVariable String id, @RequestBody Booking bookingDetails) {
+    public ResponseEntity<?> updateBookingDetails(@PathVariable String id, @RequestBody UpdateBookingDetailsRequest request) {
         try {
-            Booking updatedBooking = bookingService.updateBookingDetails(id, bookingDetails);
+            // Map the DTO to the Booking model
+            Booking updateData = new Booking();
+            updateData.setDate(request.getDate());
+            updateData.setStartTime(request.getStartTime());
+            updateData.setEndTime(request.getEndTime());
+            updateData.setPurpose(request.getPurpose());
+            updateData.setAttendees(request.getAttendees());
+            updateData.setLecturer(request.getLecturer());
+            updateData.setSpecialRequests(request.getSpecialRequests());
+            updateData.setRequestedUtilityIds(request.getRequestedUtilityIds());
+
+            // Pass the mapped model to the service layer
+            Booking updatedBooking = bookingService.updateBookingDetails(id, updateData);
             return ResponseEntity.ok(updatedBooking);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); //400 Bad Request
         }
     }
 }

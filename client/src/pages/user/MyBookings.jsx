@@ -209,34 +209,6 @@ export default function MyBookings() {
     setCancelError('');
   };
 
-  const handleDownloadQR = () => {
-    const svg = document.getElementById('qr-code-svg');
-    if (!svg) return;
-    
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      // Fill with white background before drawing SVG
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      
-      const pngFile = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `Booking-QR-${qrModalId}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
-    
-    // Convert SVG to data URL safely
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
@@ -487,15 +459,12 @@ export default function MyBookings() {
         />
       )}
 
+      {/*QR Code Popup Modal */}
       {qrModalId && (
         <QRCodeModal
-          qrBooking={myBookings.find(b => b.id === qrModalId)}
-          qrResource={getBookingItem(qrModalId)}
+          booking={myBookings.find(b => b.id === qrModalId)}
           theme={theme}
           onClose={() => setQrModalId(null)}
-          onDownload={handleDownloadQR}
-          formatDate={formatDate}
-          formatCreated={formatCreated}
         />
       )}
 

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
-  ChevronLeft, Info, Loader2, User, MessageSquare, X, Package 
+  ChevronLeft, Info, Loader2, User, MessageSquare, X, Package, Tag 
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -21,6 +21,22 @@ const TYPE_COLORS = {
   room: 'bg-blue-100 text-blue-600',
   lab: 'bg-violet-100 text-violet-600',
   equipment: 'bg-slate-100 text-slate-600',
+};
+
+const DEFAULT_RESOURCE_IMAGES = {
+  lectureRoom: 'https://i.pinimg.com/736x/f8/98/46/f89846b24148276c9000e38c51c82ce5.jpg',
+  lab: 'https://i.pinimg.com/736x/39/ee/cb/39eecbeca86920e153e277780f20feed.jpg',
+  meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+  equipment: 'https://i.pinimg.com/736x/64/e7/8f/64e78f4c21c54ff2b9765fa14b62267b.jpg',
+};
+
+const getResourceImage = (resource) => {
+  if (resource.image) return resource.image;
+  const originalType = (resource.resourceType || resource.type || '').toLowerCase();
+  if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
+  if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+  if (originalType.includes('equipment') || originalType.includes('utility')) return DEFAULT_RESOURCE_IMAGES.equipment;
+  return DEFAULT_RESOURCE_IMAGES.lectureRoom;
 };
 
 const normalizeUtilityStatus = (status = '') => status.trim().toLowerCase();
@@ -606,41 +622,92 @@ export default function NewBooking() {
                 ) : (
                   <>
                     {/* --- RENDER ROOMS AND LABS (RESOURCES) --- */}
-                    {typeFilter !== 'equipment' && filtered.map(resource => (
-                      <button
-                        key={`res-${resource.id}`}
-                        onClick={() => { setSelectedResource(resource); setStep(2); }}
-                        className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                            {TYPE_ICONS[(resource.type || '').toLowerCase()] || <Wrench className="w-4 h-4" />}
+                    {typeFilter !== 'equipment' && filtered.map(resource => {
+                      const upcomingCount = bookings.filter(b => 
+                        b.resourceId === resource.id && 
+                        (b.status === 'APPROVED' || b.status === 'PENDING') && 
+                        b.date >= today
+                      ).length;
+
+                      return (
+                        <button
+                          key={`res-${resource.id}`}
+                          onClick={() => { setSelectedResource(resource); setStep(2); }}
+                          className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all flex flex-col group ${theme.cardHover}`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-3 w-full">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                              {TYPE_ICONS[(resource.type || '').toLowerCase()] || <Wrench className="w-4 h-4" />}
+                            </div>
+                            
+                            {/* MOVED: Type Badge and Access Level stacked together on the right */}
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                                {resource.type}
+                              </span>
+                              
+                              {/* NEW: Styled Pill Badge for Access Level */}
+                              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                                (resource.access || '').toLowerCase() === 'lecturer' 
+                                  ? 'bg-red-50 text-red-600 border-red-100' 
+                                  : 'bg-gray-50 text-gray-500 border-gray-200'
+                              }`}>
+                                <User className="w-3 h-3" />
+                                <span className="capitalize">
+                                  {(resource.access || 'anyone').toLowerCase() === 'anyone' ? 'Open Access' : `${resource.access} Access`}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                            {resource.type}
-                          </span>
-                        </div>
-                        <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                          <MapPin className="w-3 h-3" />
-                          {resource.location}
-                        </div>
-                        {resource.capacity && (
-                          <div className="flex items-center gap-1 text-gray-400 text-xs">
-                            <Users className="w-3 h-3" />
-                            Capacity: {resource.capacity} persons
+                          
+                          <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
+                          
+                          {/* LOCATION - Now alone under the name */}
+                          <div className="flex items-center gap-1 text-gray-500 text-xs mb-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                            {resource.location}
                           </div>
-                        )}
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {resource.features.slice(0, 3).map(f => (
-                            <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
-                          ))}
-                          {resource.features.length > 3 && (
-                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                          
+                          {resource.capacity && (
+                            <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+                              <Users className="w-3.5 h-3.5 text-gray-400" />
+                              Capacity: {resource.capacity} persons
+                            </div>
                           )}
-                        </div>
-                      </button>
-                    ))}
+
+                          {/* Pushed to bottom with mt-auto */}
+                          <div className="mt-auto pt-3 border-t border-gray-50 flex flex-col gap-3 w-full">
+                            
+                            {/* Features */}
+                            <div className="flex flex-wrap gap-1 w-full">
+                              {resource.features.slice(0, 3).map(f => (
+                                <span key={f} className="text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
+                              ))}
+                              {resource.features.length > 3 && (
+                                <span className="text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
+                              )}
+                            </div>
+
+                            {/* AVAILABILITY - Distinct footer block at the very bottom */}
+                            <div className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg border ${
+                              upcomingCount > 0 
+                                ? 'bg-amber-50 border-amber-100' 
+                                : 'bg-emerald-50 border-emerald-100'
+                            }`}>
+                              <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                                upcomingCount > 0 ? 'text-amber-700' : 'text-emerald-700'
+                              }`}>
+                                <Calendar className="w-3.5 h-3.5" />
+                                {upcomingCount > 0 
+                                  ? `${upcomingCount} Upcoming Booking${upcomingCount > 1 ? 's' : ''}`
+                                  : 'Currently Available'}
+                              </div>
+                            </div>
+                            
+                          </div>
+                        </button>
+                      );
+                    })}
 
                     {/* --- RENDER EQUIPMENTS (UTILITIES) --- */}
                     {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => {
@@ -994,61 +1061,112 @@ export default function NewBooking() {
               </div>
 
               <div className="space-y-4">
-                <div className="bg-white rounded-xl border border-gray-100 p-5">
-                  <h3 className="text-gray-900 mb-3">Resource Details</h3>
-                  {selectedResource.capacity && (
-                    <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      Capacity: {selectedResource.capacity} persons
-                    </div>
-                  )}
-                  <div className="flex items-start gap-2 text-gray-600 text-sm mb-3">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    {selectedResource.location}
-                  </div>
-                  <div className="border-t border-gray-50 pt-3">
-                    <p className="text-gray-400 text-xs mb-2">Features</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedResource.features.map(f => (
-                        <span key={f} className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg">{f}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-100 p-5">
-                  <h3 className="text-gray-900 mb-3">Upcoming Reserved Slots</h3>
-                  {(() => {
-                    const todayStr = today;
-                    const existing = bookings
-                      .filter(b => b.resourceId === selectedResource.id && (b.status === 'APPROVED' || b.status === 'PENDING') && b.date >= todayStr)
-                      .sort((a, b) => a.date.localeCompare(b.date) || formatTo24Hour(a.startTime).localeCompare(formatTo24Hour(b.startTime)))
-                      .slice(0, 5);
-                    
-                    if (existing.length === 0) {
-                      return <p className="text-gray-400 text-sm text-center py-4">No upcoming reservations</p>;
-                    }
-                    return (
-                      <div className="space-y-2">
-                        {existing.map(b => (
-                          <div key={b.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                            <div>
-                              <p className="text-gray-700 text-xs">{new Date(b.date + 'T00:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}</p>
-                              <p className="text-gray-500 text-xs">{b.startTime} – {b.endTime}</p>
-                            </div>
-                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">Booked</span>
-                          </div>
-                        ))}
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden sticky top-4 shadow-sm">
+                  
+                  {/* Hero Image Header */}
+                  <div className="h-36 bg-gradient-to-br from-slate-700 to-slate-900 relative overflow-hidden">
+                    <img
+                      src={getResourceImage(selectedResource)}
+                      alt={selectedResource.name}
+                      className="w-full h-full object-cover opacity-60"
+                    />
+                    <div className="absolute inset-0 flex items-end p-4">
+                      <div>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${typeColors[(selectedResource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'} capitalize mb-2 inline-block`}>
+                          {selectedResource.type}
+                        </span>
+                        <h3 className="text-white text-lg font-semibold">{selectedResource.name}</h3>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    {/* Location */}
+                    <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      {selectedResource.location}
+                    </div>
+
+                    {/* Capacity */}
+                    {selectedResource.capacity && (
+                      <div className="flex items-center gap-2 text-gray-600 text-sm mb-3">
+                        <Users className="w-4 h-4 text-gray-400" />
+                        Capacity: {selectedResource.capacity} persons
+                      </div>
+                    )}
+
+                    {/* Quantity (For Equipment) */}
+                    {selectedResource.quantity !== undefined && (
+                      <div className="flex items-center gap-2 text-gray-600 text-sm mb-3">
+                        <Package className="w-4 h-4 text-gray-400" />
+                        Quantity: {selectedResource.quantity} Available
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    <p className="text-gray-500 text-sm mb-4">
+                      {selectedResource.description || 'No detailed description available for this item.'}
+                    </p>
+
+                    {/* Features (Hide for Equipments) */}
+                    {selectedResource.type !== 'equipment' && selectedResource.features && selectedResource.features.length > 0 && (
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Tag className="w-3.5 h-3.5 text-gray-400" />
+                          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Features & Amenities</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedResource.features.map(f => (
+                            <span key={f} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-50 border border-gray-100 text-gray-600 rounded-lg">
+                              <CheckCircle className="w-3 h-3 text-emerald-500" /> {f}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upcoming bookings */}
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2">Upcoming Reserved Slots</p>
+                      {(() => {
+                        const todayStr = today;
+                        const existing = bookings
+                          .filter(b => b.resourceId === selectedResource.id && (b.status === 'APPROVED' || b.status === 'PENDING') && b.date >= todayStr)
+                          .sort((a, b) => a.date.localeCompare(b.date) || formatTo24Hour(a.startTime).localeCompare(formatTo24Hour(b.startTime)))
+                          .slice(0, 4);
+                        
+                        if (existing.length === 0) {
+                          return (
+                            <div className="flex items-center gap-2 p-2.5 bg-emerald-50 rounded-lg">
+                              <CheckCircle className="w-4 h-4 text-emerald-500" />
+                              <p className="text-emerald-700 text-xs">No upcoming reservations</p>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="space-y-1.5">
+                            {existing.map(b => (
+                              <div key={b.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                                <div>
+                                  <p className="text-gray-700 text-xs font-medium">
+                                    {new Date(b.date + 'T00:00:00').toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                  </p>
+                                  <p className="text-gray-500 text-xs">{b.startTime} – {b.endTime}</p>
+                                </div>
+                                <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Booked</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-     
     </div>
   );
 }

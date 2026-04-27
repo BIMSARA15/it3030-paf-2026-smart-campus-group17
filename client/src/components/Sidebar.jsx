@@ -82,7 +82,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         ...(isLecturer ? [{ name: 'Student Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
         { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
         { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
-        { name: 'Resources', path: '/resources', icon: Building2 },
+        { name: 'All Resources', path: '/resources', icon: Building2 },
         { name: 'Maintenance', path: '/maintenance', icon: Wrench },
         { name: 'Notifications', path: '/notifications', icon: Bell },
       ];

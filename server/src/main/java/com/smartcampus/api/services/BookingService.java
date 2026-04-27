@@ -242,6 +242,35 @@ public class BookingService {
         if (existingBookingOpt.isPresent()) {
             Booking existingBooking = existingBookingOpt.get();
 
+            // --- NEW: OVERLAP CONFLICT CHECK FOR EDITS ---
+            List<Booking> otherBookings = bookingRepository.findApprovedBookingsForResourceOnDate(
+                existingBooking.getResourceId(), 
+                updatedData.getDate()
+            );
+
+            LocalTime newStart = parseBookingTime(updatedData.getStartTime());
+            LocalTime newEnd = parseBookingTime(updatedData.getEndTime());
+
+            for (Booking other : otherBookings) {
+                // Skip checking against the booking we are currently editing!
+                if (other.getId().equals(existingBooking.getId())) {
+                    continue;
+                }
+                
+                try {
+                    LocalTime existingStart = parseBookingTime(other.getStartTime());
+                    LocalTime existingEnd = parseBookingTime(other.getEndTime());
+
+                    // Conflict if new booking starts before existing ends AND new booking ends after existing starts
+                    if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
+                        throw new Exception("Scheduling conflict: This resource is already booked during the requested time.");
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+            }
+            // --- END OF CONFLICT CHECK ---
+
             existingBooking.setDate(updatedData.getDate());
             existingBooking.setStartTime(updatedData.getStartTime());
             existingBooking.setEndTime(updatedData.getEndTime());

@@ -37,6 +37,7 @@ public class Booking {
     private String cancellationReason;
 
     private boolean checkedIn = false; //QR Innovation
+    private LocalDateTime checkInTime; // For QR Innovation, to track when the user checked in
     private boolean reminderSent = false; // For ReminderService to track if we've sent a reminder email
     
     private LocalDateTime createdAt;
@@ -124,4 +125,7 @@ public class Booking {
     
     public boolean isReminderSent() { return reminderSent; }
     public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
+
+    public LocalDateTime getCheckInTime() { return checkInTime; }
+    public void setCheckInTime(LocalDateTime checkInTime) { this.checkInTime = checkInTime; }
 }

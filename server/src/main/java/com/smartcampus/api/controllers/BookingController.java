@@ -142,10 +142,14 @@ public class BookingController {
 
     // QR Code Check-in Endpoint
     @PutMapping("/{id}/checkin")
-    public ResponseEntity<Booking> checkInBooking(@PathVariable String id) {
-        Optional<Booking> checkedInBooking = bookingService.checkInBooking(id);
-        return checkedInBooking.map(ResponseEntity::ok)
-                               .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<?> checkInBooking(@PathVariable String id) {
+        try {
+            Booking checkedInBooking = bookingService.checkInBooking(id);
+            return ResponseEntity.ok(checkedInBooking);
+        } catch (Exception e) {
+            // Sends the custom error message back to the frontend to display
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); 
+        }
     }
 
     // Delete Endpoint

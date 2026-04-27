@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.time.LocalDate;
 
 @Service
 public class BookingService {
@@ -217,15 +218,53 @@ public class BookingService {
         return Optional.empty();
     }
 
-    public Optional<Booking> checkInBooking(String id) {
+    public Booking checkInBooking(String id) throws Exception {
         Optional<Booking> existingBooking = bookingRepository.findById(id);
         if (existingBooking.isPresent()) {
             Booking booking = existingBooking.get();
+
+            if (booking.isCheckedIn()) {
+                throw new Exception("Student is already checked in.");
+            }
+
+            LocalDate bookingDate;
+            try {
+                bookingDate = LocalDate.parse(booking.getDate());
+            } catch (Exception e) {
+                throw new Exception("Invalid booking date format.");
+            }
+            
+            LocalTime startTime = parseBookingTime(booking.getStartTime());
+            LocalTime endTime = parseBookingTime(booking.getEndTime());
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDate today = now.toLocalDate();
+            LocalTime currentTime = now.toLocalTime();
+
+            // Strict Date Validation
+            if (!today.isEqual(bookingDate)) {
+                if (today.isBefore(bookingDate)) {
+                    throw new Exception("Check-in failed: Booking is scheduled for a future date (" + booking.getDate() + ").");
+                } else {
+                    throw new Exception("Check-in failed: Booking date (" + booking.getDate() + ") has already passed.");
+                }
+            }
+
+            // Strict Time Validation (Allowing them to check in 15 mins early)
+            if (currentTime.isBefore(startTime.minusMinutes(15))) {
+                throw new Exception("Check-in failed: Too early. You can only check in 15 minutes before the start time (" + booking.getStartTime() + ").");
+            }
+            if (currentTime.isAfter(endTime)) {
+                throw new Exception("Check-in failed: The booking time has already ended.");
+            }
+
+            // Process Check-in
             booking.setCheckedIn(true);
-            booking.setUpdatedAt(LocalDateTime.now());
-            return Optional.of(bookingRepository.save(booking));
+            booking.setCheckInTime(now); // Save the exact timestamp
+            booking.setUpdatedAt(now);
+            return bookingRepository.save(booking);
         }
-        return Optional.empty();
+        throw new Exception("Booking not found.");
     }
 
     public boolean deleteBooking(String id) {

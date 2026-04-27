@@ -10,6 +10,7 @@ export default function VerifyBooking() {
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const found = bookings.find(b => b.id === id);
@@ -18,17 +19,25 @@ export default function VerifyBooking() {
 
   const handleCheckIn = async () => {
     setLoading(true);
+    setError(''); // Clear previous errors
+    
     try {
       const response = await fetch(`http://localhost:8080/api/bookings/${id}/checkin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
+      
       if (response.ok) {
+        const updatedBooking = await response.json();
+        setBooking(updatedBooking); // Update the UI with the fresh data from the DB
         setSuccess(true);
+      } else {
+        const errData = await response.json();
+        setError(errData.error || "Check-in failed. Please verify the time.");
       }
-    } catch (error) {
-      console.error("Check-in failed", error);
+    } catch (err) {
+      setError("Network error occurred.");
     }
     setLoading(false);
   };
@@ -49,6 +58,14 @@ export default function VerifyBooking() {
       };
     }
   }
+
+  const formatTimestamp = (isoString) => {
+    if (!isoString) return '';
+    return new Date(isoString).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -132,10 +149,27 @@ export default function VerifyBooking() {
           </div>
 
           {/* Action Area */}
-          {booking.checkedIn || success ? (
-            <div className="bg-green-50 text-green-700 p-4 rounded-xl flex items-center justify-center gap-2 font-medium border border-green-200 shadow-sm">
-              <CheckCircle className="w-5 h-5" /> 
-              Student Checked In Successfully
+          
+          {/* Show Error Message if Time Validation Fails */}
+          {error && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center justify-center gap-2 font-medium border border-red-200 shadow-sm mb-4 text-sm text-center">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" /> 
+              {error}
+            </div>
+          )}
+
+          {booking.checkedIn ? (
+            <div className="bg-green-50 flex flex-col items-center justify-center p-4 rounded-xl border border-green-200 shadow-sm">
+              <div className="text-green-700 flex items-center gap-2 font-medium mb-1">
+                <CheckCircle className="w-5 h-5" /> 
+                Student Checked In Successfully
+              </div>
+              {/* Show the Check-in Timestamp! */}
+              {booking.checkInTime && (
+                <div className="text-green-600/80 text-xs font-semibold">
+                  at {formatTimestamp(booking.checkInTime)}
+                </div>
+              )}
             </div>
           ) : booking.status !== 'APPROVED' ? (
             <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center justify-center gap-2 font-medium border border-red-200 shadow-sm">

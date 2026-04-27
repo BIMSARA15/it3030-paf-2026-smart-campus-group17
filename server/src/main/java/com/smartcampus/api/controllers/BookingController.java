@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.smartcampus.api.dto.CreateBookingRequest;
 import com.smartcampus.api.dto.UpdateBookingStatusRequest;
+import com.smartcampus.api.dto.UpdateBookingDetailsRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -157,11 +158,23 @@ public class BookingController {
         return ResponseEntity.notFound().build(); //404 Not Found Status
     }
 
-    // Update an existing booking's details
+    // Update an existing booking's details using DTO
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateBookingDetails(@PathVariable String id, @RequestBody Booking bookingDetails) {
+    public ResponseEntity<?> updateBookingDetails(@PathVariable String id, @RequestBody UpdateBookingDetailsRequest request) {
         try {
-            Booking updatedBooking = bookingService.updateBookingDetails(id, bookingDetails);
+            // Map the DTO to the Booking model
+            Booking updateData = new Booking();
+            updateData.setDate(request.getDate());
+            updateData.setStartTime(request.getStartTime());
+            updateData.setEndTime(request.getEndTime());
+            updateData.setPurpose(request.getPurpose());
+            updateData.setAttendees(request.getAttendees());
+            updateData.setLecturer(request.getLecturer());
+            updateData.setSpecialRequests(request.getSpecialRequests());
+            updateData.setRequestedUtilityIds(request.getRequestedUtilityIds());
+
+            // Pass the mapped model to the service layer
+            Booking updatedBooking = bookingService.updateBookingDetails(id, updateData);
             return ResponseEntity.ok(updatedBooking);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage())); //400 Bad Request

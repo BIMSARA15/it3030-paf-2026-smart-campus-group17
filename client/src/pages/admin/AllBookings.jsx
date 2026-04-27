@@ -472,13 +472,13 @@ export default function AllBookings() {
                                               e.stopPropagation(); 
                                               setModal({ bookingId: booking.id, action: 'cancel' }); 
                                             }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-medium hover:bg-orange-600 transition-colors shadow-sm"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 text-slate-700 bg-white rounded-lg text-xs font-medium hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-sm"
                                           >
                                             <XCircle className="w-3.5 h-3.5" /> Cancel
                                           </button>
                                         )}
 
-                                        {/* 2. Show Delete Record ONLY when NOT PENDING */}
+                                        {/* Show Delete Record ONLY when NOT PENDING */}
                                         {booking.status !== 'PENDING' && (
                                           <button
                                             onClick={(e) => {
@@ -491,12 +491,13 @@ export default function AllBookings() {
                                           </button>
                                         )}
 
-                                      {/* 3. ALWAYS show the View Details button at the very end */}
+                                      {/* ALWAYS show the View Details button at the very end */}
                                       <button
                                         onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === booking.id ? null : booking.id); }}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 bg-white rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                                        className="flex items-center justify-center p-2 border border-gray-200 text-[#1E3A8A] bg-white rounded-lg hover:bg-blue-50 transition-colors"
+                                        title="View Details"
                                       >
-                                        <Eye className="w-3.5 h-3.5" /> Details
+                                        <Eye className="w-4 h-4" />
                                       </button>
                                 </div>
                                 </td>

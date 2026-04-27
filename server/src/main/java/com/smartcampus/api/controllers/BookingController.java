@@ -12,6 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
+import com.smartcampus.api.dto.CreateBookingRequest;
+import com.smartcampus.api.dto.UpdateBookingStatusRequest;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -47,18 +50,30 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getUserBookingsByEmail(email));
     }
 
-    // Create Booking
+    // Create Booking using DTO
     @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody Booking booking, Authentication authentication) {
-        // --- ADD THESE DEBUG LOGS HERE ---
+    public ResponseEntity<?> createBooking(@RequestBody CreateBookingRequest request, Authentication authentication) {
+        
+        // Map DTO to our Database Model
+        Booking booking = new Booking();
+        booking.setResourceId(request.getResourceId());
+        booking.setUserName(request.getUserName());
+        booking.setUserEmail(request.getUserEmail());
+        booking.setUserDept(request.getUserDept());
+        booking.setDate(request.getDate());
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        booking.setPurpose(request.getPurpose());
+        booking.setAttendees(request.getAttendees());
+        booking.setQuantity(request.getQuantity());
+        booking.setLecturer(request.getLecturer());
+        booking.setSpecialRequests(request.getSpecialRequests());
+        booking.setRequestedUtilityIds(request.getRequestedUtilityIds());
+
         System.out.println("\n====== [JAVA DEBUG] INCOMING BOOKING ======");
         System.out.println("Resource ID received: " + booking.getResourceId());
-        System.out.println("Resource Name received: " + booking.getResourceName());
-        System.out.println("Block received: " + booking.getBlock());
-        System.out.println("Level received: " + booking.getLevel());
         System.out.println("===========================================\n");
         
-       
         // Map Microsoft Email to Real MongoDB ID
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
@@ -66,7 +81,6 @@ public class BookingController {
             
             if (principal instanceof OAuth2User) {
                 OAuth2User oauth2User = (OAuth2User) principal;
-                
                 realUserId = oauth2User.getAttribute("id");
                 
                 if (realUserId == null) {
@@ -79,11 +93,9 @@ public class BookingController {
                     }
                 }
             }
-            
             if (realUserId == null) {
                 realUserId = authentication.getName();
             }
-            
             if (realUserId != null) {
                 booking.setUserId(realUserId); 
             }
@@ -98,7 +110,7 @@ public class BookingController {
         }
         
         try {
-            // Hand off to the Service (which now handles the saving AND the dynamic notifications cleanly)
+            // Hand off to the Service 
             Booking createdBooking = bookingService.createBooking(booking);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking); //201 Created Status
             
@@ -107,10 +119,18 @@ public class BookingController {
         }
     }
 
-    // Update booking status
+    // Update booking status using DTO
     @PutMapping("/{id}/status")
-    public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody Booking updateData) {
+    public ResponseEntity<Booking> updateBookingStatus(@PathVariable String id, @RequestBody UpdateBookingStatusRequest request) {
         
+        // Map DTO to Model
+        Booking updateData = new Booking();
+        updateData.setStatus(request.getStatus());
+        updateData.setAdminNote(request.getAdminNote());
+        updateData.setRejectionReason(request.getRejectionReason());
+        updateData.setReviewedBy(request.getReviewedBy());
+        updateData.setCancellationReason(request.getCancellationReason());
+
         Optional<Booking> updatedBookingOpt = bookingService.updateBookingStatus(id, updateData);
         
         if (updatedBookingOpt.isPresent()) {

@@ -15,6 +15,7 @@ import CancelBookingModal from '../../components/bookings/CancelBookingModal';
 import QRCodeModal from '../../components/bookings/QRCodeModal';
 import { SuccessModal } from '../../components/bookings/NotificationModals';
 import UserBookingDetailsModal from '../../components/bookings/UserBookingDetailsModal';
+import { useLocation } from 'react-router-dom';
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -66,6 +67,7 @@ export default function MyBookings() {
   // Pulled fetchUserBookings, bookings, AND utilities from Context
   const { currentUser, bookings, getResourceById, cancelBooking, fetchUserBookings, utilities } = useBooking();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // THEME: Determine if user is lecturer for styling purposes
   const currentRole = (currentUser?.role || '').toUpperCase();
@@ -119,6 +121,23 @@ export default function MyBookings() {
 
     loadData();
   }, [currentUser, fetchUserBookings, bookings]); 
+  // NEW: Listen for Notification Redirects and Auto-Open the Modal
+  useEffect(() => {
+    if (location.state?.highlightId && myBookings.length > 0) {
+      const targetId = location.state.highlightId;
+      
+      // Verify the booking actually exists in their list
+      if (myBookings.some(b => b.id === targetId)) {
+        // Defer the state update to the next tick to avoid React cascading render warnings
+        setTimeout(() => {
+          setExpandedId(targetId);
+        }, 0);
+        
+        // Clear the router state safely using React Router so it doesn't re-open on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, location.pathname, myBookings, navigate]);
 
   // NEW: Helper function to find the item in either Resources OR Utilities
   const getBookingItem = (id) => {
@@ -165,7 +184,7 @@ export default function MyBookings() {
     hour: 'numeric', minute: '2-digit', hour12: true
   });
 
-  const today = new Date().toISOString().split('T');
+  //const today = new Date().toISOString().split('T');
 
   // Target the specific booking to open in the Modal
   const expandedBooking = expandedId ? myBookings.find(b => b.id === expandedId) : null;
@@ -291,7 +310,7 @@ export default function MyBookings() {
             <div className="space-y-3">
               {filtered.map(booking => {
                 const resource = getBookingItem(booking.resourceId);
-                const isPast = booking.date < today;
+                //const isPast = booking.date < today;
                 const canCancel = booking.status === 'PENDING' || booking.status === 'APPROVED';
 
                 return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
@@ -229,6 +229,12 @@ export default function NewBooking() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false); 
 
+  // Reference to freeze the bookings display during submission and success step
+  const frozenBookingsRef = useRef(bookings);
+  if (!submitting && step !== 3 && !showSuccessModal) {
+    frozenBookingsRef.current = bookings;
+  }
+
   useEffect(() => {
     fetchResources();
     fetchUtilities();
@@ -399,7 +405,7 @@ export default function NewBooking() {
     if (!purpose.trim()) e.purpose = 'Please describe the purpose';
     else if (purpose.trim().length < 10) e.purpose = 'Purpose must be at least 10 characters';
     
-    if (!isLecturer && !lecturer.trim()) e.lecturer = 'Please provide the name of the Lecturer in Charge'; // Only for students, lecturer in charge is mandatory
+    if (!isLecturer && !lecturer.trim() && selectedResource?.type !== 'room') e.lecturer = 'Please provide the name of the Lecturer in Charge'; // Optional for rooms, mandatory for others
 
     if (selectedResource?.capacity) {
       if (!attendees) {
@@ -806,7 +812,12 @@ export default function NewBooking() {
                       <div>
                         <label className="block text-gray-700 text-sm mb-1.5">
                           <User className="w-3.5 h-3.5 inline mr-1.5" />
-                          Lecturer in Charge <span className="text-red-500">*</span>
+                          Lecturer in Charge 
+                          {selectedResource?.type === 'room' ? (
+                            <span className="text-gray-400 text-xs ml-1">(Optional)</span>
+                          ) : (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
                         </label>
                         <input
                           type="text"
@@ -890,16 +901,14 @@ export default function NewBooking() {
                     </button>
                   )}
                 </div>
-
               </div>
-
               <div className="space-y-4">
                 <SelectedResourcePreview 
                   selectedResource={selectedResource}
                   resourceImage={getResourceImage(selectedResource)}
                   typeColors={typeColors}
                   typeIcons={TYPE_ICONS}
-                  bookings={bookings}
+                  bookings={frozenBookingsRef.current}
                   today={today}
                   formatTo24Hour={formatTo24Hour}
                 />

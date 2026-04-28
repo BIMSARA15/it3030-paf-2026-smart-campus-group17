@@ -27,7 +27,7 @@ jobs:
       run: |
         cd server
         mvn clean install
-        env:
+      env:
         GMAIL_USER: ${{ secrets.GMAIL_USER }}
         GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
 

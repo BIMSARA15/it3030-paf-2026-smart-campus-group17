@@ -1,14 +1,19 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
   Calendar, Clock, AlertCircle, CheckCircle, ChevronRight,
-  ChevronLeft, Info, Loader2, User, MessageSquare, X, Package 
+  ChevronLeft, Info, Loader2, User, MessageSquare, X, Package, Tag 
 } from 'lucide-react';
 import { useBooking } from '../../context/BookingContext';
 import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
+import BookingSuccessModal from '../../components/bookings/BookingSuccessModal';
+import BookingResourceCard from '../../components/bookings/BookingResourceCard';
+import BookingUtilityCard from '../../components/bookings/BookingUtilityCard';
+import StepProgressBar from '../../components/bookings/StepProgressBar';
+import SelectedResourcePreview from '../../components/bookings/SelectedResourcePreview';
 //import AIChat from '../components/AIChat';
 
 const TYPE_ICONS = {
@@ -23,8 +28,28 @@ const TYPE_COLORS = {
   equipment: 'bg-slate-100 text-slate-600',
 };
 
+const DEFAULT_RESOURCE_IMAGES = {
+  lectureRoom: 'https://i.pinimg.com/736x/f8/98/46/f89846b24148276c9000e38c51c82ce5.jpg',
+  lab: 'https://i.pinimg.com/736x/39/ee/cb/39eecbeca86920e153e277780f20feed.jpg',
+  meetingRoom: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80&w=800',
+  equipment: 'https://i.pinimg.com/736x/64/e7/8f/64e78f4c21c54ff2b9765fa14b62267b.jpg',
+};
+
+const getResourceImage = (resource) => {
+  if (resource.image) return resource.image;
+  const originalType = (resource.resourceType || resource.type || '').toLowerCase();
+  if (originalType.includes('meeting')) return DEFAULT_RESOURCE_IMAGES.meetingRoom;
+  if (originalType.includes('lab')) return DEFAULT_RESOURCE_IMAGES.lab;
+  if (originalType.includes('equipment') || originalType.includes('utility')) return DEFAULT_RESOURCE_IMAGES.equipment;
+  return DEFAULT_RESOURCE_IMAGES.lectureRoom;
+};
+
 const normalizeUtilityStatus = (status = '') => status.trim().toLowerCase();
-const shouldShowUtility = (utility) => normalizeUtilityStatus(utility?.status) !== 'maintenance';
+const shouldShowUtility = (utility) => {
+  const status = normalizeUtilityStatus(utility?.status);
+  // Hides utilities that are in maintenance or temporarily unavailable
+  return status !== 'maintenance' && status !== 'temporarily unavailable' && status !== 'temporary unavailable';
+};
 const isUtilityInUse = (utility) => normalizeUtilityStatus(utility?.status) === 'in use';
 
 // Helper to convert 12h format back to 24h for math calculations behind the scenes
@@ -208,6 +233,12 @@ export default function NewBooking() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false); 
 
+  // Reference to freeze the bookings display during submission and success step
+  const frozenBookingsRef = useRef(bookings);
+  if (!submitting && step !== 3 && !showSuccessModal) {
+    frozenBookingsRef.current = bookings;
+  }
+
   useEffect(() => {
     fetchResources();
     fetchUtilities();
@@ -275,6 +306,7 @@ export default function NewBooking() {
             location: u.location,
             type: 'equipment',
             capacity: null, // Hides attendees field
+            quantity: u.quantity,
             features: [],
             access: 'anyone',
             status: u.status,
@@ -356,7 +388,8 @@ export default function NewBooking() {
 
   // Filter logic specifically for the Equipments (Utilities)
   const filteredUtilities = utilities.filter((utility) => {
-    if (!shouldShowUtility(utility)) return false;
+    // Hide items completely if they are out of stock, in use, or in maintenance
+    if (!shouldShowUtility(utility) || utility.quantity <= 0 || isUtilityInUse(utility)) return false;
 
     const query = search.trim().toLowerCase();
     return query === '' ||
@@ -378,7 +411,7 @@ export default function NewBooking() {
     if (!purpose.trim()) e.purpose = 'Please describe the purpose';
     else if (purpose.trim().length < 10) e.purpose = 'Purpose must be at least 10 characters';
     
-    if (!isLecturer && !lecturer.trim()) e.lecturer = 'Please provide the name of the Lecturer in Charge'; // Only for students, lecturer in charge is mandatory
+    if (!isLecturer && !lecturer.trim() && selectedResource?.type !== 'room') e.lecturer = 'Please provide the name of the Lecturer in Charge'; // Optional for rooms, mandatory for others
 
     if (selectedResource?.capacity) {
       if (!attendees) {
@@ -464,65 +497,24 @@ export default function NewBooking() {
         <Header />
         <div className="p-4 lg:p-6 text-left relative">
           
+          {/* Extracted Success Popup Modal */}
           {showSuccessModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-              <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center z-10 border border-gray-100">
-                
-                <button
-                  onClick={() => setShowSuccessModal(false)}
-                  className="absolute top-4 right-4 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 mt-2">
-                  <CheckCircle className="w-8 h-8 text-emerald-600" />
-                </div>
-                <h2 className="text-gray-900 text-xl font-semibold mb-2">
-                  {isEditing ? 'Booking Updated!' : 'Booking Submitted!'}
-                </h2>
-                <p className="text-gray-500 text-sm mb-6">
-                  {isEditing ? 'Booking Details Updated Successfully.' : result?.message}
-                </p>
-                
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-6 text-left">
-                  <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-amber-800 text-sm font-medium flex items-center gap-2">
-                        Your booking is now <StatusBadge status="PENDING" size="sm" />
-                      </p>
-                      <p className="text-amber-700 text-xs mt-1">An administrator will review your request and notify you of the outcome.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowSuccessModal(false);
-                      setStep(1);
-                      setSelectedResource(null);
-                      setDate(''); setStartTime(''); setEndTime('');
-                      setPurpose(''); setAttendees(''); setLecturer('');
-                      setSpecialRequests('');
-                      setResult(null);
-                    }}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
-                  >
-                    New Booking
-                  </button>
-                  
-                  <button
-                    onClick={() => navigate('/bookings/my')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-white text-sm font-medium border-t border-white/20 transition-all ${theme.gradientBtn}`}
-                  >
-                    My Bookings
-                  </button>
-                </div>
-              </div>
-            </div>
+            <BookingSuccessModal
+              isEditing={isEditing}
+              resultMessage={result?.message}
+              theme={theme}
+              onClose={() => setShowSuccessModal(false)}
+              onNewBooking={() => {
+                setShowSuccessModal(false);
+                setStep(1);
+                setSelectedResource(null);
+                setDate(''); setStartTime(''); setEndTime('');
+                setPurpose(''); setAttendees(''); setLecturer('');
+                setSpecialRequests('');
+                setResult(null);
+              }}
+              onViewBookings={() => navigate('/bookings/my')}
+            />
           )}
 
           <div className="mb-6">
@@ -532,27 +524,7 @@ export default function NewBooking() {
             <p className="text-gray-500 text-sm mt-1">Reserve a Lecture Hall, Lab, or Equipment</p>
           </div>
 
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 sm:pb-0">
-            {['Select Resource', 'Booking Details', 'Request Submitted'].map((label, i) => {
-              const stepNum = i + 1;
-              const active = step === stepNum;
-              const done = step > stepNum;
-              return (
-                <div key={label} className="flex items-center gap-2 whitespace-nowrap">
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all ${
-                    done ? 'bg-emerald-100 text-emerald-700' :
-                    active ? theme.activeStep : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs border border-current">
-                      {done ? '✓' : stepNum}
-                    </span>
-                    {label}
-                  </div>
-                  {i < 2 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
-                </div>
-              );
-            })}
-          </div>
+          <StepProgressBar currentStep={step} theme={theme} />
 
           {accessNotice && (
             <div className="mb-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -606,41 +578,25 @@ export default function NewBooking() {
                 ) : (
                   <>
                     {/* --- RENDER ROOMS AND LABS (RESOURCES) --- */}
-                    {typeFilter !== 'equipment' && filtered.map(resource => (
-                      <button
-                        key={`res-${resource.id}`}
-                        onClick={() => { setSelectedResource(resource); setStep(2); }}
-                        className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all group ${theme.cardHover}`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                            {TYPE_ICONS[(resource.type || '').toLowerCase()] || <Wrench className="w-4 h-4" />}
-                          </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                            {resource.type}
-                          </span>
-                        </div>
-                        <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
-                        <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                          <MapPin className="w-3 h-3" />
-                          {resource.location}
-                        </div>
-                        {resource.capacity && (
-                          <div className="flex items-center gap-1 text-gray-400 text-xs">
-                            <Users className="w-3 h-3" />
-                            Capacity: {resource.capacity} persons
-                          </div>
-                        )}
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {resource.features.slice(0, 3).map(f => (
-                            <span key={f} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
-                          ))}
-                          {resource.features.length > 3 && (
-                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                    {typeFilter !== 'equipment' && filtered.map(resource => {
+                      const upcomingCount = bookings.filter(b => 
+                        b.resourceId === resource.id && 
+                        (b.status === 'APPROVED' || b.status === 'PENDING') && 
+                        b.date >= today
+                      ).length;
+
+                      return (
+                        <BookingResourceCard
+                          key={`res-${resource.id}`}
+                          resource={resource}
+                          theme={theme}
+                          typeColors={typeColors}
+                          typeIcons={TYPE_ICONS}
+                          upcomingCount={upcomingCount}
+                          onClick={() => { setSelectedResource(resource); setStep(2); }}
+                        />
+                      );
+                    })}
 
                     {/* --- RENDER EQUIPMENTS (UTILITIES) --- */}
                     {(typeFilter === 'all' || typeFilter === 'equipment') && filteredUtilities.map(utility => {
@@ -649,12 +605,17 @@ export default function NewBooking() {
                       const isDisabled = isOutOfStock || isInUse;
 
                       return (
-                        <button
+                        <BookingUtilityCard
                           key={`util-${utility.id}`}
-                          disabled={isDisabled}
+                          utility={utility}
+                          theme={theme}
+                          typeColors={typeColors}
+                          typeIcons={TYPE_ICONS}
+                          isDisabled={isDisabled}
+                          isInUse={isInUse}
+                          isOutOfStock={isOutOfStock}
                           onClick={() => { 
-                            if (isDisabled) return; // Fail-safe to prevent selection
-                            
+                            if (isDisabled) return;
                             setSelectedResource({
                               id: utility.id,
                               name: utility.utilityName,
@@ -669,56 +630,7 @@ export default function NewBooking() {
                             }); 
                             setStep(2); 
                           }}
-                          // NEW: Apply gray styles and remove hover effects if out of stock
-                          className={`text-left p-4 rounded-xl border-2 relative transition-all ${
-                            isDisabled 
-                              ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200' 
-                              : `border-gray-100 group ${theme.cardHover}`
-                          }`}
-                        >
-                          {/* NEW: Render Out of Stock Badge */}
-                          {isDisabled && (
-                            <div className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-md z-10 border ${
-                              isInUse
-                                ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                : 'bg-red-100 text-red-600 border-red-200'
-                            }`}>
-                              {isInUse ? 'In Use' : 'Out of Stock'}
-                            </div>
-                          )}
-
-                          <div className="flex items-start justify-between gap-2 mb-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeColors.equipment}`}>
-                              {TYPE_ICONS['equipment']}
-                            </div>
-                            
-                            {/* Hide standard category badge if out of stock so it doesn't crowd the top corner */}
-                            {!isDisabled && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors.equipment}`}>
-                                {utility.category || 'Equipment'}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className={`text-gray-900 mb-1 transition-colors ${!isDisabled ? theme.textHover : ''}`}>
-                            {utility.utilityName}
-                          </h4>
-                          <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                            <MapPin className="w-3 h-3" />
-                            {utility.location}
-                          </div>
-                          
-                          {/* Highlight the quantity in red if it's zero */}
-                          <div className={`flex items-center gap-1 text-xs ${isOutOfStock ? 'text-red-500 font-medium' : isInUse ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
-                            <Package className="w-3 h-3" />
-                            Quantity: {utility.quantity}
-                          </div>
-                          
-                          <div className="mt-2">
-                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">
-                              {utility.utilityCode}
-                            </span>
-                          </div>
-                        </button>
+                        />
                       );
                     })}
                   </>
@@ -906,7 +818,12 @@ export default function NewBooking() {
                       <div>
                         <label className="block text-gray-700 text-sm mb-1.5">
                           <User className="w-3.5 h-3.5 inline mr-1.5" />
-                          Lecturer in Charge <span className="text-red-500">*</span>
+                          Lecturer in Charge 
+                          {selectedResource?.type === 'room' ? (
+                            <span className="text-gray-400 text-xs ml-1">(Optional)</span>
+                          ) : (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
                         </label>
                         <input
                           type="text"
@@ -990,65 +907,22 @@ export default function NewBooking() {
                     </button>
                   )}
                 </div>
-
               </div>
-
               <div className="space-y-4">
-                <div className="bg-white rounded-xl border border-gray-100 p-5">
-                  <h3 className="text-gray-900 mb-3">Resource Details</h3>
-                  {selectedResource.capacity && (
-                    <div className="flex items-center gap-2 text-gray-600 text-sm mb-2">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      Capacity: {selectedResource.capacity} persons
-                    </div>
-                  )}
-                  <div className="flex items-start gap-2 text-gray-600 text-sm mb-3">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    {selectedResource.location}
-                  </div>
-                  <div className="border-t border-gray-50 pt-3">
-                    <p className="text-gray-400 text-xs mb-2">Features</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedResource.features.map(f => (
-                        <span key={f} className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg">{f}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-100 p-5">
-                  <h3 className="text-gray-900 mb-3">Upcoming Reserved Slots</h3>
-                  {(() => {
-                    const todayStr = today;
-                    const existing = bookings
-                      .filter(b => b.resourceId === selectedResource.id && (b.status === 'APPROVED' || b.status === 'PENDING') && b.date >= todayStr)
-                      .sort((a, b) => a.date.localeCompare(b.date) || formatTo24Hour(a.startTime).localeCompare(formatTo24Hour(b.startTime)))
-                      .slice(0, 5);
-                    
-                    if (existing.length === 0) {
-                      return <p className="text-gray-400 text-sm text-center py-4">No upcoming reservations</p>;
-                    }
-                    return (
-                      <div className="space-y-2">
-                        {existing.map(b => (
-                          <div key={b.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                            <div>
-                              <p className="text-gray-700 text-xs">{new Date(b.date + 'T00:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}</p>
-                              <p className="text-gray-500 text-xs">{b.startTime} – {b.endTime}</p>
-                            </div>
-                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">Booked</span>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
+                <SelectedResourcePreview 
+                  selectedResource={selectedResource}
+                  resourceImage={getResourceImage(selectedResource)}
+                  typeColors={typeColors}
+                  typeIcons={TYPE_ICONS}
+                  bookings={frozenBookingsRef.current}
+                  today={today}
+                  formatTo24Hour={formatTo24Hour}
+                />
               </div>
             </div>
           )}
         </div>
       </div>
-     
     </div>
   );
 }

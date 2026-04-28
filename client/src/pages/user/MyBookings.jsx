@@ -357,7 +357,11 @@ export default function MyBookings() {
                                   e.stopPropagation();
                                   navigate(`/booking/edit/${booking.id}`); 
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-blue-200 text-blue-600 bg-white hover:bg-blue-50 shadow-sm flex-1 xl:flex-none justify-center"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border bg-white shadow-sm flex-1 xl:flex-none justify-center ${
+                                  isLecturer 
+                                    ? 'border-[#8A3505]/30 text-[#8A3505] hover:bg-[#8A3505]/10' 
+                                    : 'border-[#0F6657]/30 text-[#0F6657] hover:bg-[#0F6657]/10'
+                                }`}
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                                 <span>Edit</span>

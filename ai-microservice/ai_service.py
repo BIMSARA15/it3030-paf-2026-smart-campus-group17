@@ -33,8 +33,8 @@ class ChatRequest(BaseModel):
     user_email: str    
     history: list[dict] 
 
-# --- PROTECTED ROUTE: Added the dependency here ---
-@app.post("/chat", dependencies=[Depends(verify_token)])
+# --- PROTECTED ROUTE:  dependency ---
+@app.post("/api/chat", dependencies=[Depends(verify_token)])
 def chat_with_bot(request: ChatRequest):
     messages = [SYSTEM_MESSAGE]
     safe_history = request.history[-6:] 

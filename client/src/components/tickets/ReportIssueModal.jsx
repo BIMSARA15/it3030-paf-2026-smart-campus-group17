@@ -3,19 +3,25 @@ import { X } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 import { createTicket } from "../../services/ticketService";
 import { RESOURCES } from "../../data/resources";
+import { useAuth } from "../../context/AuthContext";
 
 const CATEGORIES = ["IT_EQUIPMENT", "FURNITURE", "HVAC", "ELECTRICAL", "SAFETY", "OTHER"];
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
-/**
- * "Report a Maintenance Issue" modal — pixel-aligned with the Figma mockup.
- * Used by the Technician Maintenance page (technicians can self-report).
- *
- * Calls onCreated(newTicket) after a successful submit so the parent list
- * can refresh without a network round-trip.
- */
 export default function ReportIssueModal({ onClose, onCreated }) {
-  const [resourceId, setResourceId] = useState(RESOURCES[0]?.id || "");
+  const { user } = useAuth();
+  const isLecturer = (user?.role || '').toUpperCase() === 'LECTURER';
+
+  const themeClasses = {
+    focusRing: isLecturer 
+      ? "focus:ring-[#C54E08]/30 focus:border-[#C54E08]" 
+      : "focus:ring-[#17A38A]/30 focus:border-[#17A38A]",
+    submitBtn: isLecturer
+      ? "bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106]"
+      : "bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74]",
+  };
+
+  const [resourceId, setResourceId] = useState(RESOURCES?.id || "");
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [priority, setPriority] = useState("MEDIUM");
   const [description, setDescription] = useState("");
@@ -77,7 +83,7 @@ export default function ReportIssueModal({ onClose, onCreated }) {
               required
               value={resourceId}
               onChange={(e) => setResourceId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${themeClasses.focusRing}`}
             >
               {RESOURCES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
             </select>
@@ -89,7 +95,7 @@ export default function ReportIssueModal({ onClose, onCreated }) {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${themeClasses.focusRing}`}
               >
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
               </select>
@@ -99,7 +105,7 @@ export default function ReportIssueModal({ onClose, onCreated }) {
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${themeClasses.focusRing}`}
               >
                 {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
@@ -114,7 +120,7 @@ export default function ReportIssueModal({ onClose, onCreated }) {
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               placeholder="Describe the issue in detail..."
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${themeClasses.focusRing}`}
             />
           </div>
 
@@ -125,7 +131,7 @@ export default function ReportIssueModal({ onClose, onCreated }) {
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               placeholder="email@northridge.edu | Ext: 0000"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+              className={`w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${themeClasses.focusRing}`}
             />
           </div>
 
@@ -142,7 +148,7 @@ export default function ReportIssueModal({ onClose, onCreated }) {
             <button
               type="submit"
               disabled={busy}
-              className="py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 disabled:opacity-50"
+              className={`py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 transition-all border-t border-white/20 shadow-sm ${themeClasses.submitBtn}`}
             >
               {busy ? "Submitting..." : "Submit Ticket"}
             </button>

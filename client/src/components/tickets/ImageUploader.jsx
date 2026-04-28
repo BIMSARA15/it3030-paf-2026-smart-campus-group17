@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { Plus, X, Image as ImageIcon } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
-/**
- * Lightweight image-URL list (no real file upload backend yet).
- * Caps the gallery at MAX images (default 3) to match the backend rule.
- *
- * Props:
- *   value     : string[]            current list of URLs
- *   onChange  : (string[]) => void  updates parent state
- *   max       : number              hard cap (default 3)
- */
 export default function ImageUploader({ value = [], onChange, max = 3 }) {
   const [draft, setDraft] = useState("");
+  
+  const { user } = useAuth();
+  const isLecturer = (user?.role || '').toUpperCase() === 'LECTURER';
+
+  const themeClasses = {
+    focusRing: isLecturer 
+      ? "focus:ring-[#C54E08]/30 focus:border-[#C54E08]" 
+      : "focus:ring-[#17A38A]/30 focus:border-[#17A38A]",
+    warningText: isLecturer ? "text-[#C54E08]" : "text-[#17A38A]"
+  };
 
   const add = () => {
     const url = draft.trim();
@@ -38,20 +40,20 @@ export default function ImageUploader({ value = [], onChange, max = 3 }) {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Paste image URL..."
           disabled={value.length >= max}
-          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-slate-50"
+          className={`flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all disabled:bg-slate-50 ${themeClasses.focusRing}`}
         />
         <button
           type="button"
           onClick={add}
           disabled={!draft || value.length >= max}
-          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50"
+          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50 transition-colors"
         >
           Add
         </button>
       </div>
 
       {value.length === max && (
-        <p className="text-xs text-amber-600 mt-1.5">
+        <p className={`text-xs mt-1.5 font-medium ${themeClasses.warningText}`}>
           Maximum of {max} images reached.
         </p>
       )}

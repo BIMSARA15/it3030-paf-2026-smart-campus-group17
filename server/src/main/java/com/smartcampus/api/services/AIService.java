@@ -1,6 +1,5 @@
 package com.smartcampus.api.services;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -8,27 +7,26 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.stereotype.Service;
 import java.util.Map;
 import com.smartcampus.api.models.User;
+import com.smartcampus.api.config.AiMicroserviceProperties;
 import java.util.HashMap;
 import java.util.List;
 
 @Service
 public class AIService {
     
-    // Pull the URL and Token from application.properties
-    @Value("${ai.microservice.url}")
-    private String aiServiceUrl;
-
-    @Value("${ai.microservice.token}")
-    private String aiToken;
-
+    private final AiMicroserviceProperties aiProperties;
     private final RestTemplate restTemplate = new RestTemplate();
+
+    public AIService(AiMicroserviceProperties aiProperties) {
+        this.aiProperties = aiProperties;
+    }
 
     public String askAI(User user, List<Map<String, String>> history) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         
         // --- SECURITY SETUP: Attach the token to the header ---
-        headers.set("Authorization", "Bearer " + aiToken);
+        headers.set("Authorization", "Bearer " + aiProperties.getToken());
 
         Map<String, Object> requestBody = new HashMap<>();
         // Send the secure details to Python
@@ -42,7 +40,7 @@ public class AIService {
         try {
             @SuppressWarnings("unchecked")
             // Use the dynamic aiServiceUrl instead of the hardcoded one
-            Map<String, String> response = restTemplate.postForObject(aiServiceUrl, request, Map.class);
+            Map<String, String> response = restTemplate.postForObject(aiProperties.getUrl(), request, Map.class);
             
             if (response != null && response.containsKey("reply")) {
                 return response.get("reply");

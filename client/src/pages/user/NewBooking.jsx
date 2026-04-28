@@ -45,7 +45,11 @@ const getResourceImage = (resource) => {
 };
 
 const normalizeUtilityStatus = (status = '') => status.trim().toLowerCase();
-const shouldShowUtility = (utility) => normalizeUtilityStatus(utility?.status) !== 'maintenance';
+const shouldShowUtility = (utility) => {
+  const status = normalizeUtilityStatus(utility?.status);
+  // Hides utilities that are in maintenance or temporarily unavailable
+  return status !== 'maintenance' && status !== 'temporarily unavailable' && status !== 'temporary unavailable';
+};
 const isUtilityInUse = (utility) => normalizeUtilityStatus(utility?.status) === 'in use';
 
 // Helper to convert 12h format back to 24h for math calculations behind the scenes
@@ -383,7 +387,8 @@ export default function NewBooking() {
 
   // Filter logic specifically for the Equipments (Utilities)
   const filteredUtilities = utilities.filter((utility) => {
-    if (!shouldShowUtility(utility)) return false;
+    // Hide items completely if they are out of stock, in use, or in maintenance
+    if (!shouldShowUtility(utility) || utility.quantity <= 0 || isUtilityInUse(utility)) return false;
 
     const query = search.trim().toLowerCase();
     return query === '' ||

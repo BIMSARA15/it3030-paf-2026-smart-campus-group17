@@ -25,7 +25,7 @@ export default function BookingResourceCard({
           
           <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
             (resource.access || '').toLowerCase() === 'lecturer' 
-              ? 'bg-red-50 text-red-600 border-red-100' 
+              ? 'bg-[#C54E08]/10 text-[#8A3505] border-[#C54E08]/20' 
               : 'bg-gray-50 text-gray-500 border-gray-200'
           }`}>
             <User className="w-3 h-3" />

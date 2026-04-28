@@ -10,6 +10,9 @@ import { StatusBadge } from '../../components/StatusBadge';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import BookingSuccessModal from '../../components/bookings/BookingSuccessModal';
+import BookingResourceCard from '../../components/bookings/BookingResourceCard';
+import BookingUtilityCard from '../../components/bookings/BookingUtilityCard';
+import StepProgressBar from '../../components/bookings/StepProgressBar';
 //import AIChat from '../components/AIChat';
 
 const TYPE_ICONS = {
@@ -508,27 +511,7 @@ export default function NewBooking() {
             <p className="text-gray-500 text-sm mt-1">Reserve a Lecture Hall, Lab, or Equipment</p>
           </div>
 
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 sm:pb-0">
-            {['Select Resource', 'Booking Details', 'Request Submitted'].map((label, i) => {
-              const stepNum = i + 1;
-              const active = step === stepNum;
-              const done = step > stepNum;
-              return (
-                <div key={label} className="flex items-center gap-2 whitespace-nowrap">
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all ${
-                    done ? 'bg-emerald-100 text-emerald-700' :
-                    active ? theme.activeStep : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs border border-current">
-                      {done ? '✓' : stepNum}
-                    </span>
-                    {label}
-                  </div>
-                  {i < 2 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
-                </div>
-              );
-            })}
-          </div>
+          <StepProgressBar currentStep={step} theme={theme} />
 
           {accessNotice && (
             <div className="mb-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -590,82 +573,15 @@ export default function NewBooking() {
                       ).length;
 
                       return (
-                        <button
+                        <BookingResourceCard
                           key={`res-${resource.id}`}
+                          resource={resource}
+                          theme={theme}
+                          typeColors={typeColors}
+                          typeIcons={TYPE_ICONS}
+                          upcomingCount={upcomingCount}
                           onClick={() => { setSelectedResource(resource); setStep(2); }}
-                          className={`text-left p-4 rounded-xl border-2 border-gray-100 transition-all flex flex-col group ${theme.cardHover}`}
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-3 w-full">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                              {TYPE_ICONS[(resource.type || '').toLowerCase()] || <Wrench className="w-4 h-4" />}
-                            </div>
-                            
-                            {/* MOVED: Type Badge and Access Level stacked together on the right */}
-                            <div className="flex flex-col items-end gap-1.5">
-                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors[(resource.type || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                                {resource.type}
-                              </span>
-                              
-                              {/* NEW: Styled Pill Badge for Access Level */}
-                              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                                (resource.access || '').toLowerCase() === 'lecturer' 
-                                  ? 'bg-red-50 text-red-600 border-red-100' 
-                                  : 'bg-gray-50 text-gray-500 border-gray-200'
-                              }`}>
-                                <User className="w-3 h-3" />
-                                <span className="capitalize">
-                                  {(resource.access || 'anyone').toLowerCase() === 'anyone' ? 'Open Access' : `${resource.access} Access`}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <h4 className={`text-gray-900 mb-1 transition-colors ${theme.textHover}`}>{resource.name}</h4>
-                          
-                          {/* LOCATION - Now alone under the name */}
-                          <div className="flex items-center gap-1 text-gray-500 text-xs mb-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                            {resource.location}
-                          </div>
-                          
-                          {resource.capacity && (
-                            <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
-                              <Users className="w-3.5 h-3.5 text-gray-400" />
-                              Capacity: {resource.capacity} persons
-                            </div>
-                          )}
-
-                          {/* Pushed to bottom with mt-auto */}
-                          <div className="mt-auto pt-3 border-t border-gray-50 flex flex-col gap-3 w-full">
-                            
-                            {/* Features */}
-                            <div className="flex flex-wrap gap-1 w-full">
-                              {resource.features.slice(0, 3).map(f => (
-                                <span key={f} className="text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md">{f}</span>
-                              ))}
-                              {resource.features.length > 3 && (
-                                <span className="text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-md">+{resource.features.length - 3}</span>
-                              )}
-                            </div>
-
-                            {/* AVAILABILITY - Distinct footer block at the very bottom */}
-                            <div className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg border ${
-                              upcomingCount > 0 
-                                ? 'bg-amber-50 border-amber-100' 
-                                : 'bg-emerald-50 border-emerald-100'
-                            }`}>
-                              <div className={`flex items-center gap-1.5 text-xs font-medium ${
-                                upcomingCount > 0 ? 'text-amber-700' : 'text-emerald-700'
-                              }`}>
-                                <Calendar className="w-3.5 h-3.5" />
-                                {upcomingCount > 0 
-                                  ? `${upcomingCount} Upcoming Booking${upcomingCount > 1 ? 's' : ''}`
-                                  : 'Currently Available'}
-                              </div>
-                            </div>
-                            
-                          </div>
-                        </button>
+                        />
                       );
                     })}
 
@@ -676,12 +592,17 @@ export default function NewBooking() {
                       const isDisabled = isOutOfStock || isInUse;
 
                       return (
-                        <button
+                        <BookingUtilityCard
                           key={`util-${utility.id}`}
-                          disabled={isDisabled}
+                          utility={utility}
+                          theme={theme}
+                          typeColors={typeColors}
+                          typeIcons={TYPE_ICONS}
+                          isDisabled={isDisabled}
+                          isInUse={isInUse}
+                          isOutOfStock={isOutOfStock}
                           onClick={() => { 
-                            if (isDisabled) return; // Fail-safe to prevent selection
-                            
+                            if (isDisabled) return;
                             setSelectedResource({
                               id: utility.id,
                               name: utility.utilityName,
@@ -696,56 +617,7 @@ export default function NewBooking() {
                             }); 
                             setStep(2); 
                           }}
-                          // NEW: Apply gray styles and remove hover effects if out of stock
-                          className={`text-left p-4 rounded-xl border-2 relative transition-all ${
-                            isDisabled 
-                              ? 'opacity-60 grayscale cursor-not-allowed bg-gray-100 border-gray-200' 
-                              : `border-gray-100 group ${theme.cardHover}`
-                          }`}
-                        >
-                          {/* NEW: Render Out of Stock Badge */}
-                          {isDisabled && (
-                            <div className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-md z-10 border ${
-                              isInUse
-                                ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                : 'bg-red-100 text-red-600 border-red-200'
-                            }`}>
-                              {isInUse ? 'In Use' : 'Out of Stock'}
-                            </div>
-                          )}
-
-                          <div className="flex items-start justify-between gap-2 mb-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeColors.equipment}`}>
-                              {TYPE_ICONS['equipment']}
-                            </div>
-                            
-                            {/* Hide standard category badge if out of stock so it doesn't crowd the top corner */}
-                            {!isDisabled && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${typeColors.equipment}`}>
-                                {utility.category || 'Equipment'}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className={`text-gray-900 mb-1 transition-colors ${!isDisabled ? theme.textHover : ''}`}>
-                            {utility.utilityName}
-                          </h4>
-                          <div className="flex items-center gap-1 text-gray-400 text-xs mb-2">
-                            <MapPin className="w-3 h-3" />
-                            {utility.location}
-                          </div>
-                          
-                          {/* Highlight the quantity in red if it's zero */}
-                          <div className={`flex items-center gap-1 text-xs ${isOutOfStock ? 'text-red-500 font-medium' : isInUse ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
-                            <Package className="w-3 h-3" />
-                            Quantity: {utility.quantity}
-                          </div>
-                          
-                          <div className="mt-2">
-                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md uppercase tracking-wide">
-                              {utility.utilityCode}
-                            </span>
-                          </div>
-                        </button>
+                        />
                       );
                     })}
                   </>

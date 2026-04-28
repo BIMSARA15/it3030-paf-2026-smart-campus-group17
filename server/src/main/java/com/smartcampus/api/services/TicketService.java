@@ -21,25 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Business logic for the maintenance ticketing module.
- *
- * Responsibilities:
- *   - validate the ticket status lifecycle (see ALLOWED_TRANSITIONS)
- *   - cap embedded image URLs at MAX_IMAGES
- *   - keep updatedAt fresh on any mutation
- *   - append comments / system notes to the embedded list
- *   - generate a sequential ticketCode (TKT-001, TKT-002, ...)
- */
 @Service
 public class TicketService {
 
     public static final int MAX_IMAGES = 3;
 
-    /**
-     * The forward-only lifecycle. Spec requires OPEN -> IN_PROGRESS -> RESOLVED;
-     * Figma surfaces REJECTED + CLOSED filters so we permit those terminations too.
-     */
     private static final Map<TicketStatus, Set<TicketStatus>> ALLOWED_TRANSITIONS =
             new EnumMap<>(TicketStatus.class);
     static {
@@ -56,19 +42,17 @@ public class TicketService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private EmailService emailService;
+
     public Ticket createTicket(CreateTicketRequest req, String userId) {
-        if (req.getTitle() == null || req.getTitle().isBlank()) {
-            throw new IllegalArgumentException("Title is required");
-        }
-        if (req.getDescription() == null || req.getDescription().isBlank()) {
-            throw new IllegalArgumentException("Description is required");
-        }
-        if (req.getPriority() == null) {
-            throw new IllegalArgumentException("Priority is required");
-        }
-        if (req.getImageUrls() != null && req.getImageUrls().size() > MAX_IMAGES) {
-            throw new ImageLimitExceededException(MAX_IMAGES);
-        }
+        if (req.getTitle() == null || req.getTitle().isBlank()) throw new IllegalArgumentException("Title is required");
+        if (req.getDescription() == null || req.getDescription().isBlank()) throw new IllegalArgumentException("Description is required");
+        if (req.getPriority() == null) throw new IllegalArgumentException("Priority is required");
+        if (req.getImageUrls() != null && req.getImageUrls().size() > MAX_IMAGES) throw new ImageLimitExceededException(MAX_IMAGES);
 
         Ticket t = new Ticket();
         t.setTitle(req.getTitle().trim());
@@ -86,39 +70,86 @@ public class TicketService {
         t.setUpdatedAt(now);
         t.setTicketCode(nextTicketCode());
 
+        // FIX 1: Safely fetch technicians (Avoid strict boolean matching in MongoDB)
         List<TicketStatus> activeStatuses = List.of(TicketStatus.OPEN, TicketStatus.IN_PROGRESS);
-        List<User> availableTechnicians = userRepository.findByRoleAndAvailable("TECHNICIAN", true);
+        List<User> allTechnicians = userRepository.findByRole("TECHNICIAN");
 
         User chosen = null;
         long lowestWorkload = Long.MAX_VALUE;
-        for (User tech : availableTechnicians) {
-            long workload = ticketRepository.countByAssignedTechnicianIdAndStatusIn(tech.getId(), activeStatuses);
-            if (workload < lowestWorkload) {
-                lowestWorkload = workload;
-                chosen = tech;
+        for (User tech : allTechnicians) {
+            Boolean isAvail = tech.isAvailable();
+            // Assign to least busy technician that isn't explicitly marked unavailable
+            if (isAvail == null || isAvail) {
+                long workload = ticketRepository.countByAssignedTechnicianIdAndStatusIn(tech.getId(), activeStatuses);
+                if (workload < lowestWorkload) {
+                    lowestWorkload = workload;
+                    chosen = tech;
+                }
             }
         }
 
         if (chosen != null) {
             t.setAssignedTechnicianId(chosen.getId());
-            String techLabel = chosen.getName() != null && !chosen.getName().isBlank()
-                    ? chosen.getName()
-                    : chosen.getId();
-            t.getComments().add(new TicketComment(
-                    "SYSTEM",
-                    "SYSTEM",
-                    "Ticket auto-assigned to technician " + techLabel + " (id: " + chosen.getId()
-                            + ", active workload: " + lowestWorkload + ")."
-            ));
+            String techLabel = chosen.getName() != null && !chosen.getName().isBlank() ? chosen.getName() : chosen.getId();
+            t.getComments().add(new TicketComment("SYSTEM", "SYSTEM", "Ticket auto-assigned to technician " + techLabel + "."));
         } else {
-            t.getComments().add(new TicketComment(
-                    "SYSTEM",
-                    "SYSTEM",
-                    "No available technician was found. Ticket was saved without assignment."
-            ));
+            t.getComments().add(new TicketComment("SYSTEM", "SYSTEM", "No available technician was found. Ticket was saved without assignment."));
         }
 
-        return ticketRepository.save(t);
+        Ticket savedTicket = ticketRepository.save(t);
+
+        // --- FETCH REPORTER INFO ---
+        User reporter = userRepository.findById(userId).orElse(null);
+        String reporterName = (reporter != null && reporter.getName() != null) ? reporter.getName() : "Student";
+        String reporterEmail = (reporter != null) ? reporter.getEmail() : null;
+
+        // --- FIX 2: NOTIFICATIONS AND EMAILS FOR TECHNICIANS ---
+        String techMessage = String.format("A new support ticket has been opened.\n\n👤 From: %s\n📝 Issue: %s", reporterName, savedTicket.getTitle());
+        
+        for (User tech : allTechnicians) {
+            // 1. Send WebSocket Notification to Technician
+            notificationService.sendNotification(tech.getId(), "New Support Ticket 🎫", techMessage);
+            
+            // 2. Send Email to Technician
+            if (tech.getEmail() != null) {
+                try {
+                    emailService.sendTicketHtmlEmail(
+                        savedTicket, 
+                        tech, 
+                        "ACTION REQUIRED: New Support Ticket", 
+                        "ticket-created-email" 
+                    );
+                } catch (Exception e) {
+                    System.err.println("Tech email failed: " + e.getMessage());
+                }
+            }
+        }
+
+        // --- FIX 3: NOTIFICATIONS AND EMAILS FOR THE STUDENT ---
+        if (reporter != null) {
+            // 1. Send WebSocket Notification (This was missing!)
+            notificationService.sendNotification(
+                reporter.getId(), 
+                "Ticket Submitted ✅", 
+                "Your support ticket '" + savedTicket.getTitle() + "' has been successfully submitted."
+            );
+
+            // 2. Send HTML Email
+            if (reporterEmail != null) {
+                try {
+                    emailService.sendTicketHtmlEmail(
+                        savedTicket, 
+                        reporter, 
+                        "Ticket Received - UniBook Smart Campus", 
+                        "ticket-created-email"
+                    );
+                } catch (Exception e) {
+                    System.err.println("Student email failed: " + e.getMessage());
+                }
+            }
+        }
+
+        return savedTicket;
     }
 
     public Ticket getTicketById(String id) {
@@ -145,15 +176,9 @@ public class TicketService {
         return ticketRepository.countByAssignedTechnicianIdAndStatus(techId, status);
     }
 
-    /**
-     * Move a ticket to a new status iff (current -> new) is in ALLOWED_TRANSITIONS.
-     * Records the change as an auto-generated SYSTEM comment so the timeline is auditable.
-     * If `note` is non-blank, also stores it as the ticket's resolutionNote.
-     */
     public Ticket updateTicketStatus(String id, TicketStatus newStatus, String updatedByUserId, String note) {
-        if (newStatus == null) {
-            throw new IllegalArgumentException("New status is required");
-        }
+        if (newStatus == null) throw new IllegalArgumentException("New status is required");
+        
         Ticket t = getTicketById(id);
         TicketStatus current = t.getStatus();
 
@@ -165,64 +190,90 @@ public class TicketService {
         t.setStatus(newStatus);
         t.setUpdatedAt(LocalDateTime.now());
 
-        String systemMsg = "Status changed: " + current + " → " + newStatus
-                + (note != null && !note.isBlank() ? " — " + note.trim() : "");
+        String systemMsg = "Status changed: " + current + " → " + newStatus + (note != null && !note.isBlank() ? " — " + note.trim() : "");
         t.getComments().add(new TicketComment(updatedByUserId, "SYSTEM", systemMsg));
 
         if (note != null && !note.isBlank()) {
             t.setResolutionNote(note.trim());
         }
 
-        return ticketRepository.save(t);
+        Ticket savedTicket = ticketRepository.save(t);
+
+        if (newStatus == TicketStatus.RESOLVED || newStatus == TicketStatus.CLOSED) {
+            User reporter = userRepository.findById(t.getReportedByUserId()).orElse(null);
+            if (reporter != null) {
+                String closeMessage = "Your support ticket '" + t.getTitle() + "' has been marked as " + newStatus + " by the technical team.";
+                
+                System.out.println("DEBUG: Sending CLOSED notification to: " + reporter.getId());
+                notificationService.sendNotification(reporter.getId(), "Ticket " + newStatus + " ✅", closeMessage);
+
+                if (reporter.getEmail() != null) {
+                    try {
+                        emailService.sendTicketHtmlEmail(savedTicket, reporter, "Ticket " + newStatus + " - UniBook", "ticket-status-email");
+                    } catch (Exception e) {
+                        System.err.println("Failed to send close email: " + e.getMessage());
+                    }
+                }
+            }
+        }
+
+        return savedTicket;
     }
 
     public Ticket addComment(String ticketId, AddCommentRequest req, String authorId, String authorRole) {
-        if (req.getMessage() == null || req.getMessage().isBlank()) {
-            throw new IllegalArgumentException("Comment message is required");
-        }
+        if (req.getMessage() == null || req.getMessage().isBlank()) throw new IllegalArgumentException("Comment message is required");
+        
         Ticket t = getTicketById(ticketId);
         t.getComments().add(new TicketComment(authorId, authorRole, req.getMessage().trim()));
         t.setUpdatedAt(LocalDateTime.now());
-        return ticketRepository.save(t);
+        Ticket savedTicket = ticketRepository.save(t);
+
+        // If a technician replies, notify the student
+        if (!authorId.equals(t.getReportedByUserId())) {
+            User reporter = userRepository.findById(t.getReportedByUserId()).orElse(null);
+            if (reporter != null) {
+                String replyMessage = String.format("A technician has replied to your ticket.\n\n🎫 Ticket: %s\n💬 Reply: %s", t.getTitle(), req.getMessage().trim());
+                
+                System.out.println("DEBUG: Sending REPLY notification to: " + reporter.getId());
+                notificationService.sendNotification(reporter.getId(), "New Ticket Reply 💬", replyMessage);
+
+                if (reporter.getEmail() != null) {
+                    try {
+                        emailService.sendTicketHtmlEmail(savedTicket, reporter, "New Reply on your Support Ticket", "ticket-reply-email");
+                    } catch (Exception e) {
+                        System.err.println("Failed to send reply email: " + e.getMessage());
+                    }
+                }
+            }
+        }
+
+        return savedTicket;
     }
 
     public Ticket assignTechnician(String ticketId, String technicianId) {
-        if (technicianId == null || technicianId.isBlank()) {
-            throw new IllegalArgumentException("Technician id is required");
-        }
+        if (technicianId == null || technicianId.isBlank()) throw new IllegalArgumentException("Technician id is required");
         Ticket t = getTicketById(ticketId);
         t.setAssignedTechnicianId(technicianId);
         t.setUpdatedAt(LocalDateTime.now());
         return ticketRepository.save(t);
     }
 
-    /**
-     * Merges new image URLs into the existing list.
-     * Throws ImageLimitExceededException if the resulting total exceeds MAX_IMAGES.
-     */
     public Ticket uploadImages(String ticketId, List<String> imageUrls) {
-        if (imageUrls == null) {
-            throw new IllegalArgumentException("imageUrls is required");
-        }
+        if (imageUrls == null) throw new IllegalArgumentException("imageUrls is required");
         Ticket t = getTicketById(ticketId);
         List<String> merged = new ArrayList<>(t.getImageUrls());
         merged.addAll(imageUrls);
-        if (merged.size() > MAX_IMAGES) {
-            throw new ImageLimitExceededException(MAX_IMAGES);
-        }
+        if (merged.size() > MAX_IMAGES) throw new ImageLimitExceededException(MAX_IMAGES);
         t.setImageUrls(merged);
         t.setUpdatedAt(LocalDateTime.now());
         return ticketRepository.save(t);
     }
 
     public void deleteTicket(String id) {
-        if (!ticketRepository.existsById(id)) {
-            throw new TicketNotFoundException(id);
-        }
+        if (!ticketRepository.existsById(id)) throw new TicketNotFoundException(id);
         ticketRepository.deleteById(id);
     }
 
-    /** "TKT-" + zero-padded sequential count (TKT-001, TKT-002, ...). */
     private String nextTicketCode() {
         long seq = ticketRepository.count() + 1;
         return String.format("TKT-%03d", seq);

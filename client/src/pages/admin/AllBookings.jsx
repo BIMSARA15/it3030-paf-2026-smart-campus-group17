@@ -15,6 +15,7 @@ import { DeleteWarningModal } from '../../components/bookings/NotificationModals
 import InfoCard from '../../components/bookings/InfoCard';
 import AdminBookingDetailsModal from '../../components/bookings/AdminBookingDetailsModal';
 import ResultModal from '../../components/bookings/ResultModal';
+import { useLocation } from 'react-router-dom'; // <-- Add useLocation
 
 const TYPE_ICONS = {
   room: <Building2 className="w-4 h-4" />,
@@ -32,7 +33,7 @@ export default function AllBookings() {
   // Change line ~126 to include cancelBooking:
   const { bookings, getResourceById, getUtilityById, approveBooking, rejectBooking, cancelBooking, fetchBookings, purgeBooking, utilities } = useBooking();
   const navigate = useNavigate();
-
+  const location = useLocation();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -54,6 +55,24 @@ export default function AllBookings() {
       fetchBookings();
     }
   }, []);
+  // NEW: Listen for Notification Redirects and Auto-Open the Modal
+  useEffect(() => {
+    // 1. Change AllBookings to bookings here 👇
+    if (location.state?.highlightId && bookings.length > 0) {
+      const targetId = location.state.highlightId;
+      
+      // 2. Change AllBookings to bookings here 👇
+      if (bookings.some(b => b.id === targetId)) {
+        // Defer the state update to the next tick to avoid React cascading render warnings
+        setTimeout(() => {
+          setExpandedId(targetId);
+        }, 0);
+        
+        // Clear the router state safely using React Router so it doesn't re-open on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, location.pathname, bookings, navigate]); // 3. Update dependency array
 
   // Helper function to find the item in either Resources OR Utilities
   const getBookingItem = (id) => {

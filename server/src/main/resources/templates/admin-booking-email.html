@@ -18,32 +18,36 @@
     <div class="container">
         <div class="header">
             <h1 class="title">UniBook Smart Campus</h1>
-            <div class="status-badge">⏳ Status: PENDING APPROVAL</div>
+            <div class="status-badge">🚨 Action Required</div>
         </div>
         
-        <p>Hello <span th:text="${userName}">User</span>,</p>
-        <p>We have received your booking request. It is currently waiting for administrator review. Here are your requested details:</p>
+        <p>Hello <span th:text="${adminName}">Admin</span>,</p>
+        <p>A new booking request has been submitted and is awaiting your review. Please review the details below:</p>
 
         <table class="details-table">
-            <tr><th>Booking ID:</th><td style="font-family: monospace; color: #64748b;" th:text="${bookingId}">-</td></tr>
-            <tr><th>Asset Name:</th><td th:text="${assetName}">-</td></tr>
+            <tr><th>Requester Name:</th><td th:text="${requesterName}">-</td></tr>
+            <tr><th>Requester Email:</th><td><a th:href="'mailto:' + ${requesterEmail}" th:text="${requesterEmail}">-</a></td></tr>
+            <tr><th>Student/Staff ID:</th><td style="font-family: monospace; color: #64748b;" th:text="${requesterId}">-</td></tr>
+            <tr><th>Asset Requested:</th><td th:text="${assetName}">-</td></tr>
             <tr th:if="${location != null and !location.isEmpty()}">
                 <th>Location:</th><td th:text="${location}">-</td>
             </tr>
-            <tr><th>Submitted On:</th><td th:text="${createdAt}">-</td></tr>
+            <tr th:if="${attendees != null and attendees > 0}">
+                <th>Number of Attendees:</th><td th:text="${attendees}">-</td>
+            </tr>
             <tr><th>Date:</th><td th:text="${date}">-</td></tr>
             <tr><th>Time:</th><td><span th:text="${startTime}"></span> to <span th:text="${endTime}"></span></td></tr>
-            <tr><th>Purpose:</th><td th:text="${purpose}">-</td></tr>
-            <tr th:if="${attendees != null and attendees > 0}">
-                <th>Attendees:</th><td th:text="${attendees}">-</td>
-            </tr>
             <tr th:if="${lecturer != null and !lecturer.isEmpty()}">
-                <th>Lecturer:</th><td th:text="${lecturer}">-</td>
+                <th>Lecturer in Charge:</th><td th:text="${lecturer}">-</td>
             </tr>
+            <tr><th>Purpose:</th><td th:text="${purpose}">-</td></tr>
             <tr th:if="${specialRequests != null and !specialRequests.isEmpty()}">
-                <th>Special Requests:</th><td th:text="${specialRequests}">-</td>
-            </tr>
+                <th>Special Requests:</th><td th:text="${specialRequests}">-</td></tr>
         </table>
+
+        <div style="text-align: center; margin-top: 25px;">
+            <p style="color: #475569; font-size: 14px;">Please log in to the UniBook Admin Portal to approve or reject this request.</p>
+        </div>
 
         <div class="footer">
             <p><strong>UniBook Smart Campus Administration</strong><br>

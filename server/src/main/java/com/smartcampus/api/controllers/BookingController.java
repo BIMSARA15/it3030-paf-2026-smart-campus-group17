@@ -59,6 +59,7 @@ public class BookingController {
         Booking booking = new Booking();
         booking.setResourceId(request.getResourceId());
         booking.setUserName(request.getUserName());
+        booking.setUserId(request.getUserId());
         booking.setUserEmail(request.getUserEmail());
         booking.setUserDept(request.getUserDept());
         booking.setDate(request.getDate());

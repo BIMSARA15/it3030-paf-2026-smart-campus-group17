@@ -74,8 +74,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       ]
     : isTechnician
     ? [
-        { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
+       { name: 'Dashboard', path: '/staff', icon: LayoutGrid },
+        { name: 'Facilities & Assets', path: '/staff/facilities', icon: Building2 },
+        { name: 'Maintenance Tasks', path: '/staff/maintenance', icon: Wrench },
         { name: 'Notifications', path: '/notifications', icon: Bell },
+      
       ]
     : [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
@@ -98,16 +101,16 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  const theme = {
-    headerBg: isAdmin ? 'bg-[#1E3A8A]' : isLecturer ? 'bg-[#A74106]' : isTechnician ? 'bg-[#2D3748]' : 'bg-[#0F6657]',
-    roleTag: isAdmin ? 'bg-blue-50 border-[#1E3A8A]/20 text-[#1E3A8A]' : isLecturer ? 'bg-orange-50 border-[#A74106]/20 text-[#A74106]' : isTechnician ? 'bg-slate-50 border-[#2D3748]/20 text-[#2D3748]' : 'bg-emerald-50 border-[#0F6657]/20 text-[#0F6657]',
-    linkActive: isAdmin ? 'bg-[#1E3A8A]/10 text-[#1E3A8A] font-semibold' : isLecturer ? 'bg-[#A74106]/10 text-[#A74106] font-semibold' : isTechnician ? 'bg-[#2D3748]/10 text-[#2D3748] font-semibold' : 'bg-[#0F6657]/10 text-[#0F6657] font-semibold',
-    linkHover: isAdmin ? 'hover:bg-[#1E3A8A]/10 hover:text-[#1E3A8A]' : isLecturer ? 'hover:bg-[#A74106]/10 hover:text-[#A74106]' : isTechnician ? 'hover:bg-[#2D3748]/10 hover:text-[#2D3748]' : 'hover:bg-[#0F6657]/10 hover:text-[#0F6657]',
-    iconActive: isAdmin ? 'text-[#1E3A8A]' : isLecturer ? 'text-[#A74106]' : isTechnician ? 'text-[#2D3748]' : 'text-[#0F6657]',
-    iconHover: isAdmin ? 'group-hover:text-[#1E3A8A]' : isLecturer ? 'group-hover:text-[#A74106]' : isTechnician ? 'group-hover:text-[#2D3748]' : 'group-hover:text-[#0F6657]',
-    tooltipBg: isAdmin ? 'bg-[#1E3A8A]' : isLecturer ? 'bg-[#A74106]' : isTechnician ? 'bg-[#2D3748]' : 'bg-[#0F6657]',
-    tooltipArrow: isAdmin ? 'border-r-[#1E3A8A]' : isLecturer ? 'border-r-[#A74106]' : isTechnician ? 'border-r-[#2D3748]' : 'border-r-[#0F6657]',
-    tooltipShadow: isAdmin ? 'shadow-[0_4px_12px_rgba(30,58,138,0.2)]' : isLecturer ? 'shadow-[0_4px_12px_rgba(167,65,6,0.2)]' : isTechnician ? 'shadow-[0_4px_12px_rgba(45,55,72,0.2)]' : 'shadow-[0_4px_12px_rgba(15,102,87,0.2)]',
+ const theme = {
+    headerBg: isAdmin ? 'bg-[#1E3A8A]' : isLecturer ? 'bg-[#A74106]' : isTechnician ? 'bg-gradient-to-br from-[#27324A] via-[#303B53] to-[#1F2937]' : 'bg-[#0F6657]',
+    roleTag: isAdmin ? 'bg-blue-50 border-[#1E3A8A]/20 text-[#1E3A8A]' : isLecturer ? 'bg-orange-50 border-[#A74106]/20 text-[#A74106]' : isTechnician ? 'bg-slate-100 border-[#27324A]/20 text-[#27324A]' : 'bg-emerald-50 border-[#0F6657]/20 text-[#0F6657]',
+    linkActive: isAdmin ? 'bg-[#1E3A8A]/10 text-[#1E3A8A] font-semibold' : isLecturer ? 'bg-[#A74106]/10 text-[#A74106] font-semibold' : isTechnician ? 'bg-[#27324A]/10 text-[#27324A] font-semibold' : 'bg-[#0F6657]/10 text-[#0F6657] font-semibold',
+    linkHover: isAdmin ? 'hover:bg-[#1E3A8A]/10 hover:text-[#1E3A8A]' : isLecturer ? 'hover:bg-[#A74106]/10 hover:text-[#A74106]' : isTechnician ? 'hover:bg-[#27324A]/10 hover:text-[#27324A]' : 'hover:bg-[#0F6657]/10 hover:text-[#0F6657]',
+    iconActive: isAdmin ? 'text-[#1E3A8A]' : isLecturer ? 'text-[#A74106]' : isTechnician ? 'text-[#27324A]' : 'text-[#0F6657]',
+    iconHover: isAdmin ? 'group-hover:text-[#1E3A8A]' : isLecturer ? 'group-hover:text-[#A74106]' : isTechnician ? 'group-hover:text-[#27324A]' : 'group-hover:text-[#0F6657]',
+    tooltipBg: isAdmin ? 'bg-[#1E3A8A]' : isLecturer ? 'bg-[#A74106]' : isTechnician ? 'bg-[#27324A]' : 'bg-[#0F6657]',
+    tooltipArrow: isAdmin ? 'border-r-[#1E3A8A]' : isLecturer ? 'border-r-[#A74106]' : isTechnician ? 'border-r-[#27324A]' : 'border-r-[#0F6657]',
+    tooltipShadow: isAdmin ? 'shadow-[0_4px_12px_rgba(30,58,138,0.2)]' : isLecturer ? 'shadow-[0_4px_12px_rgba(167,65,6,0.2)]' : isTechnician ? 'shadow-[0_4px_12px_rgba(39,50,74,0.2)]' : 'shadow-[0_4px_12px_rgba(15,102,87,0.2)]',
   };
 
   return (

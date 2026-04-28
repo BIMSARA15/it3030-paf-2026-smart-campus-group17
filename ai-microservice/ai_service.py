@@ -1,27 +1,40 @@
-from fastapi import FastAPI
+import os
+from dotenv import load_dotenv
+from fastapi import FastAPI, Header, HTTPException, Depends
 from pydantic import BaseModel
 import ollama
-import json  # <-- ADD THIS
-import re    # <-- ADD THIS
+import json  
+import re    
 
 # Import your separated logic
 from database import available_functions
 from prompts import SYSTEM_MESSAGE, TOOLS_SCHEMA
+
+# --- SECURITY SETUP ---
+# Load the secret from the .env file
+load_dotenv()
+# If the .env is missing, it will safely default to a placeholder
+SECRET_TOKEN = os.getenv("UNIBOOKING_AI_TOKEN", "your_super_secret_token_here_12345")
 
 app = FastAPI()
 MODEL = 'qwen2.5:7b'
 #MODEL = 'qwen3:4b'
 #MODEL = 'gemma3:4b'             
 
-# 👈 FIX: Python now expects the history array from Java
+# Create a security dependency
+def verify_token(authorization: str = Header(None)):
+    if not authorization or authorization != f"Bearer {SECRET_TOKEN}":
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid or missing token")
+
 # 1. Update the Request Model
 class ChatRequest(BaseModel):
     user_id: str
-    user_name: str     # <-- NEW
-    user_email: str    # <-- NEW
+    user_name: str     
+    user_email: str    
     history: list[dict] 
 
-@app.post("/chat")
+# --- PROTECTED ROUTE:  dependency ---
+@app.post("/api/chat", dependencies=[Depends(verify_token)])
 def chat_with_bot(request: ChatRequest):
     messages = [SYSTEM_MESSAGE]
     safe_history = request.history[-6:] 
@@ -36,21 +49,20 @@ def chat_with_bot(request: ChatRequest):
     if "create_reservation" in message_content and "{" in message_content:
         print("\n[🛡️ INTERCEPTOR] Caught the AI leaking tool syntax! Forcing execution...")
         try:
-            # Find the JSON brackets inside the messy text
-            json_match = re.search(r'(\{.*?\})', message_content)
-            if json_match:
-                arguments = json.loads(json_match.group(1))
+            json_str = re.search(r'\{.*\}', message_content, re.DOTALL)
+            if json_str:
+                args = json.loads(json_str.group(0))
                 
-                # Inject secure details
-                arguments['user_id'] = request.user_id
-                arguments['user_name'] = getattr(request, 'user_name', 'Campus User')
-                arguments['user_email'] = getattr(request, 'user_email', 'user@smartcampus.com')
+                args['user_id'] = request.user_id
+                args['user_name'] = getattr(request, 'user_name', 'Campus User')
+                args['user_email'] = getattr(request, 'user_email', 'user@smartcampus.com')
+
+                print(f"[INTERCEPTOR] Running create_reservation with: {args}")
                 
-                # Force the tool to run!
-                function_result = available_functions['create_reservation'](**arguments)
+                tool_result = available_functions['create_reservation'](**args)
                 
-                messages.append({'role': 'assistant', 'content': message_content})
-                messages.append({'role': 'tool', 'name': 'create_reservation', 'content': function_result})
+                messages.append(response['message'])
+                messages.append({'role': 'tool', 'name': 'create_reservation', 'content': tool_result})
                 
                 final_response = ollama.chat(model=MODEL, messages=messages)
                 return {"reply": final_response['message']['content']}

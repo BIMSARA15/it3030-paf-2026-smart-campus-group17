@@ -23,13 +23,26 @@ export default function TicketCard({ ticket, onClick }) {
   const resourceLabel = ticket.resourceId ? findResourceLabel(ticket.resourceId).split(" — ")[0] : null;
   const code = ticket.ticketCode || (ticket.id ? `TKT-${ticket.id.slice(-3).toUpperCase()}` : "TKT");
 
+  // Dynamic styling based on priority
+  const priorityStyles = {
+    CRITICAL: { border: "border-l-rose-500", bg: "bg-rose-50", icon: "text-rose-600" },
+    HIGH:     { border: "border-l-orange-500", bg: "bg-orange-50", icon: "text-orange-500" },
+    MEDIUM:   { border: "border-l-blue-500", bg: "bg-blue-50", icon: "text-blue-500" },
+    LOW:      { border: "border-l-emerald-500", bg: "bg-emerald-50", icon: "text-emerald-500" },
+    DEFAULT:  { border: "border-l-slate-300", bg: "bg-slate-50", icon: "text-slate-500" }
+  };
+
+  const pStyle = priorityStyles[ticket.priority?.toUpperCase()] || priorityStyles.DEFAULT;
+
   return (
     <div
       onClick={onClick}
-      className="group bg-white rounded-2xl border border-slate-200 p-4 flex items-start gap-4 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
+      // Added border-l-4 and dynamic color to the container
+      className={`group bg-white rounded-2xl border border-y-slate-200 border-r-slate-200 border-l-4 ${pStyle.border} p-4 flex items-start gap-4 hover:shadow-md hover:border-r-slate-300 hover:border-y-slate-300 transition-all cursor-pointer`}
     >
-      <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-        <Wrench className="w-5 h-5 text-orange-500" />
+      {/* Icon dynamically tinted to match priority */}
+      <div className={`w-10 h-10 rounded-xl ${pStyle.bg} flex items-center justify-center shrink-0 transition-colors`}>
+        <Wrench className={`w-5 h-5 ${pStyle.icon}`} />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -44,8 +57,8 @@ export default function TicketCard({ ticket, onClick }) {
           )}
         </div>
 
-        <p className="text-sm text-slate-800 line-clamp-2 mb-2">
-          {ticket.description || ticket.title}
+        <p className="text-sm text-slate-800 line-clamp-2 mb-2 font-medium">
+          {ticket.title || ticket.description}
         </p>
 
         <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
@@ -60,9 +73,9 @@ export default function TicketCard({ ticket, onClick }) {
           {(ticket.assignedTechnicianName || ticket.assignedTechnicianId) && (
             <span className="inline-flex items-center gap-1 font-medium text-slate-600">
               <UserCheck className="w-3 h-3 shrink-0" />
-              Assigned to:{" "}
+              Assigned:{" "}
               {ticket.assignedTechnicianName ||
-                (ticket.assignedTechnicianId ? `Technician (${ticket.assignedTechnicianId})` : "—")}
+                (ticket.assignedTechnicianId ? `Tech (${ticket.assignedTechnicianId.slice(0,4)})` : "—")}
             </span>
           )}
           {ticket.comments?.length > 0 && (
@@ -75,10 +88,10 @@ export default function TicketCard({ ticket, onClick }) {
 
       <button
         type="button"
-        className="opacity-60 group-hover:opacity-100 text-slate-400 hover:text-slate-700 transition-colors"
+        className="opacity-40 group-hover:opacity-100 text-slate-400 hover:text-[#2F3A52] transition-colors"
         aria-label="View ticket"
       >
-        <Eye className="w-4 h-4" />
+        <Eye className="w-5 h-5" />
       </button>
     </div>
   );

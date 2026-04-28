@@ -3,12 +3,10 @@ import { useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
-
+import FacilitiesAssets from './pages/staff/FacilitiesAssets';
 // Module C — Maintenance & Incident Ticketing (Technician)
-import TechnicianLayout from './components/layout/TechnicianLayout';
 import TechnicianDashboard from './pages/staff/TechnicianDashboard';
 import TechnicianMaintenance from './pages/staff/TechnicianMaintenance';
-import StaffPlaceholder from './pages/staff/StaffPlaceholder';
 import Maintenance from './pages/user/Maintenance';
 
 // ------------------------------------------------------------------------
@@ -30,7 +28,7 @@ import MyBookings from './pages/user/MyBookings';
 import Resources from './pages/user/Resources';
 import StudentRequests from './pages/user/StudentRequests';
 
-// --- NEW IMPORT FOR NOTIFICATIONS ---
+// --- IMPORT FOR NOTIFICATIONS ---
 import Notifications from './pages/Notifications';
 
 function App() {
@@ -65,7 +63,7 @@ function App() {
           />
 
           {/* ========================================== */}
-          {/* TEAM DASHBOARD ROUTES (PLACEHOLDERS)         */}
+          {/* TEAM DASHBOARD ROUTES                      */}
           {/* ========================================== */}
 
           {/* Member 1 & 2: Admin */}
@@ -120,32 +118,19 @@ function App() {
             path="/staff"
             element={
               <ProtectedRoute allowedRoles={['TECHNICIAN']}>
-                <TechnicianLayout />
+                <TechnicianDashboard />
               </ProtectedRoute>
             }
-          >
-            <Route index element={<TechnicianDashboard />} />
-            <Route path="maintenance" element={<TechnicianMaintenance />} />
-            <Route
-              path="facilities"
-              element={
-                <StaffPlaceholder
-                  title="Facilities & Assets"
-                  message="Facilities & Assets module (Module A) will appear here."
-                />
-              }
-            />
-            <Route
-              path="notifications"
-              element={
-                <StaffPlaceholder
-                  title="Notifications"
-                  message="Notifications module will appear here."
-                />
-              }
-            />
-          </Route>
-
+          />
+          <Route
+            path="/staff/maintenance"
+            element={
+              <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                <TechnicianMaintenance />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/staff/facilities" element={<ProtectedRoute allowedRoles={['TECHNICIAN']}><FacilitiesAssets /></ProtectedRoute>} />
          {/* User Folder: Lecturer */}
         <Route 
             path="/lecturer" 
@@ -225,7 +210,7 @@ function App() {
             }
           />
 
-          {/* --- NEW ROUTE FOR NOTIFICATIONS PAGE (Merchant included) --- */}
+          {/* --- ROUTE FOR NOTIFICATIONS PAGE --- */}
           <Route 
             path="/notifications" 
             element={

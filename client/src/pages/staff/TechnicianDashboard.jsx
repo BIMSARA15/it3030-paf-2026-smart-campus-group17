@@ -7,6 +7,16 @@ import StatusUpdateModal from "../../components/tickets/StatusUpdateModal";
 import ReportIssueModal from "../../components/tickets/ReportIssueModal";
 import { useAuth } from "../../context/AuthContext";
 import { getAuthUserProfile, getTechnicianTickets } from "../../services/ticketService";
+import { getTicketNotificationsForUser } from "../../services/api";
+
+const TICKET_NOTIFICATION_TYPES = [
+  "TICKET_ASSIGNED",
+  "TICKET_STATUS_CHANGED",
+  "NEW_COMMENT",
+  "SLA_WARNING",
+  "SLA_OVERDUE",
+  "TICKET_RESOLVED",
+];
 
 export default function TechnicianDashboard() {
   const { user } = useAuth();
@@ -14,22 +24,44 @@ export default function TechnicianDashboard() {
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [openTicket, setOpenTicket] = useState(null);
   const [showReport, setShowReport] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
+    setNotificationsLoading(true);
     try {
-      const profile = await getAuthUserProfile();
-      const techId = user?.id || profile?.id;
+      let profile = null;
+      try {
+        profile = await getAuthUserProfile();
+      } catch (profileError) {
+        if (!user?.id) throw profileError;
+      }
+
+      const techId = profile?.id || user?.id;
       if (!techId) {
         setTickets([]);
+        setNotifications([]);
         return;
       }
       const data = await getTechnicianTickets(techId);
       setTickets(data || []);
+      if (user?.isPreview) {
+        setNotifications([]);
+      } else {
+        const notificationData = await getTicketNotificationsForUser(techId);
+        setNotifications(
+          (Array.isArray(notificationData) ? notificationData : [])
+            .filter((notification) => TICKET_NOTIFICATION_TYPES.includes(notification.type))
+        );
+      }
+    } catch (err) {
+      setNotifications([]);
     } finally {
       setLoading(false);
+      setNotificationsLoading(false);
     }
   };
 
@@ -48,6 +80,11 @@ export default function TechnicianDashboard() {
     [tickets]
   );
 
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((notification) => !notification.read).length,
+    [notifications]
+  );
+
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return "Good morning";
@@ -59,7 +96,7 @@ export default function TechnicianDashboard() {
 
   return (
     <>
-      <TechnicianTopBar title="Dashboard" subtitle="Facilities Management" notifCount={1} />
+      <TechnicianTopBar title="Dashboard" subtitle="Facilities Management" notifCount={unreadNotificationCount} />
 
       <div className="p-6 space-y-6">
         {user?.isPreview && (
@@ -91,7 +128,7 @@ export default function TechnicianDashboard() {
           <KpiCard icon={Building2} label="Active Resources" value="—" hint="Module A" tone="slate" />
           <KpiCard icon={CalendarCheck} label="My Bookings" value="—" hint="Module B" tone="blue" />
           <KpiCard icon={ClipboardList} label="Assigned Tickets" value={loading ? "…" : openCount} hint="Open + In Progress" tone="amber" />
-          <KpiCard icon={Bell} label="Unread Notifications" value="—" hint="Coming soon" tone="rose" />
+          <KpiCard icon={Bell} label="Unread Notifications" value={notificationsLoading ? "..." : unreadNotificationCount} hint="Ticket updates" tone="rose" />
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2">

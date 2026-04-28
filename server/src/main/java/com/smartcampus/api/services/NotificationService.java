@@ -20,10 +20,31 @@ public class NotificationService {
 
     public Notification sendNotification(String recipientId, String title, String message) {
         Notification notification = new Notification(recipientId, title, message);
+        return saveAndPush(notification);
+    }
+
+    public Notification sendTicketNotification(
+            String recipientId,
+            String type,
+            String title,
+            String message,
+            String relatedTicketId,
+            String relatedTicketTitle,
+            String priority
+    ) {
+        Notification notification = new Notification(recipientId, title, message);
+        notification.setType(type);
+        notification.setRelatedTicketId(relatedTicketId);
+        notification.setRelatedTicketTitle(relatedTicketTitle);
+        notification.setPriority(priority);
+        return saveAndPush(notification);
+    }
+
+    private Notification saveAndPush(Notification notification) {
         Notification savedNotification = notificationRepository.save(notification);
 
         try {
-            messagingTemplate.convertAndSend("/topic/notifications/" + recipientId, savedNotification);
+            messagingTemplate.convertAndSend("/topic/notifications/" + notification.getRecipientId(), savedNotification);
         } catch (Exception e) {
             System.err.println("WARNING: Failed to push WebSocket message: " + e.getMessage());
         }
@@ -32,6 +53,17 @@ public class NotificationService {
 
     public List<Notification> getUserNotifications(String userId) {
         return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId);
+    }
+
+    public List<Notification> getTicketNotificationsForUser(String userId) {
+        return notificationRepository.findByRecipientIdAndTypeInOrderByCreatedAtDesc(userId, List.of(
+                "TICKET_ASSIGNED",
+                "TICKET_STATUS_CHANGED",
+                "NEW_COMMENT",
+                "SLA_WARNING",
+                "SLA_OVERDUE",
+                "TICKET_RESOLVED"
+        ));
     }
 
     public void markAsRead(String notificationId) {

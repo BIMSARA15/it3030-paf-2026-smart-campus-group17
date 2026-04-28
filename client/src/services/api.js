@@ -31,6 +31,11 @@ export const getUserNotifications = async () => {
   }
 };
 
+export const getTicketNotificationsForUser = async (userId) => {
+  const response = await api.get(`/api/notifications/user/${userId}/tickets`);
+  return response.data;
+};
+
 export const markNotificationAsRead = async (notificationId) => {
   try {
     await api.patch(`/api/notifications/${notificationId}/read`);

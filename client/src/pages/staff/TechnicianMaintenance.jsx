@@ -5,11 +5,17 @@ import TicketCard from "../../components/tickets/TicketCard";
 import StatusUpdateModal from "../../components/tickets/StatusUpdateModal";
 import ReportIssueModal from "../../components/tickets/ReportIssueModal";
 import { useAuth } from "../../context/AuthContext";
-import { getTechnicianTickets, getMyTickets } from "../../services/ticketService";
+import { getAuthUserProfile, getTechnicianTickets, getMyTickets } from "../../services/ticketService";
 
 const STATUS_TABS = ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "REJECTED"];
 const PRIORITIES = ["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const CATEGORIES = ["ALL", "IT_EQUIPMENT", "FURNITURE", "HVAC", "ELECTRICAL", "SAFETY", "OTHER"];
+const SORT_OPTIONS = [
+  { value: "NEWEST", label: "Newest First" },
+  { value: "OLDEST", label: "Oldest First" },
+  { value: "PRIORITY", label: "Priority: High to Low" },
+];
+const PRIORITY_RANK = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 
 /**
  * Maintenance workspace for technicians:
@@ -26,6 +32,7 @@ export default function TechnicianMaintenance() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [sort, setSort] = useState("NEWEST");
   const [search, setSearch] = useState("");
 
   const [tickets, setTickets] = useState([]);
@@ -36,13 +43,26 @@ export default function TechnicianMaintenance() {
   const [toast, setToast] = useState(null);
 
   const refresh = async () => {
-    if (!user?.id) return;
     setLoading(true);
     setError("");
     try {
+      let profile = null;
+      try {
+        profile = await getAuthUserProfile();
+      } catch (profileError) {
+        if (!user?.id) throw profileError;
+      }
+
+      const technicianId = profile?.id || user?.id;
+      if (!technicianId) {
+        setTickets([]);
+        setError("Unable to identify the logged-in technician.");
+        return;
+      }
+
       const data = tab === "ASSIGNED"
-        ? await getTechnicianTickets(user.id)
-        : await getMyTickets(user.id);
+        ? await getTechnicianTickets(technicianId)
+        : await getMyTickets(technicianId);
       setTickets(data || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load tickets");
@@ -65,17 +85,28 @@ export default function TechnicianMaintenance() {
   }, [tickets]);
 
   const visible = useMemo(() => {
-    return tickets.filter((t) => {
+    const filtered = tickets.filter((t) => {
       if (statusFilter !== "ALL" && t.status !== statusFilter) return false;
       if (priorityFilter !== "ALL" && t.priority !== priorityFilter) return false;
       if (categoryFilter !== "ALL" && t.category !== categoryFilter) return false;
       if (search) {
-        const blob = `${t.title} ${t.description} ${t.ticketCode}`.toLowerCase();
+        const blob = `${t.title} ${t.description} ${t.ticketCode} ${t.category} ${t.priority} ${t.status} ${t.assignedTechnicianName}`.toLowerCase();
         if (!blob.includes(search.toLowerCase())) return false;
       }
       return true;
     });
-  }, [tickets, statusFilter, priorityFilter, categoryFilter, search]);
+
+    return [...filtered].sort((a, b) => {
+      if (sort === "OLDEST") {
+        return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      }
+      if (sort === "PRIORITY") {
+        const priorityDiff = (PRIORITY_RANK[b.priority] || 0) - (PRIORITY_RANK[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+      }
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }, [tickets, statusFilter, priorityFilter, categoryFilter, search, sort]);
 
   const flash = (msg, type = "success") => {
     setToast({ msg, type });
@@ -140,7 +171,7 @@ export default function TechnicianMaintenance() {
         </div>
 
         {/* Search + filters */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -164,22 +195,36 @@ export default function TechnicianMaintenance() {
           >
             {CATEGORIES.map((c) => <option key={c} value={c}>{c === "ALL" ? "All Categories" : c.replace("_", " ")}</option>)}
           </select>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+          >
+            {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
         </div>
 
         {/* List */}
         {loading ? (
-          <div className="space-y-3">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-20 rounded-2xl bg-white border border-slate-100 animate-pulse" />
-            ))}
+          <div className="rounded-2xl bg-white border border-slate-200 p-8 text-center">
+            <div className="mx-auto mb-3 h-10 w-10 rounded-full border-4 border-slate-100 border-t-orange-400 animate-spin" />
+            <p className="text-sm font-semibold text-slate-700">
+              {tab === "ASSIGNED" ? "Loading assigned tickets..." : "Loading tickets..."}
+            </p>
           </div>
         ) : visible.length === 0 ? (
           <div className="rounded-2xl bg-white border border-dashed border-slate-200 p-12 text-center">
             <div className="w-12 h-12 rounded-full bg-slate-100 mx-auto mb-3 flex items-center justify-center">
               <Wrench className="w-5 h-5 text-slate-400" />
             </div>
-            <p className="text-sm font-semibold text-slate-700">No tickets found</p>
-            <p className="text-xs text-slate-500 mt-1">Try a different filter or report a new issue.</p>
+            <p className="text-sm font-semibold text-slate-700">
+              {tickets.length === 0 && tab === "ASSIGNED" ? "No tickets assigned to you yet." : "No tickets found"}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {tickets.length === 0 && tab === "ASSIGNED"
+                ? "When admins assign you tickets they'll appear here."
+                : "Try a different filter or report a new issue."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

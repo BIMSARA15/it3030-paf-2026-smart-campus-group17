@@ -20,6 +20,9 @@ const typeConfig = {
   TICKET_STATUS_CHANGED: { icon: Wrench,        label: 'Ticket Updated',        bg: 'bg-orange-100',  ic: 'text-orange-600'  },
   TICKET_ASSIGNED:       { icon: UserCheck,     label: 'Ticket Assigned',       bg: 'bg-blue-100',    ic: 'text-blue-600'    },
   NEW_COMMENT:           { icon: MessageSquare, label: 'New Comment',           bg: 'bg-purple-100',  ic: 'text-purple-600'  },
+  SLA_WARNING:           { icon: Bell,          label: 'SLA Warning',           bg: 'bg-amber-100',   ic: 'text-amber-600'   },
+  SLA_OVERDUE:           { icon: Bell,          label: 'SLA Overdue',           bg: 'bg-red-100',     ic: 'text-red-600'     },
+  TICKET_RESOLVED:       { icon: CheckCircle,   label: 'Ticket Resolved',       bg: 'bg-emerald-100', ic: 'text-emerald-600' },
   DEFAULT:               { icon: Bell,          label: 'Notification',          bg: 'bg-slate-100',   ic: 'text-slate-600'   }
 };
 

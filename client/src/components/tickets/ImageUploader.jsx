@@ -2,23 +2,101 @@ import { useState } from "react";
 import { Plus, X, Image as ImageIcon } from "lucide-react";
 
 /**
- * Lightweight image-URL list (no real file upload backend yet).
+ * Lightweight image file uploader using data URLs.
  * Caps the gallery at MAX images (default 3) to match the backend rule.
  *
  * Props:
- *   value     : string[]            current list of URLs
+ *   value     : string[]            current list of image data URLs
  *   onChange  : (string[]) => void  updates parent state
  *   max       : number              hard cap (default 3)
  */
-export default function ImageUploader({ value = [], onChange, max = 3 }) {
-  const [draft, setDraft] = useState("");
+const ONE_MB = 1024 * 1024;
+const MAX_IMAGE_WIDTH = 1280;
+const MAX_IMAGE_HEIGHT = 1280;
 
-  const add = () => {
-    const url = draft.trim();
-    if (!url) return;
-    if (value.length >= max) return;
-    onChange([...value, url]);
-    setDraft("");
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Unable to read image file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getDataUrlByteSize(dataUrl) {
+  const base64 = String(dataUrl).split(",")[1] || "";
+  return Math.ceil((base64.length * 3) / 4);
+}
+
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Unable to process image file."));
+    img.src = dataUrl;
+  });
+}
+
+async function compressImage(dataUrl) {
+  const img = await loadImage(dataUrl);
+  const ratio = Math.min(1, MAX_IMAGE_WIDTH / img.width, MAX_IMAGE_HEIGHT / img.height);
+  const width = Math.max(1, Math.round(img.width * ratio));
+  const height = Math.max(1, Math.round(img.height * ratio));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, width, height);
+
+  let quality = 0.82;
+  let compressed = canvas.toDataURL("image/jpeg", quality);
+  while (getDataUrlByteSize(compressed) > ONE_MB && quality > 0.45) {
+    quality -= 0.1;
+    compressed = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  return compressed;
+}
+
+export default function ImageUploader({ value = [], onChange, max = 3 }) {
+  const [error, setError] = useState("");
+
+  const handleFiles = async (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    event.target.value = "";
+    setError("");
+
+    if (!selectedFiles.length) return;
+
+    const remainingSlots = max - value.length;
+    if (remainingSlots <= 0) {
+      setError(`Maximum of ${max} images reached.`);
+      return;
+    }
+
+    const invalidFile = selectedFiles.find((file) => !file.type.startsWith("image/"));
+    if (invalidFile) {
+      setError("Please upload image files only.");
+      return;
+    }
+
+    const filesToAdd = selectedFiles.slice(0, remainingSlots);
+    if (selectedFiles.length > remainingSlots) {
+      setError(`Only ${remainingSlots} more image${remainingSlots === 1 ? "" : "s"} can be added.`);
+    }
+
+    try {
+      const dataUrls = await Promise.all(
+        filesToAdd.map(async (file) => {
+          const dataUrl = await readAsDataUrl(file);
+          if (file.size <= ONE_MB) return dataUrl;
+          return compressImage(dataUrl);
+        })
+      );
+      onChange([...value, ...dataUrls].slice(0, max));
+    } catch (err) {
+      setError(err.message || "Unable to upload one or more images.");
+    }
   };
 
   const remove = (idx) => {
@@ -28,27 +106,21 @@ export default function ImageUploader({ value = [], onChange, max = 3 }) {
   return (
     <div>
       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-        Image Attachments (up to {max})
+        Upload Photos (up to {max})
       </label>
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <input
-          type="url"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Paste image URL..."
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFiles}
           disabled={value.length >= max}
-          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-slate-50"
+          className="block w-full text-sm text-slate-600 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold hover:file:bg-slate-200 disabled:opacity-50"
         />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!draft || value.length >= max}
-          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50"
-        >
-          Add
-        </button>
       </div>
+
+      {error && <p className="text-xs text-rose-600 mt-1.5">{error}</p>}
 
       {value.length === max && (
         <p className="text-xs text-amber-600 mt-1.5">

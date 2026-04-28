@@ -56,6 +56,9 @@ public class TicketService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private NotificationService notificationService;
+
     public Ticket createTicket(CreateTicketRequest req, String userId) {
         if (req.getTitle() == null || req.getTitle().isBlank()) {
             throw new IllegalArgumentException("Title is required");
@@ -118,7 +121,16 @@ public class TicketService {
             ));
         }
 
-        return ticketRepository.save(t);
+        Ticket saved = ticketRepository.save(t);
+        if (saved.getAssignedTechnicianId() != null) {
+            sendTicketNotification(
+                    saved,
+                    "TICKET_ASSIGNED",
+                    "Ticket Assigned",
+                    "A new ticket has been assigned to you: " + saved.getTitle()
+            );
+        }
+        return saved;
     }
 
     public Ticket getTicketById(String id) {
@@ -173,7 +185,22 @@ public class TicketService {
             t.setResolutionNote(note.trim());
         }
 
-        return ticketRepository.save(t);
+        Ticket saved = ticketRepository.save(t);
+        if (saved.getAssignedTechnicianId() != null) {
+            String notificationType = newStatus == TicketStatus.RESOLVED
+                    ? "TICKET_RESOLVED"
+                    : "TICKET_STATUS_CHANGED";
+            String title = newStatus == TicketStatus.RESOLVED
+                    ? "Ticket Resolved"
+                    : "Ticket Status Changed";
+            sendTicketNotification(
+                    saved,
+                    notificationType,
+                    title,
+                    "Ticket " + saved.getTicketCode() + " status changed from " + current + " to " + newStatus + "."
+            );
+        }
+        return saved;
     }
 
     public Ticket addComment(String ticketId, AddCommentRequest req, String authorId, String authorRole) {
@@ -183,7 +210,16 @@ public class TicketService {
         Ticket t = getTicketById(ticketId);
         t.getComments().add(new TicketComment(authorId, authorRole, req.getMessage().trim()));
         t.setUpdatedAt(LocalDateTime.now());
-        return ticketRepository.save(t);
+        Ticket saved = ticketRepository.save(t);
+        if (saved.getAssignedTechnicianId() != null && !saved.getAssignedTechnicianId().equals(authorId)) {
+            sendTicketNotification(
+                    saved,
+                    "NEW_COMMENT",
+                    "New Ticket Comment",
+                    "A new comment was added to " + saved.getTicketCode() + ": " + req.getMessage().trim()
+            );
+        }
+        return saved;
     }
 
     public Ticket assignTechnician(String ticketId, String technicianId) {
@@ -193,7 +229,14 @@ public class TicketService {
         Ticket t = getTicketById(ticketId);
         t.setAssignedTechnicianId(technicianId);
         t.setUpdatedAt(LocalDateTime.now());
-        return ticketRepository.save(t);
+        Ticket saved = ticketRepository.save(t);
+        sendTicketNotification(
+                saved,
+                "TICKET_ASSIGNED",
+                "Ticket Assigned",
+                "Ticket " + saved.getTicketCode() + " has been assigned to you: " + saved.getTitle()
+        );
+        return saved;
     }
 
     /**
@@ -226,5 +269,17 @@ public class TicketService {
     private String nextTicketCode() {
         long seq = ticketRepository.count() + 1;
         return String.format("TKT-%03d", seq);
+    }
+
+    private void sendTicketNotification(Ticket ticket, String type, String title, String message) {
+        notificationService.sendTicketNotification(
+                ticket.getAssignedTechnicianId(),
+                type,
+                title,
+                message,
+                ticket.getId(),
+                ticket.getTitle(),
+                ticket.getPriority() != null ? ticket.getPriority().name() : null
+        );
     }
 }

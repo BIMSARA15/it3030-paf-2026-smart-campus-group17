@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import TechnicianLayout from './components/layout/TechnicianLayout';
 import TechnicianDashboard from './pages/staff/TechnicianDashboard';
 import TechnicianMaintenance from './pages/staff/TechnicianMaintenance';
+import TechnicianResources from './pages/staff/TechnicianResources';
 import StaffPlaceholder from './pages/staff/StaffPlaceholder';
 import Maintenance from './pages/user/Maintenance';
 
@@ -126,15 +127,7 @@ function App() {
           >
             <Route index element={<TechnicianDashboard />} />
             <Route path="maintenance" element={<TechnicianMaintenance />} />
-            <Route
-              path="facilities"
-              element={
-                <StaffPlaceholder
-                  title="Facilities & Assets"
-                  message="Facilities & Assets module (Module A) will appear here."
-                />
-              }
-            />
+            <Route path="facilities" element={<TechnicianResources />} />
             <Route
               path="notifications"
               element={

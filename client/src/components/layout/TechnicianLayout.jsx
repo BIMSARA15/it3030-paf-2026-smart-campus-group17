@@ -33,7 +33,7 @@ export default function TechnicianLayout() {
 
   const navLinks = [
     { name: "Dashboard", path: "/staff", icon: LayoutDashboard, exact: true },
-    { name: "Facilities & Assets", path: "/staff/facilities", icon: Building2 },
+    { name: "Resources", path: "/staff/facilities", icon: Building2 },
     { name: "Maintenance", path: "/staff/maintenance", icon: Wrench },
     { name: "Notifications", path: "/staff/notifications", icon: Bell, badge: 1 },
   ];

@@ -42,7 +42,11 @@ public class NotificationController {
                 }
             }
         }
-        if (userId == null) userId = authentication.getName();
+        if (userId == null) {
+            String principalName = authentication.getName();
+            Optional<User> dbUser = userRepository.findByEmail(principalName);
+            userId = dbUser.map(User::getId).orElse(principalName);
+        }
         return userId;
     }
 
@@ -51,6 +55,11 @@ public class NotificationController {
         String userId = extractUserIdSafe(authentication);
         if (userId == null) return ResponseEntity.status(401).build();
         return ResponseEntity.ok(notificationService.getUserNotifications(userId));
+    }
+
+    @GetMapping("/user/{userId}/tickets")
+    public ResponseEntity<List<Notification>> getTicketNotificationsForUser(@PathVariable String userId) {
+        return ResponseEntity.ok(notificationService.getTicketNotificationsForUser(userId));
     }
 
     @PatchMapping("/{id}/read")

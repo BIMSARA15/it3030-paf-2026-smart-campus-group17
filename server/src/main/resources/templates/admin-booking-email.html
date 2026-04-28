@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .header { padding-bottom: 15px; margin-bottom: 20px; text-align: center; }
+        .title { color: #1e293b; font-size: 24px; margin: 0; font-weight: bold; }
+        .status-badge { display: inline-block; background-color: #fef3c7; color: #d97706; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 10px; border: 1px solid #fde68a; }
+        .details-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .details-table th, .details-table td { padding: 12px; text-align: left; }
+        .details-table th { color: #64748b; width: 35%; font-weight: 600; }
+        .details-table td { font-weight: 500; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #f0f0f0; font-size: 12px; color: #94a3b8; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">UniBook Smart Campus</h1>
+            <div class="status-badge">🚨 Action Required</div>
+        </div>
+        
+        <p>Hello <span th:text="${adminName}">Admin</span>,</p>
+        <p>A new booking request has been submitted and is awaiting your review. Please review the details below:</p>
+
+        <table class="details-table">
+            <tr><th>Requester Name:</th><td th:text="${requesterName}">-</td></tr>
+            <tr><th>Requester Email:</th><td><a th:href="'mailto:' + ${requesterEmail}" th:text="${requesterEmail}">-</a></td></tr>
+            <tr><th>Student/Staff ID:</th><td style="font-family: monospace; color: #64748b;" th:text="${requesterId}">-</td></tr>
+            <tr><th>Asset Requested:</th><td th:text="${assetName}">-</td></tr>
+            <tr th:if="${location != null and !location.isEmpty()}">
+                <th>Location:</th><td th:text="${location}">-</td>
+            </tr>
+            <tr th:if="${attendees != null and attendees > 0}">
+                <th>Number of Attendees:</th><td th:text="${attendees}">-</td>
+            </tr>
+            <tr><th>Date:</th><td th:text="${date}">-</td></tr>
+            <tr><th>Time:</th><td><span th:text="${startTime}"></span> to <span th:text="${endTime}"></span></td></tr>
+            <tr th:if="${lecturer != null and !lecturer.isEmpty()}">
+                <th>Lecturer in Charge:</th><td th:text="${lecturer}">-</td>
+            </tr>
+            <tr><th>Purpose:</th><td th:text="${purpose}">-</td></tr>
+            <tr th:if="${specialRequests != null and !specialRequests.isEmpty()}">
+                <th>Special Requests:</th><td th:text="${specialRequests}">-</td></tr>
+        </table>
+
+        <div style="text-align: center; margin-top: 25px;">
+            <p style="color: #475569; font-size: 14px;">Please log in to the UniBook Admin Portal to approve or reject this request.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>UniBook Smart Campus Administration</strong><br>
+            Faculty of Computing | 123 University Avenue, SL<br>
+            contact@unibook.edu | +94 11 234 5678</p>
+            <p>&copy; 2026 Smart Campus System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

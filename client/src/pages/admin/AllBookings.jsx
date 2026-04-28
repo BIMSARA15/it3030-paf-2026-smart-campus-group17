@@ -184,47 +184,7 @@ export default function AllBookings() {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto">
             <div className="p-4 lg:p-6 space-y-5">
-            {modal && modalBooking && modalResource && (
-                <ReviewModal
-                bookingId={modal.bookingId}
-                action={modal.action}
-                userName={modalBooking.userName}
-                resourceName={modalResource.name}
-                onConfirm={(reason) => handleReview(modal.bookingId, modal.action, reason)}
-                onClose={() => setModal(null)}
-                />
-            )}
-
-            {/* Result Popup Modal */}
-            <ResultModal resultModal={resultModal} onClose={() => setResultModal(null)} />
-
-            <DeleteWarningModal
-            deleteModalId={deleteModalId}
-            onClose={() => setDeleteModalId(null)}
-            onConfirm={async (idToDelete) => {
-              setDeleteModalId(null); 
-              await purgeBooking(idToDelete);
-              setResultModal({
-                type: 'success',
-                title: 'Record Deleted',
-                message: `Booking record ID-${idToDelete.slice(-5).toUpperCase()} has been permanently removed.`
-              });
-            }}
-          />
-
-            {/* Admin Details Modal */}
-            {expandedBooking && ( 
-              <AdminBookingDetailsModal
-                booking={expandedBooking}
-                resource={expandedResource}
-                adminTheme={adminTheme}
-                onClose={() => setExpandedId(null)}
-                formatDate={formatDate}
-                formatCreated={formatCreated}
-              />
-            )}
             
-            {/* <-- END NEW DETAILS MODAL --> */}
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -513,6 +473,46 @@ export default function AllBookings() {
             </div>
         </div>
       </div>
+      {/* Review Modal */}
+      {modal && modalBooking && modalResource && (
+                <ReviewModal
+                bookingId={modal.bookingId}
+                action={modal.action}
+                userName={modalBooking.userName}
+                resourceName={modalResource.name}
+                onConfirm={(reason) => handleReview(modal.bookingId, modal.action, reason)}
+                onClose={() => setModal(null)}
+                />
+            )}
+
+            {/* Result Popup Modal */}
+            <ResultModal resultModal={resultModal} onClose={() => setResultModal(null)} />
+
+            <DeleteWarningModal
+            deleteModalId={deleteModalId}
+            onClose={() => setDeleteModalId(null)}
+            onConfirm={async (idToDelete) => {
+              setDeleteModalId(null); 
+              await purgeBooking(idToDelete);
+              setResultModal({
+                type: 'success',
+                title: 'Record Deleted',
+                message: `Booking record ID-${idToDelete.slice(-5).toUpperCase()} has been permanently removed.`
+              });
+            }}
+          />
+
+            {/* Admin Details Modal */}
+            {expandedBooking && ( 
+              <AdminBookingDetailsModal
+                booking={expandedBooking}
+                resource={expandedResource}
+                adminTheme={adminTheme}
+                onClose={() => setExpandedId(null)}
+                formatDate={formatDate}
+                formatCreated={formatCreated}
+              />
+            )}
     </div>
   );
 }

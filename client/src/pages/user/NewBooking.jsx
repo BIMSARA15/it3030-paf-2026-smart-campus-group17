@@ -306,6 +306,7 @@ export default function NewBooking() {
             location: u.location,
             type: 'equipment',
             capacity: null, // Hides attendees field
+            quantity: u.quantity,
             features: [],
             access: 'anyone',
             status: u.status,

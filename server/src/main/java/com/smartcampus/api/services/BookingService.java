@@ -2,6 +2,8 @@ package com.smartcampus.api.services;
 
 import com.smartcampus.api.models.Booking;
 import com.smartcampus.api.models.Resource;
+import com.smartcampus.api.models.Utility;
+import com.smartcampus.api.repositories.UtilityRepository;
 import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.BookingRepository;
 import com.smartcampus.api.repositories.ResourceRepository;
@@ -35,6 +37,9 @@ public class BookingService {
     //Resource Repo to fetch the missing details
     @Autowired
     private ResourceRepository resourceRepository;
+
+    @Autowired
+    private UtilityRepository utilityRepository;
 
     public List<Booking> getAllBookings() {
         return bookingRepository.findAll();
@@ -74,6 +79,20 @@ public class BookingService {
                 newBooking.setBlock(resource.getBlock());
                 newBooking.setLevel(resource.getLevel());
             });
+            
+            // NEW: If it's equipment, deduct the requested quantity and grab its name
+            if (newBooking.getQuantity() != null && newBooking.getQuantity() > 0) {
+                utilityRepository.findById(newBooking.getResourceId()).ifPresent(utility -> {
+                    int updatedQuantity = Math.max(0, utility.getQuantity() - newBooking.getQuantity());
+                    utility.setQuantity(updatedQuantity);
+                    
+                    if (newBooking.getResourceName() == null) {
+                        newBooking.setResourceName(utility.getUtilityName());
+                    }
+                    
+                    utilityRepository.save(utility);
+                });
+            }
         }
 
         newBooking.setStatus("PENDING");
@@ -151,6 +170,8 @@ public class BookingService {
         
         if (existingBooking.isPresent()) {
             Booking booking = existingBooking.get();
+            String oldStatus = booking.getStatus(); // Keep track of old status
+            
             booking.setStatus(updateData.getStatus());
             booking.setUpdatedAt(LocalDateTime.now());
             
@@ -160,6 +181,18 @@ public class BookingService {
             if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
 
             Booking savedBooking = bookingRepository.save(booking);
+
+            // NEW: Restore equipment quantity if the booking is rejected or cancelled
+            if (!"REJECTED".equalsIgnoreCase(oldStatus) && !"CANCELLED".equalsIgnoreCase(oldStatus)) {
+                if ("REJECTED".equalsIgnoreCase(savedBooking.getStatus()) || "CANCELLED".equalsIgnoreCase(savedBooking.getStatus())) {
+                    if (savedBooking.getQuantity() != null && savedBooking.getQuantity() > 0) {
+                        utilityRepository.findById(savedBooking.getResourceId()).ifPresent(utility -> {
+                            utility.setQuantity(utility.getQuantity() + savedBooking.getQuantity());
+                            utilityRepository.save(utility);
+                        });
+                    }
+                }
+            }
 
             // --- DYNAMIC NOTIFICATIONS FOR STUDENT ---
             String assetName = savedBooking.getResourceName() != null ? savedBooking.getResourceName() : "Asset (" + savedBooking.getResourceId() + ")";

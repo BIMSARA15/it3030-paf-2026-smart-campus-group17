@@ -2,20 +2,20 @@
 PAF – IT3030 Group Project (2026)
 🚀 Overview
 
-The Smart Campus Management System is a full-stack web application designed to manage campus resources efficiently. It helps administrators track assets, monitor stock levels, and organize resources through a centralized system.
+The Smart Campus Management System is a full-stack web application designed to manage campus resources efficiently. It allows users to track assets, manage stock, and monitor resources through a centralized system.
 
 🎯 Features
-🔹 Resource management (Add, update, delete resources)
-🔹 Stock tracking by aisle, row, and item
-🔹 Low stock alerts and near-expiry tracking
-🔹 Search and filtering functionality
-🔹 Role-based user management
-🔹 Dashboard for monitoring resources
+Resource management (Add, update, delete)
+Stock tracking by aisle, row, and item
+Low stock alerts and near-expiry tracking
+Search and filtering
+Role-based access control
+Dashboard for monitoring
 🏗️ Tech Stack
 Frontend: React / Next.js
 Backend: Spring Boot (Java)
 Database: MySQL / Oracle
-API: RESTful APIs
+API: REST
 ⚙️ Setup Guide
 1. Clone Repository
 git clone https://github.com/BIMSARA15/it3030-paf-2026-smart-campus-group17.git
@@ -27,9 +27,9 @@ cd backend
 cd frontend
 npm install
 npm run dev
-4. Configure Database
+4. Database Configuration
 
-Add this to application.properties:
+Add this to your application.properties file:
 
 spring.datasource.url=jdbc:mysql://localhost:3306/your_db
 spring.datasource.username=your_username
@@ -42,24 +42,24 @@ PUT	/resources/{id}	Update resource
 DELETE	/resources/{id}	Delete resource
 📁 Project Structure
 backend/
-├── controllers/
-├── services/
-├── models/
-└── repositories/
+  controllers/
+  services/
+  models/
+  repositories/
 
 frontend/
-├── components/
-├── pages/
-└── services/
+  components/
+  pages/
+  services/
 👥 Team
 Asiri Tennakoon
 Bimsara
-Other group members
+Other members
 🚧 Future Improvements
-Mobile app integration
-AI-based stock prediction
-QR-based tracking
-Real-time notifications
+Mobile app
+AI-based predictions
+QR tracking
+Notifications
 📜 License
 
-This project is developed for academic purposes under the IT3030 module.
+Academic project (IT3030 – PAF)

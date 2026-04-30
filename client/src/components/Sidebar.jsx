@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Sidebar.jsx
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUserNotifications } from '../services/api';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { useNotifications } from '../context/NotificationContext'; // <-- ADDED THIS
 import { 
   LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, 
   LogOut, GraduationCap, X, Menu, SendHorizontal, Bell, UserCog
@@ -14,37 +13,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // <-- CHANGED: Pull unreadCount directly from Context!
+  const { unreadCount } = useNotifications(); 
+  
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // --- WEBSOCKET FOR SIDEBAR BADGE ---
-  useEffect(() => {
-    const identifier = user?.id || user?.email; 
-    if (!identifier) return;
-
-    const fetchInitialNotifications = async () => {
-      try {
-        const data = await getUserNotifications(); 
-        setUnreadCount(data.filter(n => !n.read).length);
-      } catch (error) {
-        // FIXED: Replaced the empty block with a console error so your linter doesn't crash!
-        console.error("Failed to fetch sidebar notifications:", error);
-      }
-    };
-    fetchInitialNotifications();
-
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-      onConnect: () => {
-        client.subscribe(`/topic/notifications/${identifier}`, (message) => {
-          const newNotification = JSON.parse(message.body);
-          if (!newNotification.read) setUnreadCount(prev => prev + 1);
-        });
-      }
-    });
-    client.activate();
-    return () => client.deactivate();
-  }, [user]);
 
   const getDashboardRoute = (role) => {
     const r = role?.toUpperCase() || '';
@@ -62,7 +34,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const isAdmin = role === 'ADMIN';
   const isTechnician = role === 'TECHNICIAN';
 
-  // --- ADDED NOTIFICATIONS TO ALL ROLES ---
   const navLinks = isAdmin
     ? [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
@@ -101,7 +72,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
- const theme = {
+  const theme = {
     headerBg: isAdmin ? 'bg-[#1E3A8A]' : isLecturer ? 'bg-[#A74106]' : isTechnician ? 'bg-gradient-to-br from-[#27324A] via-[#303B53] to-[#1F2937]' : 'bg-[#0F6657]',
     roleTag: isAdmin ? 'bg-blue-50 border-[#1E3A8A]/20 text-[#1E3A8A]' : isLecturer ? 'bg-orange-50 border-[#A74106]/20 text-[#A74106]' : isTechnician ? 'bg-slate-100 border-[#27324A]/20 text-[#27324A]' : 'bg-emerald-50 border-[#0F6657]/20 text-[#0F6657]',
     linkActive: isAdmin ? 'bg-[#1E3A8A]/10 text-[#1E3A8A] font-semibold' : isLecturer ? 'bg-[#A74106]/10 text-[#A74106] font-semibold' : isTechnician ? 'bg-[#27324A]/10 text-[#27324A] font-semibold' : 'bg-[#0F6657]/10 text-[#0F6657] font-semibold',
@@ -185,7 +156,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                   <Icon className={`w-[22px] h-[22px] flex-shrink-0 ${active ? theme.iconActive : `text-gray-500 ${theme.iconHover}`} ${isOpen && 'mr-4'}`} />
                   {isOpen && <span className="text-[15px] whitespace-nowrap flex-1">{link.name}</span>}
                   
-                  {/* --- NEW: RENDER THE UNREAD BADGE IF IT'S THE NOTIFICATION TAB --- */}
                   {isOpen && link.name === 'Notifications' && unreadCount > 0 && (
                     <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto shadow-sm">
                       {unreadCount}
@@ -195,7 +165,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                   {!isOpen && (
                     <div className={`absolute left-full ml-4 px-2.5 py-1.5 ${theme.tooltipBg} text-white text-[13px] font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap z-[100] ${theme.tooltipShadow} flex items-center`}>
                       {link.name}
-                      {/* Show badge in tooltip too if collapsed */}
                       {link.name === 'Notifications' && unreadCount > 0 && ` (${unreadCount})`}
                       <div className={`absolute top-1/2 -left-1 -translate-y-1/2 border-[5px] border-transparent ${theme.tooltipArrow}`}></div>
                     </div>

@@ -107,8 +107,8 @@ public class TicketService {
         String techMessage = String.format("A new support ticket has been opened.\n\n👤 From: %s\n📝 Issue: %s", reporterName, savedTicket.getTitle());
         
         for (User tech : allTechnicians) {
-            // 1. Send WebSocket Notification to Technician
-            notificationService.sendNotification(tech.getId(), "New Support Ticket 🎫", techMessage);
+            // 1. Send WebSocket Notification to Technician (ADDED ID HERE)
+            notificationService.sendNotification(tech.getId(), "New Support Ticket 🎫", techMessage, savedTicket.getId());
             
             // 2. Send Email to Technician
             if (tech.getEmail() != null) {
@@ -127,11 +127,12 @@ public class TicketService {
 
         // --- FIX 3: NOTIFICATIONS AND EMAILS FOR THE STUDENT ---
         if (reporter != null) {
-            // 1. Send WebSocket Notification (This was missing!)
+            // 1. Send WebSocket Notification (ADDED ID HERE)
             notificationService.sendNotification(
                 reporter.getId(), 
                 "Ticket Submitted ✅", 
-                "Your support ticket '" + savedTicket.getTitle() + "' has been successfully submitted."
+                "Your support ticket '" + savedTicket.getTitle() + "' has been successfully submitted.",
+                savedTicket.getId()
             );
 
             // 2. Send HTML Email
@@ -205,7 +206,8 @@ public class TicketService {
                 String closeMessage = "Your support ticket '" + t.getTitle() + "' has been marked as " + newStatus + " by the technical team.";
                 
                 System.out.println("DEBUG: Sending CLOSED notification to: " + reporter.getId());
-                notificationService.sendNotification(reporter.getId(), "Ticket " + newStatus + " ✅", closeMessage);
+                // ADDED ID HERE
+                notificationService.sendNotification(reporter.getId(), "Ticket " + newStatus + " ✅", closeMessage, savedTicket.getId());
 
                 if (reporter.getEmail() != null) {
                     try {
@@ -235,7 +237,8 @@ public class TicketService {
                 String replyMessage = String.format("A technician has replied to your ticket.\n\n🎫 Ticket: %s\n💬 Reply: %s", t.getTitle(), req.getMessage().trim());
                 
                 System.out.println("DEBUG: Sending REPLY notification to: " + reporter.getId());
-                notificationService.sendNotification(reporter.getId(), "New Ticket Reply 💬", replyMessage);
+                // ADDED ID HERE
+                notificationService.sendNotification(reporter.getId(), "New Ticket Reply 💬", replyMessage, savedTicket.getId());
 
                 if (reporter.getEmail() != null) {
                     try {

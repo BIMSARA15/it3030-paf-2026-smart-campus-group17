@@ -1,103 +1,48 @@
 // src/pages/Notifications.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell, CheckCheck, CheckCircle, XCircle, Wrench, MessageSquare, 
   UserCheck, Trash2, X, Check, ListChecks, Clock, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext'; // <-- ADDED THIS
 import { formatDistanceToNow } from 'date-fns';
 import { 
-  getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, 
+  markNotificationAsRead, markAllNotificationsAsRead, 
   deleteNotification, deleteMultipleNotifications 
 } from '../services/api';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
-// Dynamically determine the icon/badge style based on the backend plain-text message
 const getNotifStyle = (n) => {
   const text = (n?.title + " " + n?.message).toUpperCase();
-  
   if (text.includes("APPROVED")) return { icon: CheckCircle, label: 'Approved', bg: 'bg-emerald-100', ic: 'text-emerald-600', tab: 'BOOKING' };
   if (text.includes("REJECTED")) return { icon: XCircle, label: 'Rejected', bg: 'bg-red-100', ic: 'text-red-600', tab: 'BOOKING' };
   if (text.includes("CANCELLED") || text.includes("CANCELED")) return { icon: XCircle, label: 'Cancelled', bg: 'bg-slate-100', ic: 'text-slate-500', tab: 'BOOKING' };
   if (text.includes("PENDING") || text.includes("NEW BOOKING")) return { icon: Clock, label: 'Pending Review', bg: 'bg-amber-100', ic: 'text-amber-600', tab: 'BOOKING' };
   if (text.includes("TICKET") || text.includes("TECHNICIAN")) return { icon: Wrench, label: 'Support Ticket', bg: 'bg-blue-100', ic: 'text-blue-600', tab: 'TICKET' };
-  
   return { icon: Bell, label: 'Notification', bg: 'bg-slate-100', ic: 'text-slate-600', tab: 'OTHER' };
 };
 
 export default function Notifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState('ALL');
-  const [notifications, setNotifications] = useState([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
+  // <-- CHANGED: Pulling global state from Context instead of managing it locally
+  const { notifications, setNotifications, unreadCount } = useNotifications();
+  
+  const [filter, setFilter] = useState('ALL');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedNotif, setSelectedNotif] = useState(null);
 
-  // INDUSTRY STANDARD: Memoized Theme Configuration based on User Role
   const theme = useMemo(() => {
     const role = (user?.role || '').toUpperCase();
-    
-    if (role === 'ADMIN') return {
-      text: 'text-[#1E3A8A]',
-      hoverText: 'hover:text-[#2563EB]',
-      border: 'border-[#1E3A8A]',
-      ring: 'ring-[#2563EB]/40',
-      gradient: 'bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] hover:from-[#172554] hover:to-[#1D4ED8]',
-      shadow: 'shadow-[0_4px_12px_rgba(37,99,235,0.3)]'
-    };
-    
-    if (role === 'LECTURER') return {
-      text: 'text-[#A74106]',
-      hoverText: 'hover:text-[#C54E08]',
-      border: 'border-[#A74106]',
-      ring: 'ring-[#A74106]/40',
-      gradient: 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106]',
-      shadow: 'shadow-[0_4px_12px_rgba(167,65,6,0.3)]'
-    };
-    
-    // Default: Student & Technician
-    return {
-      text: 'text-[#0F6657]',
-      hoverText: 'hover:text-[#17A38A]',
-      border: 'border-[#0F6657]',
-      ring: 'ring-[#17A38A]/40',
-      gradient: 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74]',
-      shadow: 'shadow-[0_4px_12px_rgba(23,163,138,0.3)]'
-    };
+    if (role === 'ADMIN') return { text: 'text-[#1E3A8A]', hoverText: 'hover:text-[#2563EB]', border: 'border-[#1E3A8A]', ring: 'ring-[#2563EB]/40', gradient: 'bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] hover:from-[#172554] hover:to-[#1D4ED8]', shadow: 'shadow-[0_4px_12px_rgba(37,99,235,0.3)]' };
+    if (role === 'LECTURER') return { text: 'text-[#A74106]', hoverText: 'hover:text-[#C54E08]', border: 'border-[#A74106]', ring: 'ring-[#A74106]/40', gradient: 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106]', shadow: 'shadow-[0_4px_12px_rgba(167,65,6,0.3)]' };
+    return { text: 'text-[#0F6657]', hoverText: 'hover:text-[#17A38A]', border: 'border-[#0F6657]', ring: 'ring-[#17A38A]/40', gradient: 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74]', shadow: 'shadow-[0_4px_12px_rgba(23,163,138,0.3)]' };
   }, [user?.role]);
-
-  useEffect(() => {
-    if (!user) return;
-    const identifier = user.id || user.email;
-
-    const fetchInitial = async () => {
-      try {
-        const data = await getUserNotifications();
-        setNotifications(data);
-      } catch (error) {
-        console.error('Failed to fetch notifications:', error);
-      }
-    };
-    fetchInitial();
-
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-      onConnect: () => {
-        client.subscribe(`/topic/notifications/${identifier}`, (message) => {
-          const newNotif = JSON.parse(message.body);
-          setNotifications((prev) => [newNotif, ...prev]);
-        });
-      }
-    });
-    client.activate();
-    return () => client.deactivate();
-  }, [user]);
 
   if (!user) return null;
 
@@ -127,7 +72,6 @@ export default function Notifications() {
       await deleteMultipleNotifications(selectedIds);
       setNotifications((prev) => prev.filter((n) => !selectedIds.includes(n.id)));
       setSelectedIds([]);
-      window.dispatchEvent(new Event('notificationsUpdated'));
     } catch (error) {
       console.error("Error bulk deleting notifications", error);
     }
@@ -143,8 +87,7 @@ export default function Notifications() {
 
   const handleViewAction = () => {
     const text = (selectedNotif?.title + " " + selectedNotif?.message).toUpperCase();
-    const bookingMatch = selectedNotif?.message?.match(/Booking ID:\s*([a-zA-Z0-9-]+)/i);
-    const extractedId = bookingMatch ? bookingMatch[1] : null;
+    const extractedId = selectedNotif?.relatedEntityId; 
 
     setSelectedNotif(null); 
 
@@ -158,7 +101,6 @@ export default function Notifications() {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
   const visible = notifications.filter((n) => {
     if (filter === 'UNREAD') return !n.read;
     if (filter !== 'ALL') return getNotifStyle(n).tab === filter;
@@ -267,7 +209,6 @@ export default function Notifications() {
                       className={`relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 cursor-pointer group hover:shadow-md hover:-translate-y-0.5
                         ${isSelected ? `bg-slate-50 border-transparent ${theme.ring} ring-1` : n.read ? 'bg-white border-slate-100' : 'bg-slate-50/50 border-slate-200 shadow-sm'}`}
                     >
-                      {/* Dynamic Checkbox */}
                       <div 
                         onClick={(e) => toggleSelection(e, n.id)}
                         className={`w-5 h-5 rounded flex items-center justify-center border shadow-sm transition-all duration-200 ${
@@ -277,7 +218,6 @@ export default function Notifications() {
                         <Check size={14} strokeWidth={3} />
                       </div>
 
-                      {/* Dynamic Unread Dot */}
                       {!n.read && <span className={`absolute top-4 right-4 w-2 h-2 rounded-full ${theme.gradient} ${theme.shadow}`} />}
 
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${cfg.bg}`}>
@@ -354,7 +294,6 @@ export default function Notifications() {
               </div>
 
               <div className="flex gap-3">
-                {/* Dynamic Theme Action Button */}
                 <button 
                   onClick={handleViewAction}
                   className={`flex-1 text-white py-3 rounded-xl transition-all font-semibold flex justify-center items-center gap-2 ${theme.gradient} ${theme.shadow}`}

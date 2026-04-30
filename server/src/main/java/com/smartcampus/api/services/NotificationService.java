@@ -18,8 +18,8 @@ public class NotificationService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
-    public Notification sendNotification(String recipientId, String title, String message) {
-        Notification notification = new Notification(recipientId, title, message);
+    public Notification sendNotification(String recipientId, String title, String message, String relatedEntityId) {
+        Notification notification = new Notification(recipientId, title, message, relatedEntityId);
         Notification savedNotification = notificationRepository.save(notification);
 
         try {

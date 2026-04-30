@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/components/Header.jsx
+import React, { useState, useRef, useEffect } from 'react';
 import { Bell, ChevronDown, CheckCircle } from 'lucide-react'; 
 import { useAuth } from '../context/AuthContext';
-import { getUserNotifications, markNotificationAsRead } from '../services/api';
+import { useNotifications } from '../context/NotificationContext'; // <-- ADDED THIS
+import { markNotificationAsRead } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 
 export default function Header() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [notifications, setNotifications] = useState([]);
+  // <-- CHANGED: Now pulling from Context instead of local state
+  const { notifications, setNotifications, unreadCount } = useNotifications(); 
+  
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -32,50 +34,12 @@ export default function Header() {
 
   const getNotificationColors = (title, message) => {
     const text = (title + " " + message).toUpperCase();
-    
     if (text.includes('REJECT')) return 'bg-rose-50 border-rose-100 text-rose-800'; 
     if (text.includes('APPROVE') || text.includes('ACCEPT')) return 'bg-emerald-50 border-emerald-100 text-emerald-800'; 
     if (text.includes('CLOSE') || text.includes('RESOLVE')) return 'bg-slate-100 border-slate-200 text-slate-600'; 
     if (text.includes('REPLY') || text.includes('COMMENT')) return 'bg-sky-50 border-sky-100 text-sky-800'; 
-    
     return 'bg-amber-50 border-amber-100 text-amber-800'; 
   };
-
-  useEffect(() => {
-    const identifier = user?.id || user?.email; 
-    if (!identifier) return;
-
-    const fetchInitialNotifications = async () => {
-      try {
-        const data = await getUserNotifications(); 
-        setNotifications(data);
-      } catch (error) {
-        console.error("Failed to fetch initial notifications:", error);
-      }
-    };
-    
-    fetchInitialNotifications();
-
-    const handleGlobalSync = () => fetchInitialNotifications();
-    window.addEventListener('notificationsUpdated', handleGlobalSync);
-
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-      onConnect: () => {
-        client.subscribe(`/topic/notifications/${identifier}`, (message) => {
-          const newNotification = JSON.parse(message.body);
-          setNotifications(prev => [newNotification, ...prev]); 
-        });
-      }
-    });
-
-    client.activate();
-    
-    return () => {
-      client.deactivate();
-      window.removeEventListener('notificationsUpdated', handleGlobalSync); 
-    };
-  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -93,8 +57,6 @@ export default function Header() {
       console.error("Failed to mark read", error);
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="bg-white border-b border-gray-100 h-16 flex items-center justify-end px-4 lg:px-6 sticky top-0 z-50">
@@ -132,8 +94,6 @@ export default function Header() {
                   <div className="px-5 py-8 text-center text-gray-400 text-sm">No notifications yet.</div>
                 ) : (
                   <div className="divide-y divide-gray-50 p-2 space-y-1">
-                    
-                    {/* RESTRICT TO TOP 5 NOTIFICATIONS ONLY */}
                     {notifications.slice(0, 5).map((notif) => {
                       const colorClass = getNotificationColors(notif.title, notif.message);
                       
@@ -158,7 +118,7 @@ export default function Header() {
                             {!notif.read && (
                               <button 
                                 onClick={(e) => {
-                                  e.stopPropagation(); // Stops the card click event from firing so we don't accidentally navigate
+                                  e.stopPropagation();
                                   handleMarkAsRead(notif.id);
                                 }} 
                                 className="p-1.5 opacity-50 hover:opacity-100 hover:bg-white/50 rounded-lg transition-all flex-shrink-0" 

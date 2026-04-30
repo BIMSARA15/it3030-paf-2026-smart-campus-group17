@@ -12,7 +12,7 @@ public class Notification {
     
     // Who receives this? (Use the user's ID/EmployeeID we set up earlier)
     private String recipientId; 
-    
+    private String relatedEntityId;
     private String title;
     private String message;
     private boolean isRead = false;
@@ -21,10 +21,11 @@ public class Notification {
     // Constructors
     public Notification() {}
 
-    public Notification(String recipientId, String title, String message) {
+    public Notification(String recipientId, String title, String message, String relatedEntityId) {
         this.recipientId = recipientId;
         this.title = title;
         this.message = message;
+        this.relatedEntityId = relatedEntityId;
         this.createdAt = LocalDateTime.now();
         this.isRead = false;
     }
@@ -33,6 +34,8 @@ public class Notification {
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public String getRelatedEntityId() { return relatedEntityId; }
+    public void setRelatedEntityId(String relatedEntityId) { this.relatedEntityId = relatedEntityId; }
     public String getRecipientId() { return recipientId; }
     public void setRecipientId(String recipientId) { this.recipientId = recipientId; }
     public String getTitle() { return title; }

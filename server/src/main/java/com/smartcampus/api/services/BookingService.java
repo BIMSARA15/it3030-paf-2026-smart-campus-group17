@@ -112,7 +112,7 @@ public class BookingService {
             .collect(Collectors.toList());
 
         for (User admin : adminUsers) {
-            notificationService.sendNotification(admin.getId(), "New Booking Request", dynamicAdminMessage);
+            notificationService.sendNotification(admin.getId(), "New Booking Request", dynamicAdminMessage, savedBooking.getId());
             
             // SEND BEAUTIFUL HTML EMAIL TO ADMIN
             if (admin.getEmail() != null) {
@@ -130,16 +130,22 @@ public class BookingService {
             }
         }
 
-        // --- 2. AUTOMATED HTML EMAIL TO STUDENT ---
+  // --- 3. AUTOMATED HTML EMAIL TO THE CREATOR ---
         try {
             emailService.sendBookingHtmlEmail(savedBooking, "Booking Request Received - Pending Approval", "pending-email");
         } catch (Exception e) {
             System.err.println("Failed to send booking creation emails: " + e.getMessage());
         }
 
+        // --- 4. IN-APP NOTIFICATION TO THE CREATOR ---
+        String requesterPendingMessage = String.format(
+            "Your booking request is successfully submitted and pending review.\n\n🔖 Booking ID: %s\n🏫 Asset: %s\n📅 Date: %s", 
+            savedBooking.getId(), cleanResourceName, savedBooking.getDate()
+        );
+        notificationService.sendNotification(savedBooking.getUserId(), "Booking Pending Review ⏳", requesterPendingMessage, savedBooking.getId());
+
         return savedBooking;
     }
-
     private LocalTime parseBookingTime(String time) {
         if (time == null || time.trim().isEmpty()) {
             throw new IllegalArgumentException("Booking time is required.");
@@ -197,7 +203,7 @@ public class BookingService {
                 dynamicStudentMessage += "⚠️ Reason for Cancellation: " + savedBooking.getCancellationReason();
             }
 
-            notificationService.sendNotification(savedBooking.getUserId(), "Booking Status Update", dynamicStudentMessage);
+            notificationService.sendNotification(savedBooking.getUserId(), "Booking Status Update", dynamicStudentMessage, savedBooking.getId());
 
             // --- HTML EMAILS TO STUDENT ---
             try {

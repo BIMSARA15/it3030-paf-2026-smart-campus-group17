@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { BookingProvider } from './context/BookingContext.jsx'
+import { NotificationProvider } from './context/NotificationContext.jsx';
 
 // 1. 👇 Import axios here
 import axios from 'axios';
@@ -16,9 +17,11 @@ axios.defaults.baseURL = 'http://localhost:8080';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>  
+      <NotificationProvider>
       <BookingProvider>
         <App />
       </BookingProvider>
+      </NotificationProvider>
     </AuthProvider>
   </StrictMode>
 )

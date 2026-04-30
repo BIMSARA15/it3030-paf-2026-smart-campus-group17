@@ -90,7 +90,7 @@ frontend/
 
 ## 👥 Team  
   
-- Bimsara  
+- Bimsara Kumarasekara
 - Chathurya Dissanayake
 - Asiri Tennakoon
 - Sachin Weerakoon

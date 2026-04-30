@@ -18,8 +18,21 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 
+// --- NEW IMPORTS FOR ZXING & LOGGING ---
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class EmailService {
+
+    // Added logger for the QR Code method
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
     @Autowired
     private JavaMailSender mailSender;
@@ -85,12 +98,13 @@ public class EmailService {
                 context.setVariable("cancellationReason", booking.getCancellationReason());
             }
 
-           String qrData = booking.getId(); 
-String encodedQrData = URLEncoder.encode(qrData, StandardCharsets.UTF_8.toString());
+            // --- CHANGED: Generate the QR code locally as a Base64 image string ---
+            String frontendBaseUrl = "http://localhost:5173"; 
+String verificationUrl = frontendBaseUrl + "/admin/verify/" + booking.getId();
 
-// Added margins and high error correction (Q) so it scans instantly on mobile screens
-String qrCodeUrl = "https://quickchart.io/qr?size=300x300&margin=2&ecLevel=Q&text=" + encodedQrData;
-            context.setVariable("qrCodeUrl", qrCodeUrl);
+// Generate the QR code containing the full clickable link
+String localQrCodeImage = generateLocalQRCodeBase64(verificationUrl);
+            context.setVariable("qrCodeUrl", localQrCodeImage);
 
             String htmlContent = templateEngine.process(templateName, context);
             MimeMessage message = mailSender.createMimeMessage();
@@ -176,6 +190,23 @@ String qrCodeUrl = "https://quickchart.io/qr?size=300x300&margin=2&ecLevel=Q&tex
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("❌ Failed to send Ticket HTML email: " + e.getMessage());
+        }
+    }
+
+    // --- NEW: Local QR Code Generator ---
+    private String generateLocalQRCodeBase64(String text) {
+        try {
+            QRCodeWriter barcodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = barcodeWriter.encode(text, BarcodeFormat.QR_CODE, 300, 300);
+            
+            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+            byte[] pngData = pngOutputStream.toByteArray(); 
+            
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(pngData);
+        } catch (Exception e) {
+            log.error("Failed to generate QR Code locally", e);
+            return "";
         }
     }
 }

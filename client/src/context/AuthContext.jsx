@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
        } else {
            // ✅ EXISTING USER: Normal login
            setUser({
+              id: response.data.id,
               name: response.data.name,
               email: response.data.email,
               picture: response.data.picture,

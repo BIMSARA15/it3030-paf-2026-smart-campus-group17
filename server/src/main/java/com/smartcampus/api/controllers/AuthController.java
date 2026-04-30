@@ -115,8 +115,7 @@ public class AuthController {
 
         // 👈 Check what the email is exactly before saving to MongoDB
         System.out.println("DEBUG: Right before saving, the user email is: " + user.getEmail());
-        userRepository.save(user); // (I also removed the duplicated save line here)
-        
+        userRepository.save(user);
         return ResponseEntity.ok("Profile updated and saved to DB!");
     }
 }

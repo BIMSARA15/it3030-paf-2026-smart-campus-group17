@@ -160,7 +160,7 @@ export default function NewBooking() {
     createBooking,
     updateBooking,
     getResourceById,
-    getUtilitiesForResource,
+    //getUtilitiesForResource,
     fetchResources,
     resourcesLoading,
     resourcesError,
@@ -899,7 +899,7 @@ export default function NewBooking() {
                         setSelectedResource(null);
                         setDate(''); setStartTime(''); setEndTime('');
                       setPurpose(''); setAttendees(''); setRequestedQuantity(''); setLecturer('');
-                        setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
+                        setSpecialRequests(''); setResult(null);
                       }}
                       className={`w-full py-2.5 px-4 rounded-xl text-white text-sm font-medium transition-all active:scale-[0.98] mt-1 border-t border-white/30 ${theme.gradientBtnLg}`}
                     >

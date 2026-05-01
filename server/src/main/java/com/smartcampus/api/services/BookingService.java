@@ -77,12 +77,15 @@ public class BookingService {
             }
         }
 
+        final String[] resourceAccess = { "" };
+
         // Fetch the actual names and manage quantities
         if (newBooking.getResourceId() != null) {
             resourceRepository.findById(newBooking.getResourceId()).ifPresent(resource -> {
                 newBooking.setResourceName(resource.getResourceName()); 
                 newBooking.setBlock(resource.getBlock());
                 newBooking.setLevel(resource.getLevel());
+                resourceAccess[0] = resource.getAccess() != null ? resource.getAccess().trim().toLowerCase() : "";
             });
             
             if (newBooking.getQuantity() != null && newBooking.getQuantity() > 0) {
@@ -99,41 +102,32 @@ public class BookingService {
             }
         }
 
-        newBooking.setStatus("PENDING");
+        String requesterRole = newBooking.getRequesterRole() != null ? newBooking.getRequesterRole().trim().toUpperCase(Locale.US) : "";
+        boolean needsLecturerReview =
+            ("STUDENT".equals(requesterRole) || "USER".equals(requesterRole)) &&
+            resourceAccess[0].contains("lecturer");
+
+        newBooking.setStatus(needsLecturerReview ? "PENDING_LECTURER" : "PENDING");
         newBooking.setCreatedAt(LocalDateTime.now());
         newBooking.setUpdatedAt(LocalDateTime.now());
         
         Booking savedBooking = bookingRepository.save(newBooking);
 
-        // --- 1. ADMIN NOTIFICATIONS & EMAILS ---
         String cleanResourceName = savedBooking.getResourceName() != null ? savedBooking.getResourceName() : "Asset (" + savedBooking.getResourceId() + ")";
+        if ("PENDING".equalsIgnoreCase(savedBooking.getStatus())) {
+            notifyAdminsOfPendingBooking(savedBooking, cleanResourceName);
+        } else {
+            String lecturerMessage = String.format(
+                "A lecturer-only booking request is waiting for your review.\n\n🔖 Booking ID: %s\n👤 Student: %s\n🏫 Asset: %s\n📅 Date: %s\n⏰ Time: %s to %s",
+                savedBooking.getId(), savedBooking.getUserName(), cleanResourceName, savedBooking.getDate(), savedBooking.getStartTime(), savedBooking.getEndTime()
+            );
 
-        // Keep this plain text version ONLY for the WebSocket Real-Time Notification popup
-        String dynamicAdminMessage = String.format(
-            "A new booking request requires your approval.\n\n🔖 Booking ID: %s\n👤 Name: %s\n📧 Email: %s\n🏫 Asset: %s\n📅 Date: %s\n⏰ Time: %s to %s",
-            savedBooking.getId(), savedBooking.getUserName(), savedBooking.getUserEmail(), cleanResourceName, savedBooking.getDate(), savedBooking.getStartTime(), savedBooking.getEndTime()
-        );
+            List<User> lecturerUsers = userRepository.findAll().stream()
+                .filter(u -> u.getRole() != null && u.getRole().equalsIgnoreCase("LECTURER"))
+                .collect(Collectors.toList());
 
-        List<User> adminUsers = userRepository.findAll().stream()
-            .filter(u -> u.getRole() != null && u.getRole().equalsIgnoreCase("ADMIN"))
-            .collect(Collectors.toList());
-
-        for (User admin : adminUsers) {
-            notificationService.sendNotification(admin.getId(), "New Booking Request", dynamicAdminMessage, savedBooking.getId());
-            
-            // SEND BEAUTIFUL HTML EMAIL TO ADMIN
-            if (admin.getEmail() != null) {
-                try {
-                   emailService.sendAdminBookingHtmlEmail(
-                        savedBooking,
-                        admin.getEmail(),
-                        admin.getName(), // 1. Admin Name first
-                        "ACTION REQUIRED: New Booking Request", // 2. Subject second
-                        "admin-booking-email" // 3. Template Name third
-                    );
-                } catch (Exception e) {
-                    System.err.println("Failed to email admin: " + e.getMessage());
-                }
+            for (User lecturer : lecturerUsers) {
+                notificationService.sendNotification(lecturer.getId(), "Lecturer Review Needed", lecturerMessage, savedBooking.getId());
             }
         }
 
@@ -145,13 +139,47 @@ public class BookingService {
         }
 
         // --- 4. IN-APP NOTIFICATION TO THE CREATOR ---
-        String requesterPendingMessage = String.format(
-            "Your booking request is successfully submitted and pending review.\n\n🔖 Booking ID: %s\n🏫 Asset: %s\n📅 Date: %s", 
-            savedBooking.getId(), cleanResourceName, savedBooking.getDate()
-        );
+        String requesterPendingMessage = "PENDING_LECTURER".equalsIgnoreCase(savedBooking.getStatus())
+            ? String.format(
+                "Your booking request is successfully submitted and is waiting for lecturer review.\n\n🔖 Booking ID: %s\n🏫 Asset: %s\n📅 Date: %s",
+                savedBooking.getId(), cleanResourceName, savedBooking.getDate()
+            )
+            : String.format(
+                "Your booking request is successfully submitted and pending review.\n\n🔖 Booking ID: %s\n🏫 Asset: %s\n📅 Date: %s",
+                savedBooking.getId(), cleanResourceName, savedBooking.getDate()
+            );
         notificationService.sendNotification(savedBooking.getUserId(), "Booking Pending Review ⏳", requesterPendingMessage, savedBooking.getId());
 
         return savedBooking;
+    }
+
+    private void notifyAdminsOfPendingBooking(Booking savedBooking, String cleanResourceName) {
+        String dynamicAdminMessage = String.format(
+            "A new booking request requires your approval.\n\n🔖 Booking ID: %s\n👤 Name: %s\n📧 Email: %s\n🏫 Asset: %s\n📅 Date: %s\n⏰ Time: %s to %s",
+            savedBooking.getId(), savedBooking.getUserName(), savedBooking.getUserEmail(), cleanResourceName, savedBooking.getDate(), savedBooking.getStartTime(), savedBooking.getEndTime()
+        );
+
+        List<User> adminUsers = userRepository.findAll().stream()
+            .filter(u -> u.getRole() != null && u.getRole().equalsIgnoreCase("ADMIN"))
+            .collect(Collectors.toList());
+
+        for (User admin : adminUsers) {
+            notificationService.sendNotification(admin.getId(), "New Booking Request", dynamicAdminMessage, savedBooking.getId());
+
+            if (admin.getEmail() != null) {
+                try {
+                    emailService.sendAdminBookingHtmlEmail(
+                        savedBooking,
+                        admin.getEmail(),
+                        admin.getName(),
+                        "ACTION REQUIRED: New Booking Request",
+                        "admin-booking-email"
+                    );
+                } catch (Exception e) {
+                    System.err.println("Failed to email admin: " + e.getMessage());
+                }
+            }
+        }
     }
     private LocalTime parseBookingTime(String time) {
         if (time == null || time.trim().isEmpty()) {
@@ -178,8 +206,21 @@ public class BookingService {
             if (updateData.getRejectionReason() != null) booking.setRejectionReason(updateData.getRejectionReason());
             if (updateData.getReviewedBy() != null) booking.setReviewedBy(updateData.getReviewedBy());
             if (updateData.getCancellationReason() != null) booking.setCancellationReason(updateData.getCancellationReason());
+            if (updateData.getRequesterRole() != null) booking.setRequesterRole(updateData.getRequesterRole());
 
             Booking savedBooking = bookingRepository.save(booking);
+
+            if ("PENDING_LECTURER".equalsIgnoreCase(oldStatus) && "PENDING".equalsIgnoreCase(savedBooking.getStatus())) {
+                String assetName = savedBooking.getResourceName() != null ? savedBooking.getResourceName() : "Asset (" + savedBooking.getResourceId() + ")";
+                String lecturerApprovedMessage = String.format(
+                    "Your lecturer has approved this request. It is now waiting for admin approval.\n\n🔖 Booking ID: %s\n🏫 Asset: %s\n📅 Date: %s",
+                    savedBooking.getId(), assetName, savedBooking.getDate()
+                );
+
+                notificationService.sendNotification(savedBooking.getUserId(), "Lecturer Approved Request", lecturerApprovedMessage, savedBooking.getId());
+                notifyAdminsOfPendingBooking(savedBooking, assetName);
+                return Optional.of(savedBooking);
+            }
 
             // Restore equipment quantity if the booking is rejected or cancelled
             if (!"REJECTED".equalsIgnoreCase(oldStatus) && !"CANCELLED".equalsIgnoreCase(oldStatus)) {

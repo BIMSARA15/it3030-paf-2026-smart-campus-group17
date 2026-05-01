@@ -16,12 +16,16 @@ export default function AdminTechnicians() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
 
+  // 1. Setup the dynamic URL for Vercel vs Localhost
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
   useEffect(() => {
     let isMounted = true; 
 
     const loadTechnicians = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/admin/technicians");
+        // Updated to use dynamic URL
+        const response = await axios.get(`${API_URL}/api/admin/technicians`);
         if (isMounted) {
           setTechnicians(response.data);
         }
@@ -35,22 +39,23 @@ export default function AdminTechnicians() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [API_URL]);
 
   const handleProvision = async (e) => {
     e.preventDefault();
     setStatusMessage({ type: "loading", text: "Provisioning..." });
 
     try {
-      await axios.post("http://localhost:8080/api/admin/provision-technician", {
+      // Updated to use dynamic URL
+      await axios.post(`${API_URL}/api/admin/provision-technician`, {
         name, email, phoneNumber
       });
       
       setStatusMessage({ type: "success", text: "Technician added successfully!" });
       setName(""); setEmail(""); setPhoneNumber("");
       
-      // Refresh the table
-      const response = await axios.get("http://localhost:8080/api/admin/technicians");
+      // Updated to use dynamic URL
+      const response = await axios.get(`${API_URL}/api/admin/technicians`);
       setTechnicians(response.data);
       
       setTimeout(() => {
@@ -65,13 +70,14 @@ export default function AdminTechnicians() {
     }
   };
 
-  // 🔴 NEW: Delete Technician Handler
+  // NEW: Delete Technician Handler
   const handleDelete = async (id, name) => {
     if (window.confirm(`Are you sure you want to permanently delete ${name}? This action cannot be undone.`)) {
       try {
-        await axios.delete(`http://localhost:8080/api/admin/technicians/${id}`);
-        // Refresh table
-        const response = await axios.get("http://localhost:8080/api/admin/technicians");
+        // Updated to use dynamic URL
+        await axios.delete(`${API_URL}/api/admin/technicians/${id}`);
+        // Updated to use dynamic URL
+        const response = await axios.get(`${API_URL}/api/admin/technicians`);
         setTechnicians(response.data);
       } catch (error) {
         alert("Failed to delete technician.");
@@ -80,7 +86,7 @@ export default function AdminTechnicians() {
     }
   };
 
-  // 🟠 NEW: Toggle Availability Status Handler
+  // NEW: Toggle Availability Status Handler
   const handleToggleStatus = async (id, currentStatus) => {
     // Safety check in case the database ID is missing
     if (!id) {
@@ -89,13 +95,13 @@ export default function AdminTechnicians() {
     }
 
     try {
-      // 👈 Changed from axios.patch to axios.put
-      await axios.put(`http://localhost:8080/api/admin/technicians/${id}/status`, {
+      // Updated to use dynamic URL
+      await axios.put(`${API_URL}/api/admin/technicians/${id}/status`, {
         available: !currentStatus
       });
       
-      // Refresh table
-      const response = await axios.get("http://localhost:8080/api/admin/technicians");
+      // Updated to use dynamic URL
+      const response = await axios.get(`${API_URL}/api/admin/technicians`);
       setTechnicians(response.data);
     } catch (error) {
       alert("Failed to update status.");
@@ -181,7 +187,6 @@ export default function AdminTechnicians() {
                           <div className="flex items-center justify-end gap-2">
                             {/* 🟠 Status Toggle Button */}
                            <button
-                              // 👇 Added tech._id as a fallback here!
                               onClick={() => handleToggleStatus(tech.id || tech._id, tech.available !== false)}
                               title={tech.available !== false ? "Mark as Unavailable" : "Mark as Available"}
                               className={`p-2 rounded-lg transition-colors ${tech.available !== false ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}

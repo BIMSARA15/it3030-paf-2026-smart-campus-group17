@@ -29,7 +29,8 @@ export function NotificationProvider({ children }) {
         fetchInitial();
 
         const client = new Client({
-            webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+            // Updated WebSocket URL configuration here
+            webSocketFactory: () => new SockJS(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/ws`),
             onConnect: () => {
                 client.subscribe(`/topic/notifications/${activeId}`, (message) => {
                     const newNotif = JSON.parse(message.body);

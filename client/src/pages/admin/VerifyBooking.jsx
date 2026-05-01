@@ -22,7 +22,8 @@ export default function VerifyBooking() {
     setError(''); // Clear previous errors
     
     try {
-      const response = await fetch(`http://localhost:8080/api/bookings/${id}/checkin`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      const response = await fetch(`${API_URL}/api/bookings/${id}/checkin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

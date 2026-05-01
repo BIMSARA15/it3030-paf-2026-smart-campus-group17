@@ -4,7 +4,7 @@ export default function SelectedResourcePreview({
   selectedResource,
   resourceImage,
   typeColors,
-  typeIcons,
+  //typeIcons,
   bookings,
   today,
   formatTo24Hour

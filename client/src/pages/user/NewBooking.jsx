@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Search, Building2, FlaskConical, Wrench, MapPin, Users,
@@ -160,7 +160,6 @@ export default function NewBooking() {
     createBooking,
     updateBooking,
     getResourceById,
-    getUtilitiesForResource,
     fetchResources,
     resourcesLoading,
     resourcesError,
@@ -233,11 +232,6 @@ export default function NewBooking() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false); 
 
-  // Reference to freeze the bookings display during submission and success step
-  const frozenBookingsRef = useRef(bookings);
-  if (!submitting && step !== 3 && !showSuccessModal) {
-    frozenBookingsRef.current = bookings;
-  }
 
   useEffect(() => {
     fetchResources();
@@ -272,7 +266,7 @@ export default function NewBooking() {
             };
           }
         }
-
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (r) setSelectedResource(r);
         
         setDate(bookingToEdit.date || '');
@@ -319,6 +313,7 @@ export default function NewBooking() {
       const isBlockedForStudent = (currentRole === 'STUDENT' || currentRole === 'USER') && isLecturerOnly;
 
       if (isBlockedForStudent) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedResource(null);
         setStep(1);
         setAccessNotice('Only accessible by a lecturer, please contact a lecturer.');
@@ -399,12 +394,26 @@ export default function NewBooking() {
       (utility.location || '').toLowerCase().includes(query);
   });
 
-  const validate = () => {
+const validate = () => {
     const e = {};
+    // --- Standard way to get current time in 24h format (HH:mm) ---
+    const now = new Date();
+    const current24Time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     if (!date) e.date = 'Please select a date';
     else if (date < today) e.date = 'Date cannot be in the past';
+    
     if (!startTime) e.startTime = 'Please select start time';
+    
+    // --- Prevent booking past times on the current day ---
+    if (date === today && startTime) {
+      if (formatTo24Hour(startTime) < current24Time) {
+        e.startTime = 'Cannot book a time slot that has already passed today';
+      }
+    }
+
     if (!endTime) e.endTime = 'Please select end time';
+    
     if (startTime && endTime && formatTo24Hour(startTime) >= formatTo24Hour(endTime)) {
       e.endTime = 'End time must be after start time';
     }
@@ -416,9 +425,9 @@ export default function NewBooking() {
     if (selectedResource?.capacity) {
       if (!attendees) {
         e.attendees = 'Please provide the expected number of attendees';
-      } else if (parseInt(attendees) > selectedResource.capacity) {
+      } else if (parseInt(attendees, 10) > selectedResource.capacity) {
         e.attendees = `Exceeds capacity of ${selectedResource.capacity}`;
-      } else if (parseInt(attendees) < 1) {
+      } else if (parseInt(attendees, 10) < 1) {
         e.attendees = 'Must have at least 1 attendee';
       }
     }
@@ -458,8 +467,8 @@ export default function NewBooking() {
       startTime,
       endTime,
       purpose: purpose.trim(),
-      attendees: attendees ? parseInt(attendees) : undefined,
-      quantity: requestedQuantity && selectedResource.type === 'equipment' ? parseInt(requestedQuantity) : undefined,
+      attendees: attendees ? parseInt(attendees, 10) : undefined,
+      quantity: requestedQuantity && selectedResource.type === 'equipment' ? parseInt(requestedQuantity, 10) : undefined,
       lecturer: isLecturer ? (currentUser?.name || 'Self') : lecturer.trim(),
       specialRequests: specialRequests.trim(),
       //requestedUtilityIds,
@@ -675,7 +684,12 @@ export default function NewBooking() {
                       </button>
                     ) : step === 2 && (
                       <button
-                        onClick={() => setStep(1)}
+                        onClick={() => {
+                          setStep(1);
+                          setDate(''); setStartTime(''); setEndTime('');
+                          setPurpose(''); setAttendees(''); setRequestedQuantity(''); 
+                          setLecturer(''); setSpecialRequests(''); setErrors({});
+                        }}
                         className={`ml-auto text-[13px] font-medium hover:opacity-75 transition-opacity flex items-center gap-1 ${
                           isLecturer ? 'text-[#8A3505]' : 'text-[#0F6657]'
                         }`}
@@ -739,7 +753,7 @@ export default function NewBooking() {
                         <div>
                           <p className="text-red-800 text-sm">Scheduling Conflict Detected</p>
                           <p className="text-red-600 text-xs mt-0.5">
-                            This resource is already booked by <span className="font-medium">{conflict.userName}</span> from{' '}
+                            This resource {conflict.status === 'PENDING' ? 'already has a pending request from' : 'is already booked by'} <span className="font-medium">{conflict.userName}</span> from{' '}
                             <span className="font-medium">{conflict.startTime} to {conflict.endTime}</span> on this date.
                             Please choose a different time slot.
                           </p>
@@ -864,10 +878,15 @@ export default function NewBooking() {
                     </div>
                   )}
 
-                  <div className="flex gap-3">
+                 <div className="flex gap-3">
                     {step === 2 && (
                       <button
-                        onClick={() => setStep(1)}
+                        onClick={() => {
+                          setStep(1);
+                          setDate(''); setStartTime(''); setEndTime('');
+                          setPurpose(''); setAttendees(''); setRequestedQuantity(''); 
+                          setLecturer(''); setSpecialRequests(''); setErrors({});
+                        }}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm transition-colors"
                       >
                         <ChevronLeft className="w-4 h-4" /> Back
@@ -899,7 +918,7 @@ export default function NewBooking() {
                         setSelectedResource(null);
                         setDate(''); setStartTime(''); setEndTime('');
                       setPurpose(''); setAttendees(''); setRequestedQuantity(''); setLecturer('');
-                        setSpecialRequests(''); setRequestedUtilityIds([]); setResult(null);
+                        setSpecialRequests(''); setResult(null);
                       }}
                       className={`w-full py-2.5 px-4 rounded-xl text-white text-sm font-medium transition-all active:scale-[0.98] mt-1 border-t border-white/30 ${theme.gradientBtnLg}`}
                     >
@@ -909,15 +928,15 @@ export default function NewBooking() {
                 </div>
               </div>
               <div className="space-y-4">
-                <SelectedResourcePreview 
-                  selectedResource={selectedResource}
-                  resourceImage={getResourceImage(selectedResource)}
-                  typeColors={typeColors}
-                  typeIcons={TYPE_ICONS}
-                  bookings={frozenBookingsRef.current}
-                  today={today}
-                  formatTo24Hour={formatTo24Hour}
-                />
+              <SelectedResourcePreview 
+                selectedResource={selectedResource}
+                resourceImage={getResourceImage(selectedResource)}
+                typeColors={typeColors}
+                typeIcons={TYPE_ICONS}
+                bookings={bookings}
+                today={today}
+                formatTo24Hour={formatTo24Hour}
+              />
               </div>
             </div>
           )}

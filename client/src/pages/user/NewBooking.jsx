@@ -308,17 +308,6 @@ export default function NewBooking() {
         }
       }
 
-      const isLecturerOnly = (r?.access || '').toLowerCase() === 'lecturer';
-      const isBlockedForStudent = (currentRole === 'STUDENT' || currentRole === 'USER') && isLecturerOnly;
-
-      if (isBlockedForStudent) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setSelectedResource(null);
-        setStep(1);
-        setAccessNotice('Only accessible by a lecturer, please contact a lecturer.');
-        return;
-      }
-
       if (r) {
         setSelectedResource(r);
         setStep(2);

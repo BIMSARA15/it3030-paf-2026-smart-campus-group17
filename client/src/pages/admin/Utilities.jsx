@@ -5,7 +5,7 @@ import Header from '../../components/Header';
 import UtilityCard from '../../components/admin/UtilityCard';
 import AddUtilityModal from '../../components/admin/AddUtilityModal';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export default function Utilities() {
   const [sidebarOpen, setSidebarOpen] = useState(true);

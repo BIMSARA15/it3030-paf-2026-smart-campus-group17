@@ -12,7 +12,7 @@ import axios from 'axios';
 // 2. 👇 Add this global rule! Now EVERY axios request in your app will send cookies.
 axios.defaults.withCredentials = true; 
 // (Optional but helpful: set your base URL so you don't have to type localhost:8080 everywhere)
-axios.defaults.baseURL = 'http://localhost:8080';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

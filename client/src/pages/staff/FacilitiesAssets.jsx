@@ -5,7 +5,7 @@ import Header from '../../components/Header';
 import ResourceCard from '../../components/admin/ResourceCard';
 import { useBooking } from '../../context/BookingContext';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const BLOCK_OPTIONS = ['A', 'B', 'C'];
 
 const getCanonicalType = (resource) => {

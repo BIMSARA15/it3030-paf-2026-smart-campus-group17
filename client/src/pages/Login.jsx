@@ -5,7 +5,7 @@ import LeftPanel from "../components/auth/LeftPanel.jsx";
 import MicrosoftIcon from "../components/auth/MicrosoftIcon.jsx";
 
 export default function AuthPage() {
-  const { devLogin, login } = useAuth();
+  const { login } = useAuth();
 
   return (
     <div className="min-h-screen flex" style={{ background: "#F8FAFF" }}>
@@ -132,27 +132,6 @@ export default function AuthPage() {
           <p className="text-center mt-3" style={{ fontSize: "0.75rem", color: "#CBD5E1" }}>
             © 2026 UniBook · Powered by Microsoft Azure AD
           </p>
-
-          {/* Dev Quick Login (Kept exactly as it was for Team 17) */}
-          {import.meta.env.DEV && (
-            <div className="mt-10 p-5 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Wrench className="w-4 h-4 text-amber-600" />
-                <h3 className="text-amber-800 font-bold text-sm">Team 17 Quick Dev Login</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {["admin", "technician", "student", "lecturer"].map((role) => (
-                  <button 
-                    key={role} 
-                    onClick={() => devLogin(role)} 
-                    className="py-2.5 px-3 bg-white text-amber-900 border border-amber-200 rounded-xl text-xs font-bold hover:bg-amber-100 transition-colors uppercase tracking-wider shadow-sm"
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
         </div>
       </div>

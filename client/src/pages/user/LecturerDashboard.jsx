@@ -13,7 +13,7 @@ import ReportIssueModal from '../../components/tickets/ReportIssueModal';
 import AIChat from '../../components/AIChat';
 
 export default function LecturerDashboard() {
-  const { currentUser, bookings, resources, studentRequests, getResourceById, getUtilityById, fetchUserBookings } = useBooking();
+  const { currentUser, bookings, resources, getResourceById, getUtilityById, fetchUserBookings } = useBooking();
   const navigate = useNavigate();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -44,7 +44,7 @@ export default function LecturerDashboard() {
     approved: myBookings.filter(b => b.status === 'APPROVED').length,
     rejected: myBookings.filter(b => b.status === 'REJECTED').length,
     cancelled: myBookings.filter(b => b.status === 'CANCELLED').length,
-    studentRequests: studentRequests.filter((request) => request.status === 'PENDING').length,
+    lecturerReviews: bookings.filter((booking) => booking.status === 'PENDING_LECTURER').length,
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -88,7 +88,7 @@ export default function LecturerDashboard() {
     { label: 'Total Bookings', value: stats.total, icon: CalendarCheck, color: 'text-[#A74106]', bg: 'bg-[#A74106]/10', border: 'border-[#A74106]/20' },
     { label: 'Pending Review', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
     { label: 'Approved', value: stats.approved, icon: CalendarCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-    { label: 'Student Requests', value: stats.studentRequests, icon: Users, color: 'text-[#A74106]', bg: 'bg-orange-50', border: 'border-orange-100' },
+    { label: 'Lecturer Reviews', value: stats.lecturerReviews, icon: Users, color: 'text-[#A74106]', bg: 'bg-orange-50', border: 'border-orange-100' },
   ];
 
   const getBookingItem = (id) => {
@@ -209,8 +209,8 @@ export default function LecturerDashboard() {
                     <Users className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[#8A3505] text-sm font-medium">Student Requests</p>
-                    <p className="text-[#A74106] text-xs">{stats.studentRequests} pending request{stats.studentRequests !== 1 ? 's' : ''}</p>
+                    <p className="text-[#8A3505] text-sm font-medium">Lecturer Reviews</p>
+                    <p className="text-[#A74106] text-xs">{stats.lecturerReviews} pending review{stats.lecturerReviews !== 1 ? 's' : ''}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#A74106] group-hover:translate-x-0.5 transition-transform" />
                 </button>

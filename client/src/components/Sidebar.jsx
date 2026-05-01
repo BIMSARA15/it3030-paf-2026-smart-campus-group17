@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext'; // <-- ADDED THIS
 import { 
   LayoutGrid, CalendarPlus, BookOpen, Building2, Wrench, 
-  LogOut, GraduationCap, X, Menu, SendHorizontal, Bell, UserCog
+  LogOut, GraduationCap, X, Menu, ClipboardCheck, Bell, UserCog
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       ]
     : [
         { name: 'Dashboard', path: dashboardPath, icon: LayoutGrid },
-        ...(isLecturer ? [{ name: 'Student Requests', path: '/lecturer/requests', icon: SendHorizontal }] : []),
+        ...(isLecturer ? [{ name: 'Lecturer Reviews', path: '/lecturer/requests', icon: ClipboardCheck }] : []),
         { name: 'New Booking', path: '/booking/new', icon: CalendarPlus },
         { name: 'My Bookings', path: '/bookings/my', icon: BookOpen },
         { name: 'All Resources', path: '/resources', icon: Building2 },

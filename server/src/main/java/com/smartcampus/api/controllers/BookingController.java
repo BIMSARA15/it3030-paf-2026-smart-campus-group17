@@ -62,6 +62,7 @@ public class BookingController {
         booking.setUserId(request.getUserId());
         booking.setUserEmail(request.getUserEmail());
         booking.setUserDept(request.getUserDept());
+        booking.setRequesterRole(request.getRequesterRole());
         booking.setDate(request.getDate());
         booking.setStartTime(request.getStartTime());
         booking.setEndTime(request.getEndTime());
@@ -77,20 +78,23 @@ public class BookingController {
         System.out.println("===========================================\n");
         
         // Map Microsoft Email to Real MongoDB ID
+        User authenticatedUser = null;
+
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
             String realUserId = null;
+            String emailFromAuth = null;
             
             if (principal instanceof OAuth2User) {
                 OAuth2User oauth2User = (OAuth2User) principal;
                 realUserId = oauth2User.getAttribute("id");
+                emailFromAuth = oauth2User.getAttribute("email");
                 
                 if (realUserId == null) {
-                    String email = oauth2User.getAttribute("email");
-                    if (email != null) {
-                        Optional<User> dbUser = userRepository.findByEmail(email);
-                        if (dbUser.isPresent()) {
-                            realUserId = dbUser.get().getId(); 
+                    if (emailFromAuth != null) {
+                        authenticatedUser = userRepository.findByEmail(emailFromAuth).orElse(null);
+                        if (authenticatedUser != null) {
+                            realUserId = authenticatedUser.getId(); 
                         }
                     }
                 }
@@ -101,6 +105,17 @@ public class BookingController {
             if (realUserId != null) {
                 booking.setUserId(realUserId); 
             }
+
+            if (authenticatedUser == null) {
+                String lookupEmail = emailFromAuth != null ? emailFromAuth : booking.getUserEmail();
+                if (lookupEmail != null) {
+                    authenticatedUser = userRepository.findByEmail(lookupEmail).orElse(null);
+                }
+            }
+        }
+
+        if (authenticatedUser != null && authenticatedUser.getRole() != null) {
+            booking.setRequesterRole(authenticatedUser.getRole().toUpperCase());
         }
         
         if (booking.getStatus() == null) {
@@ -132,6 +147,7 @@ public class BookingController {
         updateData.setRejectionReason(request.getRejectionReason());
         updateData.setReviewedBy(request.getReviewedBy());
         updateData.setCancellationReason(request.getCancellationReason());
+        updateData.setRequesterRole(request.getRequesterRole());
 
         Optional<Booking> updatedBookingOpt = bookingService.updateBookingStatus(id, updateData);
         

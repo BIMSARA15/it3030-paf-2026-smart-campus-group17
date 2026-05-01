@@ -6,6 +6,7 @@ public class UpdateBookingStatusRequest {
     private String rejectionReason;
     private String reviewedBy;
     private String cancellationReason;
+    private String requesterRole;
 
     // --- GETTERS AND SETTERS ---
     public String getStatus() { return status; }
@@ -22,4 +23,7 @@ public class UpdateBookingStatusRequest {
 
     public String getCancellationReason() { return cancellationReason; }
     public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
+
+    public String getRequesterRole() { return requesterRole; }
+    public void setRequesterRole(String requesterRole) { this.requesterRole = requesterRole; }
 }

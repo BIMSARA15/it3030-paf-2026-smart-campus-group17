@@ -100,10 +100,18 @@ public class ResourceController {
         resource.setLevel(resource.getLevel().trim());
         resource.setType(resource.getType().trim());
         resource.setStatus(resource.getStatus().trim());
-        resource.setAccess(resource.getAccess().trim());
+        resource.setAccess(canonicalizeAccess(resource.getAccess()));
         resource.setDescription(resource.getDescription() == null ? "" : resource.getDescription().trim());
         resource.setFeatures(resource.getFeatures() == null ? new ArrayList<>() : resource.getFeatures());
         resource.setUtilityIds(resource.getUtilityIds() == null ? new ArrayList<>() : resource.getUtilityIds());
+    }
+
+    private String canonicalizeAccess(String access) {
+        String normalized = access == null ? "" : access.trim().toLowerCase();
+        if (normalized.contains("lecturer")) return "Lecturer";
+        if (normalized.contains("student")) return "Student";
+        if (normalized.contains("anyone") || normalized.contains("open") || normalized.contains("all")) return "Anyone";
+        return access == null ? "" : access.trim();
     }
 
     private boolean isBlank(String value) {

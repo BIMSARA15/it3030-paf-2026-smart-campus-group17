@@ -43,6 +43,9 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String senderEmail;
 
+    @Value("${app.frontend.url}")
+private String frontendBaseUrl;
+
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy hh:mm a");
 
     public void sendEmail(String to, String subject, String text) {
@@ -99,7 +102,7 @@ public class EmailService {
             }
 
             // --- CHANGED: Generate the QR code locally as a Base64 image string ---
-            String frontendBaseUrl = "http://localhost:5173"; 
+            
 String verificationUrl = frontendBaseUrl + "/admin/verify/" + booking.getId();
 
 // Generate the QR code containing the full clickable link

@@ -9,12 +9,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-
+@org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
+    private String frontendUrl;
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // This is the URL React will connect to
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost:5173") // Allow your React app
+               .setAllowedOrigins(frontendUrl, "http://localhost:5173")// Allow your React app
                 .withSockJS(); // Fallback for older browsers
     }
 

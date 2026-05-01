@@ -7,7 +7,6 @@ import {
 import { useBooking } from '../../context/BookingContext';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
-import StudentRequestModal from '../../components/user/StudentRequestModal';
 
 const TYPE_CONFIG = {
   room: {
@@ -44,8 +43,8 @@ const getResourceImage = (resource) => {
 
 const getAccessLabel = (access = '') => {
   const normalized = access.toLowerCase();
-  if (normalized === 'lecturer') return 'Lecturer Only';
-  if (normalized === 'student') return 'Student Only';
+  if (normalized.includes('lecturer')) return 'Lecturer Only';
+  if (normalized.includes('student')) return 'Student Only';
   return 'Open Access';
 };
 
@@ -61,10 +60,8 @@ export default function Resources() {
     utilitiesError,
     fetchUtilities,
     bookings,
-    studentRequests,
     currentUser,
     getUtilitiesForResource,
-    createStudentRequest,
   } = useBooking();
   const navigate = useNavigate();
   const currentRole = (currentUser?.role || '').toUpperCase();
@@ -116,9 +113,6 @@ export default function Resources() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
-  const [accessMessage, setAccessMessage] = useState('');
-  const [requestingResource, setRequestingResource] = useState(null);
-  const [requestSentPopup, setRequestSentPopup] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
   const [blockFilter, setBlockFilter] = useState('All');
   const [minCapacityFilter, setMinCapacityFilter] = useState('');
@@ -197,23 +191,6 @@ export default function Resources() {
   const statusOptions = ['All', 'Available', 'Not Available', 'Out Of Service'];
   const blockOptions = ['All', 'A', 'B', 'C'];
 
-  const hasExistingRequest = (resourceId) => studentRequests.some((request) => {
-    const sameResource = request.resourceId === resourceId;
-    const sameStudent = (request.studentEmail || '') === (currentUser?.email || '');
-    const isActive = request.status === 'PENDING' || request.status === 'BOOKING_CREATED';
-    return sameResource && sameStudent && isActive;
-  });
-
-  const handleStudentRequest = async (requestData) => {
-    const result = await createStudentRequest(requestData);
-    if (result.success) {
-      setAccessMessage('');
-      setRequestSentPopup(true);
-      setRequestingResource(null);
-    }
-    return result;
-  };
-
   return (
     // 3. Add Layout Wrapper
     <div className="min-h-screen bg-slate-50 flex">
@@ -248,7 +225,6 @@ export default function Resources() {
                   onClick={() => {
                     setTypeFilter(t);
                     setSelectedId(null);
-                    setAccessMessage('');
                   }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all ${
                     typeFilter === t
@@ -334,9 +310,8 @@ export default function Resources() {
                 const cfg = typeConfig[resource.type];
                 const stats = getResourceStats(resource.id);
                 const isSelected = selectedId === resource.id;
-                const isLecturerOnly = (resource.access || '').toLowerCase() === 'lecturer';
+                const isLecturerOnly = (resource.access || '').toLowerCase().includes('lecturer');
                 const isBlockedForStudent = isStudentView && isLecturerOnly;
-                const requestAlreadySent = isBlockedForStudent && hasExistingRequest(resource.id);
                 
                 // NEW: Determine if the resource is out of service
                 const isOutOfService = (resource.status || '').toLowerCase() === 'out of service';
@@ -347,7 +322,6 @@ export default function Resources() {
                     onClick={() => {
                       if (isOutOfService) return; // NEW: Prevent clicking if out of service
                       setSelectedId(isSelected ? null : resource.id);
-                      setAccessMessage('');
                     }}
                     // NEW: Added relative positioning and disabled styling
                     className={`rounded-xl border-2 p-5 relative transition-all cursor-pointer hover:shadow-md ${
@@ -436,9 +410,7 @@ export default function Resources() {
                         {isOutOfService
                           ? <span className="text-red-500 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Currently Unavailable</span>
                           : isBlockedForStudent
-                          ? requestAlreadySent
-                            ? <span className="text-amber-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Request already sent</span>
-                            : <span className="text-amber-700 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Lecturer access required</span>
+                          ? <span className="text-amber-700 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Lecturer review required</span>
                           : stats.upcoming > 0
                           ? <span className="text-amber-600">{stats.upcoming} upcoming booking{stats.upcoming !== 1 ? 's' : ''}</span>
                           : <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Available</span>
@@ -602,16 +574,14 @@ export default function Resources() {
                   </div>
 
                   <div className="p-5">
-                    {isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && (
+                    {isStudentView && (selectedResource.access || '').toLowerCase().includes('lecturer') && (
                       <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                         <div className="flex items-start gap-2">
                           <ShieldAlert className="mt-0.5 w-4 h-4 text-amber-600 flex-shrink-0" />
                           <div>
                             <p className="text-sm font-medium text-amber-900">Lecturer-only resource</p>
                             <p className="text-xs text-amber-800 mt-1">
-                              {hasExistingRequest(selectedResource.id)
-                                ? 'A request has already been sent for this resource. Please wait for the lecturer to review it.'
-                                : 'Students can send a request to a lecturer, and the lecturer can then place the booking for the student.'}
+                              Students use the same booking form here. The request goes to a lecturer first, and after lecturer approval it continues to admin approval.
                             </p>
                           </div>
                         </div>
@@ -718,42 +688,18 @@ export default function Resources() {
                     </div>
 
                     {/* UPDATED: Book button with Green Gradient */}
-                    {accessMessage && (
-                      <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                        {accessMessage}
-                      </div>
-                    )}
-
                     <button
                       onClick={() => {
-                        const isLecturerOnly = (selectedResource.access || '').toLowerCase() === 'lecturer';
-                        const requestAlreadySent = hasExistingRequest(selectedResource.id);
-                        if (isStudentView && isLecturerOnly) {
-                          if (requestAlreadySent) {
-                            setAccessMessage('You have already sent a request for this resource.');
-                            return;
-                          }
-                          setAccessMessage('');
-                          setRequestingResource(selectedResource);
-                          return;
-                        }
-
-                        setAccessMessage('');
                         navigate(`/booking/new?resource=${selectedResource.id}`);
                       }}
-                      disabled={isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)}
                       className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium border-t active:scale-[0.98] border-white/20 ${
-                        isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
-                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200 cursor-not-allowed shadow-none'
-                          : isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer'
+                        isStudentView && (selectedResource.access || '').toLowerCase().includes('lecturer')
                           ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_12px_rgba(245,158,11,0.28)]'
                           : `${theme.gradientBtn} text-white`
                       }`}
                     >
-                      {isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer' && hasExistingRequest(selectedResource.id)
-                        ? <><CheckCircle className="w-4 h-4" /> Request Sent</>
-                        : isStudentView && (selectedResource.access || '').toLowerCase() === 'lecturer'
-                        ? <><Send className="w-4 h-4" /> Send Request to Lecturer</>
+                      {isStudentView && (selectedResource.access || '').toLowerCase().includes('lecturer')
+                        ? <><Send className="w-4 h-4" /> Continue to Booking Form</>
                         : <><CalendarPlus className="w-4 h-4" /> Book This Resource</>
                       }
                     </button>
@@ -764,46 +710,6 @@ export default function Resources() {
           </div>
         </div>
       </div>
-
-      <StudentRequestModal
-        key={requestingResource?.id || 'student-request'}
-        isOpen={Boolean(requestingResource)}
-        resource={requestingResource}
-        currentUser={currentUser}
-        getUtilitiesForResource={getUtilitiesForResource}
-        onClose={() => setRequestingResource(null)}
-        onSubmit={handleStudentRequest}
-      />
-
-      {requestSentPopup && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setRequestSentPopup(false)} />
-          <div className="relative z-10 w-full max-w-sm rounded-[28px] border border-white/60 bg-white p-8 text-center shadow-[0_30px_80px_rgba(15,23,42,0.2)]">
-            <button
-              type="button"
-              onClick={() => setRequestSentPopup(false)}
-              className="absolute right-4 top-4 rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-              <CheckCircle className="h-8 w-8 text-emerald-600" />
-            </div>
-            <h3 className="mt-4 text-xl font-semibold text-slate-900">Request Sent</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Your request has been sent to the lecturer successfully.
-            </p>
-            <button
-              type="button"
-              onClick={() => setRequestSentPopup(false)}
-              className={`mt-6 inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-all ${theme.gradientBtn}`}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

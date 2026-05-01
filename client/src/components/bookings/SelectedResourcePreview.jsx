@@ -4,7 +4,7 @@ export default function SelectedResourcePreview({
   selectedResource,
   resourceImage,
   typeColors,
-  typeIcons,
+ // typeIcons,
   bookings,
   today,
   formatTo24Hour
@@ -77,7 +77,7 @@ export default function SelectedResourcePreview({
 
         {/* Upcoming bookings */}
         <div className="border-t border-gray-100 pt-4">
-          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2">Upcoming Reserved Slots</p>
+          <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2">Upcoming Pending & Reserved Slots</p>
           {(() => {
             const todayStr = today;
             const existing = bookings
@@ -103,7 +103,14 @@ export default function SelectedResourcePreview({
                       </p>
                       <p className="text-gray-500 text-xs">{b.startTime} – {b.endTime}</p>
                     </div>
-                    <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">Booked</span>
+                    {/* Dynamically check status to render the correct badge and colors */}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      b.status === 'PENDING' 
+                        ? 'bg-amber-100 text-amber-700' 
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {b.status === 'PENDING' ? 'Pending' : 'Reserved'}
+                    </span>
                   </div>
                 ))}
               </div>

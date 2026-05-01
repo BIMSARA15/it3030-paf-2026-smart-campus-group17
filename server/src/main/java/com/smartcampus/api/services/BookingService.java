@@ -1,5 +1,4 @@
 package com.smartcampus.api.services;
-
 import com.smartcampus.api.models.Booking;
 import com.smartcampus.api.models.User;
 import com.smartcampus.api.repositories.BookingRepository;
@@ -48,13 +47,22 @@ public class BookingService {
     }
 
     public Booking createBooking(Booking newBooking) throws Exception {
+        
+        // Parse the incoming strings into Java Time objects FIRST
+        LocalTime newStart = parseBookingTime(newBooking.getStartTime());
+        LocalTime newEnd = parseBookingTime(newBooking.getEndTime());
+        LocalDate bookingDate = LocalDate.parse(newBooking.getDate());
+
+        // Prevent booking past times on the current day
+        if (bookingDate.isEqual(LocalDate.now()) && newStart.isBefore(LocalTime.now())) {
+            throw new Exception("Cannot book a time slot that has already passed today.");
+        }
+
+        // Now run the database query to check for conflicts
         List<Booking> existingBookings = bookingRepository.findApprovedBookingsForResourceOnDate(
             newBooking.getResourceId(), 
             newBooking.getDate()
         );
-
-        LocalTime newStart = parseBookingTime(newBooking.getStartTime());
-        LocalTime newEnd = parseBookingTime(newBooking.getEndTime());
 
         for (Booking existing : existingBookings) {
             try {
@@ -97,10 +105,9 @@ public class BookingService {
         
         Booking savedBooking = bookingRepository.save(newBooking);
 
-       // --- 1. ADMIN NOTIFICATIONS & EMAILS ---
+        // --- 1. ADMIN NOTIFICATIONS & EMAILS ---
         String cleanResourceName = savedBooking.getResourceName() != null ? savedBooking.getResourceName() : "Asset (" + savedBooking.getResourceId() + ")";
 
-        // Keep this plain text version ONLY for the WebSocket Real-Time Notification popup
         // Keep this plain text version ONLY for the WebSocket Real-Time Notification popup
         String dynamicAdminMessage = String.format(
             "A new booking request requires your approval.\n\n🔖 Booking ID: %s\n👤 Name: %s\n📧 Email: %s\n🏫 Asset: %s\n📅 Date: %s\n⏰ Time: %s to %s",
@@ -130,7 +137,7 @@ public class BookingService {
             }
         }
 
-  // --- 3. AUTOMATED HTML EMAIL TO THE CREATOR ---
+        // --- 3. AUTOMATED HTML EMAIL TO THE CREATOR ---
         try {
             emailService.sendBookingHtmlEmail(savedBooking, "Booking Request Received - Pending Approval", "pending-email");
         } catch (Exception e) {

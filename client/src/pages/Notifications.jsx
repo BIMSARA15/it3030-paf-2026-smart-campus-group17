@@ -37,12 +37,17 @@ export default function Notifications() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedNotif, setSelectedNotif] = useState(null);
 
-  const theme = useMemo(() => {
+ const theme = useMemo(() => {
     const role = (user?.role || '').toUpperCase();
     if (role === 'ADMIN') return { text: 'text-[#1E3A8A]', hoverText: 'hover:text-[#2563EB]', border: 'border-[#1E3A8A]', ring: 'ring-[#2563EB]/40', gradient: 'bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] hover:from-[#172554] hover:to-[#1D4ED8]', shadow: 'shadow-[0_4px_12px_rgba(37,99,235,0.3)]' };
     if (role === 'LECTURER') return { text: 'text-[#A74106]', hoverText: 'hover:text-[#C54E08]', border: 'border-[#A74106]', ring: 'ring-[#A74106]/40', gradient: 'bg-gradient-to-r from-[#8A3505] to-[#C54E08] hover:from-[#702A04] hover:to-[#A74106]', shadow: 'shadow-[0_4px_12px_rgba(167,65,6,0.3)]' };
+    
+    // NEW: Technician Theme
+    if (role === 'TECHNICIAN') return { text: 'text-[#27324A]', hoverText: 'hover:text-[#303B53]', border: 'border-[#27324A]', ring: 'ring-[#303B53]/40', gradient: 'bg-gradient-to-r from-[#27324A] to-[#303B53] hover:from-[#1F2937] hover:to-[#2F3A52]', shadow: 'shadow-[0_4px_12px_rgba(39,50,74,0.3)]' };
+    
+    // Default (Student)
     return { text: 'text-[#0F6657]', hoverText: 'hover:text-[#17A38A]', border: 'border-[#0F6657]', ring: 'ring-[#17A38A]/40', gradient: 'bg-gradient-to-r from-[#0F6657] to-[#17A38A] hover:from-[#0c5246] hover:to-[#128a74]', shadow: 'shadow-[0_4px_12px_rgba(23,163,138,0.3)]' };
-  }, [user?.role]);
+  }, [user?.role])
 
   if (!user) return null;
 

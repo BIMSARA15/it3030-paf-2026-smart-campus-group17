@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CheckCircle, XCircle, X, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function ReviewModal({ bookingId, action, userName, resourceName, onConfirm, onClose }) {
+export default function ReviewModal({ action, userName, resourceName, onConfirm, onClose }) {
   const [note, setNote] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');

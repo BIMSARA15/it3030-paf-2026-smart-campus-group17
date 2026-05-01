@@ -1,8 +1,8 @@
 package com.smartcampus.api.config;
 
-import com.smartcampus.api.services.CustomOAuth2UserService; 
+import com.smartcampus.api.services.CustomOAuth2UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value; // Added this import to make it cleaner!
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -25,14 +25,13 @@ public class SecurityConfig {
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
 
-    // FIX: The variable is properly declared right here!
-    @Value("${app.frontend.url:http://localhost:5173}")
+    @Value("${app.frontend.url:http://localhost:5173/}")
     private String frontendUrl;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults()) 
+            .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                .requestMatchers("/", "/error",  "/api/auth/user").permitAll()
@@ -46,7 +45,10 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                    .oidcUserService(customOAuth2UserService)
                 )
-               .defaultSuccessUrl(frontendUrl, true) // Removed the + "/"
+                // Use a success handler instead of defaultSuccessUrl to avoid startup crashes
+                .successHandler((request, response, authentication) -> {
+                    response.sendRedirect(frontendUrl);
+                })
             );
 
         return http.build();

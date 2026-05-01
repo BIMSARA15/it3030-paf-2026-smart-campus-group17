@@ -8,6 +8,7 @@ import FacilitiesAssets from './pages/staff/FacilitiesAssets';
 import TechnicianDashboard from './pages/staff/TechnicianDashboard';
 import TechnicianMaintenance from './pages/staff/TechnicianMaintenance';
 import Maintenance from './pages/user/Maintenance';
+import AIChat from './components/AIChat';
 
 // ------------------------------------------------------------------------
 // TEAM INSTRUCTIONS:
@@ -221,6 +222,7 @@ function App() {
           />
 
         </Routes>
+        <AIChat />
       </div>
     </Router>
   );

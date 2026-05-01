@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                    .oidcUserService(customOAuth2UserService)
                 )
-               .defaultSuccessUrl(frontendUrl + "/", true)
+               .defaultSuccessUrl(frontendUrl, true) // Removed the + "/"
             );
 
         return http.build();

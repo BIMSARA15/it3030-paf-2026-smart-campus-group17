@@ -8,6 +8,7 @@ public class CreateBookingRequest {
     private String userId;
     private String userEmail;
     private String userDept;
+    private String requesterRole;
     private String date;
     private String startTime;
     private String endTime;
@@ -33,6 +34,9 @@ public class CreateBookingRequest {
 
     public String getUserDept() { return userDept; }
     public void setUserDept(String userDept) { this.userDept = userDept; }
+
+    public String getRequesterRole() { return requesterRole; }
+    public void setRequesterRole(String requesterRole) { this.requesterRole = requesterRole; }
 
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }

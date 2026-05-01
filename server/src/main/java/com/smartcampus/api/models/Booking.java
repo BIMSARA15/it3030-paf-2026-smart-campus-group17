@@ -18,6 +18,7 @@ public class Booking {
     private String userName;
     private String userEmail;
     private String userDept;
+    private String requesterRole;
     
     private String date;
     private String startTime;
@@ -71,6 +72,9 @@ public class Booking {
 
     public String getUserDept() { return userDept; }
     public void setUserDept(String userDept) { this.userDept = userDept; }
+
+    public String getRequesterRole() { return requesterRole; }
+    public void setRequesterRole(String requesterRole) { this.requesterRole = requesterRole; }
 
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }

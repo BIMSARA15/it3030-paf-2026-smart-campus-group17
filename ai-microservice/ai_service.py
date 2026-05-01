@@ -8,7 +8,7 @@ import re
 
 # Import your separated logic
 from database import available_functions
-from prompts import SYSTEM_MESSAGE, TOOLS_SCHEMA
+from prompts import get_system_message, TOOLS_SCHEMA
 
 # --- SECURITY SETUP ---
 # Load the secret from the .env file
@@ -36,7 +36,7 @@ class ChatRequest(BaseModel):
 # --- PROTECTED ROUTE:  dependency ---
 @app.post("/api/chat", dependencies=[Depends(verify_token)])
 def chat_with_bot(request: ChatRequest):
-    messages = [SYSTEM_MESSAGE]
+    messages = [get_system_message()]  # Start with the system message
     safe_history = request.history[-6:] 
     
     for msg in safe_history:

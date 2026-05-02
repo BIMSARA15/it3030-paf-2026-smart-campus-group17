@@ -4,8 +4,8 @@ import {
   clearPreviewMode,
 } from '../services/previewMode';
 
-
 const AuthContext = createContext();
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   return useContext(AuthContext);
@@ -15,6 +15,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // 1. Setup the dynamic URL for Vercel vs Localhost
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
   // Configure Axios to always send cookies (session data) with requests
   axios.defaults.withCredentials = true;
 
@@ -22,7 +25,8 @@ export const AuthProvider = ({ children }) => {
     // When the app loads, ask Spring Boot if we are logged in
     const checkUserStatus = async () => {
     try {
-        const response = await axios.get('http://localhost:8080/api/auth/user');
+        // 2. Used dynamic URL here, ensuring 'const response = ' is intact
+        const response = await axios.get(`${API_URL}/api/auth/user`);
         
         if (!response.data || !response.data.email) {
             setUser(null);
@@ -30,7 +34,7 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
-       // 🛑 NEW USER: CATCH THE SESSION HOLD
+       // NEW USER: CATCH THE SESSION HOLD
        if (response.data.requiresRegistration) {
            setUser({
                name: response.data.name,
@@ -45,7 +49,7 @@ export const AuthProvider = ({ children }) => {
                window.location.href = '/login';
            }
        } else {
-           // ✅ EXISTING USER: Normal login
+           // EXISTING USER: Normal login
            setUser({
               id: response.data.id,
               name: response.data.name,
@@ -64,7 +68,7 @@ export const AuthProvider = ({ children }) => {
                 else window.location.href = '/student'; 
             }
        }
-      }catch (error) {
+      } catch (error) {
         console.error("Auth check failed:", error);
         setUser(null);
       } finally {
@@ -73,39 +77,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkUserStatus();
-  }, []);
+  }, [API_URL]);
 
-// Accept the provider name ('google' or 'microsoft')
+  // Accept the provider name ('google' or 'microsoft')
   const login = (provider) => {
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
-  };
-  // NEW: Developer Quick Login Bypass
-  // NEW: Developer Quick Login Bypass
-  const devLogin = async (role) => {
-    try {
-      await axios.get(`http://localhost:8080/api/auth/dev-login/${role}`);
-      
-      // Force a page reload and route to their specific team folders!
-      if (role === 'admin') {
-        window.location.href = '/admin';
-      } else if (role === 'technician') {
-        window.location.href = '/staff'; // Technician goes to Staff folder
-      } else if (role === 'lecturer') {
-        window.location.href = '/lecturer';
-      } else {
-        window.location.href = '/student'; // Default student dashboard
-      }
-      
-    } catch (error) {
-      console.error("Dev login failed:", error);
-    }
+    // 3. Used dynamic URL here
+    window.location.href = `${API_URL}/oauth2/authorization/${provider}`;
   };
 
   const logout = async () => {
     clearPreviewMode();
     try {
-      // Tell Spring Boot to destroy the session cookie
-      await axios.post('http://localhost:8080/logout'); 
+      // 4. Used dynamic URL here
+      await axios.post(`${API_URL}/logout`); 
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
@@ -114,8 +98,9 @@ export const AuthProvider = ({ children }) => {
       window.location.href = '/'; 
     }
   };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, devLogin, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

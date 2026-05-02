@@ -111,6 +111,7 @@ export default function AllBookings() {
 
   const counts = {
     ALL: bookings.length,
+    PENDING_LECTURER: bookings.filter(b => b.status === 'PENDING_LECTURER').length,
     PENDING: bookings.filter(b => b.status === 'PENDING').length,
     APPROVED: bookings.filter(b => b.status === 'APPROVED').length,
     REJECTED: bookings.filter(b => b.status === 'REJECTED').length,
@@ -268,7 +269,7 @@ export default function AllBookings() {
 
                 {/* Status tabs */}
                 <div className="flex gap-2 flex-wrap">
-                {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(s => (
+                {['ALL', 'PENDING_LECTURER', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(s => (
                     <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
@@ -278,7 +279,7 @@ export default function AllBookings() {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                     >
-                    {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
+                    {s === 'ALL' ? 'All' : s.replaceAll('_', ' ')}
                     <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
                         statusFilter === s ? 'bg-white/20' : 'bg-blue-100 text-blue-700 font-medium' // <--- UPDATED COLORS
                     }`}>

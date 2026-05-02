@@ -50,7 +50,8 @@ export default function AddResourceModal({ isOpen, onClose, onSave, saving, init
     }
 
     setError('');
-  }, [isOpen, initialData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

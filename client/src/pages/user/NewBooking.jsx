@@ -227,7 +227,6 @@ export default function NewBooking() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
-  const [accessNotice, setAccessNotice] = useState('');
   
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false); 
@@ -309,21 +308,9 @@ export default function NewBooking() {
         }
       }
 
-      const isLecturerOnly = (r?.access || '').toLowerCase() === 'lecturer';
-      const isBlockedForStudent = (currentRole === 'STUDENT' || currentRole === 'USER') && isLecturerOnly;
-
-      if (isBlockedForStudent) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setSelectedResource(null);
-        setStep(1);
-        setAccessNotice('Only accessible by a lecturer, please contact a lecturer.');
-        return;
-      }
-
       if (r) {
         setSelectedResource(r);
         setStep(2);
-        setAccessNotice('');
       }
     }
   }, [searchParams, resources, utilities, currentRole]); // Added utilities to dependency array
@@ -337,7 +324,7 @@ export default function NewBooking() {
         if (isEditing && b.id === id) return false;
 
         if (b.resourceId !== selectedResource.id || b.date !== date) return false;
-        if (b.status !== 'APPROVED' && b.status !== 'PENDING') return false;
+        if (b.status !== 'APPROVED' && b.status !== 'PENDING' && b.status !== 'PENDING_LECTURER') return false;
         
         const bStart = formatTo24Hour(b.startTime);
         const bEnd = formatTo24Hour(b.endTime);
@@ -363,7 +350,7 @@ export default function NewBooking() {
     const matchesAccess =
       currentRole === 'ADMIN' || currentRole === 'LECTURER'
         ? true
-        : access === 'student' || access === 'anyone' || access === 'all';
+        : access.includes('student') || access.includes('anyone') || access.includes('open') || access.includes('all') || access.includes('lecturer');
     
     const matchesStatus = status !== 'out of service';
     
@@ -450,10 +437,6 @@ const validate = () => {
   const handleSubmit = async () => {
     if (!validate() || !selectedResource) return;
     if ((selectedResource.status || '').toLowerCase() === 'out of service') return;
-    if ((currentRole === 'STUDENT' || currentRole === 'USER') && (selectedResource.access || '').toLowerCase() === 'lecturer') {
-      setAccessNotice('Only accessible by a lecturer, please contact a lecturer.');
-      return;
-    }
     if (conflict) return;
     setSubmitting(true);
     
@@ -463,6 +446,7 @@ const validate = () => {
       userName: currentUser?.name || 'Chathurya',
       userEmail: currentUser?.email || 'it23345478@my.sliit.lk',
       userDept: currentUser?.department || 'Faculty of Computing',
+      requesterRole: currentRole,
       date, 
       startTime,
       endTime,
@@ -535,12 +519,6 @@ const validate = () => {
 
           <StepProgressBar currentStep={step} theme={theme} />
 
-          {accessNotice && (
-            <div className="mb-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              {accessNotice}
-            </div>
-          )}
-
           {step === 1 && (
             <div className="bg-white rounded-xl border border-gray-100">
               <div className="p-5 border-b border-gray-50">
@@ -590,7 +568,7 @@ const validate = () => {
                     {typeFilter !== 'equipment' && filtered.map(resource => {
                       const upcomingCount = bookings.filter(b => 
                         b.resourceId === resource.id && 
-                        (b.status === 'APPROVED' || b.status === 'PENDING') && 
+                        (b.status === 'APPROVED' || b.status === 'PENDING' || b.status === 'PENDING_LECTURER') && 
                         b.date >= today
                       ).length;
 
@@ -700,6 +678,12 @@ const validate = () => {
                   </div>
 
                   <div className="space-y-4">
+                    {(currentRole === 'STUDENT' || currentRole === 'USER') && (selectedResource.access || '').toLowerCase().includes('lecturer') && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        This lecturer-only booking will be reviewed by a lecturer first. If approved, it will continue to the existing admin approval step.
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-gray-700 text-sm mb-1.5">
                         <Calendar className="w-3.5 h-3.5 inline mr-1.5" />

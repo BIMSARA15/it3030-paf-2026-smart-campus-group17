@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
 const BookingContext = createContext();
-const API_BASE_URL = 'http://localhost:8080';
-const STUDENT_REQUESTS_STORAGE_KEY = 'smart_campus_student_requests';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const normalizeResourceType = (type) => {
   if (type === 'Lab') return 'lab';
@@ -34,8 +33,6 @@ const normalizeUtility = (utility) => ({
   description: utility.description || '',
 });
 
-const createLocalId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
 export const useBooking = () => useContext(BookingContext);
 
 export const BookingProvider = ({ children }) => {
@@ -54,18 +51,6 @@ export const BookingProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('smart_campus_bookings', JSON.stringify(bookings));
   }, [bookings]);
-
-  const [studentRequests, setStudentRequests] = useState(() => {
-    const savedRequests = localStorage.getItem(STUDENT_REQUESTS_STORAGE_KEY);
-    if (savedRequests) {
-      return JSON.parse(savedRequests);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem(STUDENT_REQUESTS_STORAGE_KEY, JSON.stringify(studentRequests));
-  }, [studentRequests]);
 
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -245,51 +230,6 @@ const createBooking = async (bookingData) => {
     }
   };
 
-  const createStudentRequest = async (requestData) => {
-    const now = new Date().toISOString();
-    const nextRequest = {
-      id: createLocalId('stdreq'),
-      status: 'PENDING',
-      createdAt: now,
-      updatedAt: now,
-      ...requestData,
-      requestedUtilityIds: Array.isArray(requestData.requestedUtilityIds) ? requestData.requestedUtilityIds : [],
-    };
-
-    setStudentRequests((current) => [nextRequest, ...current]);
-
-    return {
-      success: true,
-      message: 'Your request has been sent to the lecturer.',
-      request: nextRequest,
-    };
-  };
-
-  const updateStudentRequest = (id, updates) => {
-    const updatedAt = new Date().toISOString();
-    setStudentRequests((current) =>
-      current.map((request) =>
-        request.id === id
-          ? { ...request, ...updates, updatedAt }
-          : request
-      )
-    );
-  };
-
-  const fulfillStudentRequest = async (requestId, bookingData) => {
-    const response = await createBooking(bookingData);
-
-    if (response.success) {
-      updateStudentRequest(requestId, {
-        status: 'BOOKING_CREATED',
-        fulfilledBy: user?.name || 'Lecturer',
-        linkedBookingId: response.booking?.id || '',
-      });
-    }
-
-    return response;
-  };
-
   const updateBooking = async (id, updatedData) => {
     try {
       // Use standard fetch instead of the undefined 'api' variable
@@ -420,6 +360,68 @@ const createBooking = async (bookingData) => {
     }
   };
 
+  const approveBookingByLecturer = async (id, adminNote) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'PENDING',
+          adminNote,
+          reviewedBy: user?.name || 'Lecturer'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update database');
+      }
+
+      const updatedBooking = await response.json();
+      setBookings(prevBookings =>
+        prevBookings.map(b => (b.id === id ? updatedBooking : b))
+      );
+
+      return { success: true, booking: updatedBooking };
+    } catch (error) {
+      console.error('Error approving booking as lecturer:', error);
+      return { success: false, message: error.message || 'Failed to update database' };
+    }
+  };
+
+  const rejectBookingByLecturer = async (id, rejectionReason) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/bookings/${id}/status`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'REJECTED',
+          rejectionReason,
+          reviewedBy: user?.name || 'Lecturer'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update database');
+      }
+
+      const updatedBooking = await response.json();
+      setBookings(prevBookings =>
+        prevBookings.map(b => (b.id === id ? updatedBooking : b))
+      );
+
+      return { success: true, booking: updatedBooking };
+    } catch (error) {
+      console.error('Error rejecting booking as lecturer:', error);
+      return { success: false, message: error.message || 'Failed to update database' };
+    }
+  };
+
   // Hard Delete a booking (Admin Only)
   const purgeBooking = async (id) => {
     try {
@@ -442,11 +444,11 @@ const createBooking = async (bookingData) => {
 
   return (
     <BookingContext.Provider value={{ 
-      resources, utilities, bookings, studentRequests, currentUser: user, 
+      resources, utilities, bookings, currentUser: user, 
       createBooking, checkConflict, getResourceById, updateBooking, cancelBooking,
       approveBooking, rejectBooking, fetchResources, resourcesLoading, resourcesError,
       fetchUtilities, utilitiesLoading, utilitiesError, getUtilityById, getUtilitiesForResource,
-      createStudentRequest, updateStudentRequest, fulfillStudentRequest, 
+      approveBookingByLecturer, rejectBookingByLecturer,
       fetchUserBookings, purgeBooking
     }}>
       {children}

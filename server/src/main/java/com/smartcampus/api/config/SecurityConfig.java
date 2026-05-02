@@ -1,9 +1,8 @@
 package com.smartcampus.api.config;
 
-// 1. ADD THESE TWO IMPORTS:
-import com.smartcampus.api.services.CustomOAuth2UserService; 
+import com.smartcampus.api.services.CustomOAuth2UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,17 +22,19 @@ import java.util.Arrays;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // 2. INJECT THE SERVICE HERE (Inside the class, before the methods)
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
+
+    @Value("${app.frontend.url:http://localhost:5173/}")
+    private String frontendUrl;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults()) 
+            .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-               .requestMatchers("/", "/error", "/api/auth/dev-login/**", "/api/auth/user").permitAll()
+               .requestMatchers("/", "/error",  "/api/auth/user").permitAll()
                .requestMatchers(HttpMethod.GET, "/api/resources").permitAll()
                .requestMatchers(HttpMethod.GET, "/api/utilities").permitAll()
                .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
@@ -44,7 +45,10 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                    .oidcUserService(customOAuth2UserService)
                 )
-                .defaultSuccessUrl("http://localhost:5173/", true)
+                // Use a success handler instead of defaultSuccessUrl to avoid startup crashes
+                .successHandler((request, response, authentication) -> {
+                    response.sendRedirect(frontendUrl);
+                })
             );
 
         return http.build();
@@ -55,10 +59,9 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Allow your Vite React app's URL
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        // Allow your Vite React app's URLs (Both live and local)
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl, "http://localhost:5173"));
         
-        // ADD "PATCH" TO THIS LIST!
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         
         // This is crucial: it allows the browser to send the session cookie back to Spring Boot

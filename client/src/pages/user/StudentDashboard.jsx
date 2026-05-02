@@ -50,7 +50,7 @@ export default function StudentDashboard() {
   
   const stats = {
     total: myBookings.length,
-    pending: myBookings.filter(b => b.status === 'PENDING').length,
+    pending: myBookings.filter(b => b.status === 'PENDING' || b.status === 'PENDING_LECTURER').length,
     approved: myBookings.filter(b => b.status === 'APPROVED').length,
     rejected: myBookings.filter(b => b.status === 'REJECTED').length,
     cancelled: myBookings.filter(b => b.status === 'CANCELLED').length,
@@ -83,7 +83,7 @@ export default function StudentDashboard() {
     return {
       name: label,
       Approved: dayBookings.filter(b => b.status === 'APPROVED').length,
-      Pending: dayBookings.filter(b => b.status === 'PENDING').length,
+      Pending: dayBookings.filter(b => b.status === 'PENDING' || b.status === 'PENDING_LECTURER').length,
       Rejected: dayBookings.filter(b => b.status === 'REJECTED').length,
     };
   });

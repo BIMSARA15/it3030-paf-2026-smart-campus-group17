@@ -27,6 +27,7 @@ export default function AddUtilityModal({ isOpen, onClose, onSave, saving, initi
     if (!isOpen) return;
 
     if (initialData) {
+     
       setForm({
         utilityCode: initialData.utilityCode || '',
         utilityName: initialData.utilityName || '',
@@ -41,7 +42,9 @@ export default function AddUtilityModal({ isOpen, onClose, onSave, saving, initi
     }
 
     setError('');
+    
   }, [isOpen, initialData]);
+  
 
   if (!isOpen) return null;
 

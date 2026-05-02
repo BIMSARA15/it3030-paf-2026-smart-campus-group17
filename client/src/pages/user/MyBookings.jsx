@@ -169,6 +169,7 @@ export default function MyBookings() {
 
   const counts = {
     ALL: myBookings.length,
+    PENDING_LECTURER: myBookings.filter(b => b.status === 'PENDING_LECTURER').length,
     PENDING: myBookings.filter(b => b.status === 'PENDING').length,
     APPROVED: myBookings.filter(b => b.status === 'APPROVED').length,
     REJECTED: myBookings.filter(b => b.status === 'REJECTED').length,
@@ -192,6 +193,15 @@ export default function MyBookings() {
   
   // Progress Bar Logic Map
   const getSteps = (currentStatus) => {
+    if (currentStatus === 'PENDING_LECTURER') {
+      return [
+        { label: "Submitted", done: true, active: false },
+        { label: "Lecturer Review", done: false, active: true },
+        { label: "Admin Review", done: false, active: false },
+        { label: "Approved", done: false, active: false },
+      ];
+    }
+
     return [
       { label: "Submitted", done: true, active: false },
       { label: "Under Review", done: currentStatus !== 'PENDING', active: currentStatus === 'PENDING' },
@@ -253,7 +263,7 @@ export default function MyBookings() {
           {/* Status filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex gap-2 flex-wrap">
-              {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(s => (
+              {['ALL', 'PENDING_LECTURER', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(s => (
                 <button
                   key={s}
                   onClick={() => setStatusFilter(s)}
@@ -263,7 +273,7 @@ export default function MyBookings() {
                     : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
+                  {s === 'ALL' ? 'All' : s.replaceAll('_', ' ')}
                   <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${
                     statusFilter === s ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
                   }`}>
@@ -311,7 +321,7 @@ export default function MyBookings() {
               {filtered.map(booking => {
                 const resource = getBookingItem(booking.resourceId);
                 //const isPast = booking.date < today;
-                const canCancel = booking.status === 'PENDING' || booking.status === 'APPROVED';
+                const canCancel = booking.status === 'PENDING' || booking.status === 'PENDING_LECTURER' || booking.status === 'APPROVED';
 
                 return (
                   <div key={booking.id} className="relative bg-white rounded-xl border border-gray-100 overflow-hidden">

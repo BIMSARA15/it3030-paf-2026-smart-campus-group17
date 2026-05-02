@@ -33,6 +33,12 @@ public class AIService {
         requestBody.put("user_id", user.getId());
         requestBody.put("user_name", user.getName() != null ? user.getName() : "Campus User");
         requestBody.put("user_email", user.getEmail() != null ? user.getEmail() : "no-email@smartcampus.com");
+        
+        // --- NEW: Safely extract Faculty or Department ---
+        String dept = user.getFaculty() != null ? user.getFaculty() : (user.getDepartment() != null ? user.getDepartment() : "Faculty of Computing");
+        requestBody.put("user_dept", dept); 
+        // -------------------------------------------------
+
         requestBody.put("history", history); 
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);

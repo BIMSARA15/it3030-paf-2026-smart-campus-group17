@@ -8,12 +8,9 @@ import FacilitiesAssets from './pages/staff/FacilitiesAssets';
 import TechnicianDashboard from './pages/staff/TechnicianDashboard';
 import TechnicianMaintenance from './pages/staff/TechnicianMaintenance';
 import Maintenance from './pages/user/Maintenance';
+import AIChat from './components/AIChat';
+// Final deployment trigger
 
-// ------------------------------------------------------------------------
-// TEAM INSTRUCTIONS:
-// When you pull this branch, uncomment your import below and replace the
-// placeholder <div> tags in the Routes with your actual component!
-// ------------------------------------------------------------------------
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AllBookings from './pages/admin/AllBookings';
 import AdminResources from './pages/admin/Resources';
@@ -221,6 +218,7 @@ function App() {
           />
 
         </Routes>
+        <AIChat />
       </div>
     </Router>
   );

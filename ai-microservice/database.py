@@ -3,7 +3,7 @@ import requests
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from datetime import datetime
-from bson import ObjectId  # <-- ADDED IMPORT HERE
+from bson import ObjectId 
 
 # Load environment variables
 load_dotenv()
@@ -63,7 +63,7 @@ def check_asset_availability(asset_type: str = "", capacity: int = 0, date: str 
     else:
         return f"No {asset_type}s with a capacity of at least {capacity} are available on {date}."
 
-def create_reservation(user_id: str = "guest", resource_id: str = "", date: str = "", start_time: str = "", end_time: str = "", attendees: int = 1, purpose: str = "Automated Academic Booking Session", special_requests: str = "", user_name: str = "Campus User", user_email: str = "user@smartcampus.com") -> str:
+def create_reservation(user_id: str = "guest", resource_id: str = "", date: str = "", start_time: str = "", end_time: str = "", attendees: int = 1, purpose: str = "Automated Academic Booking Session", special_requests: str = "", user_name: str = "Campus User", user_email: str = "user@smartcampus.com", user_dept: str = "Faculty of Computing") -> str:
     print(f"\n--- [AI ACTION] Start Booking Process ---")
     print(f"Target Resource ID from AI: '{resource_id}'")
     
@@ -132,6 +132,7 @@ def create_reservation(user_id: str = "guest", resource_id: str = "", date: str 
         "userId": user_id,
         "userName": user_name,
         "userEmail": user_email,
+        "userDept": user_dept,
         "resourceId": real_db_id,    # <-- NOW SENDING THE REAL 24-CHAR ID!
         "resourceName": actual_name, 
         "block": actual_block,       

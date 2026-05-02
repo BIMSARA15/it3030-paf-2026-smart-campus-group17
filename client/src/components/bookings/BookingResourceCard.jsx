@@ -8,6 +8,16 @@ export default function BookingResourceCard({
   upcomingCount, 
   onClick 
 }) {
+  const normalizedAccess = (resource.access || '').toLowerCase();
+  const isLecturerOnly = normalizedAccess.includes('lecturer');
+  const accessLabel = normalizedAccess.includes('anyone') || normalizedAccess.includes('open') || normalizedAccess.includes('all')
+    ? 'Open Access'
+    : isLecturerOnly
+    ? 'Lecturer Only'
+    : normalizedAccess.includes('student')
+    ? 'Student Only'
+    : `${resource.access} Access`;
+
   return (
     <button
       onClick={onClick}
@@ -24,13 +34,13 @@ export default function BookingResourceCard({
           </span>
           
           <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-            (resource.access || '').toLowerCase() === 'lecturer' 
+            isLecturerOnly
               ? 'bg-[#C54E08]/10 text-[#8A3505] border-[#C54E08]/20' 
               : 'bg-gray-50 text-gray-500 border-gray-200'
           }`}>
             <User className="w-3 h-3" />
             <span className="capitalize">
-              {(resource.access || 'anyone').toLowerCase() === 'anyone' ? 'Open Access' : `${resource.access} Access`}
+              {accessLabel}
             </span>
           </div>
         </div>
